@@ -1,0 +1,32 @@
+# Ignore dev/build artifacts
+node_modules
+.npmignore
+.gitignore
+.DS_Store
+
+# Source code (if you only want to ship dist/)
+src/
+tests/
+test/
+__tests__/
+coverage/
+
+# Build / tooling files
+rollup.config.js
+webpack.config.js
+vite.config.js
+tsconfig.json
+*.log
+
+# Project / meta
+docs/
+demo/
+examples/
+scripts/
+*.sh
+*.mdx
+*.pdf
+
+# Editor / IDE
+.vscode/
+.idea/
