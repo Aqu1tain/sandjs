@@ -173,7 +173,7 @@ function layoutAlignedLayer(
       parentEnd: trimmedEnd,
       depthUnits: 0,
       depth: 0,
-      percentage: slot.percentage,
+      percentage: 1,
     });
     context.arcs.push(placement.arc);
 
@@ -185,7 +185,7 @@ function layoutAlignedLayer(
         span: placement.span,
         depthUnits: node.expandLevels,
         depth: 1,
-        padAngle: layerPad,
+        padAngle: normalizePad(node.input.padAngle ?? layerPad),
       });
     }
 
@@ -194,7 +194,10 @@ function layoutAlignedLayer(
 
   if (context.arcs.length === 0) {
     // No aligned arcs were created; fallback to free layout so layer still renders.
-    const startAngle = typeof layer.baseOffset === 'number' ? layer.baseOffset : 0;
+    const startAngle = normalizeRotation(
+      typeof layer.baseOffset === 'number' ? layer.baseOffset : 0,
+      totalAngle,
+    );
     layoutSiblingsFree({
       siblings: roots,
       context,
@@ -236,6 +239,9 @@ function layoutSiblingsFree(params: {
   );
   const gapTotal = gaps.reduce((sum, gap) => sum + gap, 0);
   const availableSpan = Math.max(span - gapTotal, 0);
+  if (availableSpan <= ZERO_TOLERANCE) {
+    return;
+  }
 
   let cursor = startAngle;
   const denominator = totalValue > 0 ? totalValue : visible.length;
@@ -272,6 +278,7 @@ function layoutSiblingsFree(params: {
     context.arcs.push(placement.arc);
 
     if (node.children.length > 0) {
+      const childPad = normalizePad(node.input.padAngle ?? padAngle);
       layoutSiblingsFree({
         siblings: node.children,
         context,
@@ -279,7 +286,7 @@ function layoutSiblingsFree(params: {
         span: placement.span,
         depthUnits: depthUnits + node.expandLevels,
         depth: depth + 1,
-        padAngle,
+        padAngle: childPad,
       });
     }
 

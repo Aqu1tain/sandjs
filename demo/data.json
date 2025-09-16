@@ -1,0 +1,98 @@
+{
+  "size": { "radius": 500 },
+  "layers": [
+    {
+      "id": "root-layer",
+      "radialUnits": [0, 3],
+      "angleMode": "free",
+      "tree": {
+        "name": "Root",
+        "value": 100,
+        "expandLevels": 1,
+        "children": [
+          {
+            "name": "Child A",
+            "value": 50,
+            "expandLevels": 1,
+            "children": [
+              { "name": "A1", "value": 20 },
+              { "name": "A2", "value": 15 },
+              { "name": "A3", "value": 15 }
+            ]
+          },
+          {
+            "name": "Child B",
+            "value": 50,
+            "expandLevels": 1,
+            "children": [
+              { "name": "B1", "value": 25 },
+              { "name": "B2", "value": 25 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "extra-layer",
+      "radialUnits": [3, 9],
+      "angleMode": "free",
+      "tree": [
+        {
+          "name": "Node 1 (3 levels)",
+          "value": 10,
+          "expandLevels": 3
+        },
+        {
+          "name": "Node 2 (nested)",
+          "value": 10,
+          "expandLevels": 1,
+          "children": [
+            {
+              "name": "2a",
+              "value": 10,
+              "children": [
+                { "name": "2a-1", "value": 5 },
+                { "name": "2a-2", "value": 5 }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Node 3 (2 levels, no children)",
+          "value": 10,
+          "expandLevels": 2
+        },
+        {
+          "name": "Node 4 (1 level, 2 children)",
+          "value": 10,
+          "expandLevels": 1,
+          "children": [
+            { "name": "4a", "value": 7.5 },
+            { "name": "4b", "value": 2.5 }
+          ]
+        },
+        {
+          "name": "Node 5 (2 levels, no children)",
+          "value": 10,
+          "expandLevels": 2
+        },
+        {
+          "name": "Node 6 (1 level + child 2 levels)",
+          "value": 10,
+          "expandLevels": 1,
+          "children": [
+            { "name": "6a", "value": 10, "expandLevels": 2 }
+          ]
+        },
+        {
+          "name": "Node 7 (1 level + child 2 levels)",
+          "value": 10,
+          "expandLevels": 1,
+          "children": [
+            { "name": "7a", "value": 10, "expandLevels": 2 }
+          ]
+        }
+      ]
+    }
+  ]
+}

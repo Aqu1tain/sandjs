@@ -170,3 +170,60 @@ test('absolute offsets ignore the allocated slot', () => {
   roughlyEqual(arcs[0].x0, 0.4);
   roughlyEqual(arcs[1].x0, Math.PI + 0.2);
 });
+
+test('aligned roots occupy the full aligned interval', () => {
+  const config: SunburstConfig = {
+    size: { radius: 100 },
+    layers: [
+      {
+        id: 'base',
+        radialUnits: [0, 1],
+        angleMode: 'free',
+        tree: [
+          { name: 'Left', value: 1, key: 'left' },
+          { name: 'Right', value: 1, key: 'right' },
+        ],
+      },
+      {
+        id: 'aligned',
+        radialUnits: [1, 2],
+        angleMode: 'align',
+        alignWith: 'base',
+        tree: [{ name: 'Left detail', key: 'left', value: 1 }],
+      },
+    ],
+  };
+
+  const arcs = layout(config).filter((arc) => arc.layerId === 'aligned');
+  assert.equal(arcs.length, 1);
+  roughlyEqual(arcs[0].percentage, 1);
+  roughlyEqual(arcs[0].x0, 0);
+  roughlyEqual(arcs[0].x1, Math.PI);
+});
+
+test('align fallback normalizes base offset for free layout', () => {
+  const config: SunburstConfig = {
+    size: { radius: 80 },
+    layers: [
+      {
+        id: 'base',
+        radialUnits: [0, 1],
+        angleMode: 'free',
+        tree: [{ name: 'Solo', value: 1, key: 'solo' }],
+      },
+      {
+        id: 'aligned-free',
+        radialUnits: [1, 2],
+        angleMode: 'align',
+        alignWith: 'base',
+        padAngle: Math.PI * 4,
+        baseOffset: Math.PI * 3 + 0.5,
+        tree: [{ name: 'Solo detail', value: 2, key: 'solo' }],
+      },
+    ],
+  };
+
+  const arcs = layout(config).filter((arc) => arc.layerId === 'aligned-free');
+  assert.equal(arcs.length, 1);
+  roughlyEqual(arcs[0].x0, Math.PI + 0.5);
+});

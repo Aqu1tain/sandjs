@@ -1,236 +1,91 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Sand.js Demo</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      :root {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: #0f172a;
-        color: #e2e8f0;
-      }
-      body {
-        margin: 0;
-        padding: 2rem;
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-        align-items: center;
-      }
-      header {
-        text-align: center;
-      }
-      svg {
-        max-width: min(480px, 90vw);
-        max-height: min(480px, 90vw);
-        width: 100%;
-        height: auto;
-        display: block;
-      }
-      figcaption {
-        margin-top: 1rem;
-        font-size: 0.9rem;
-        color: #cbd5f5;
-      }
-      .sand-arc {
-        stroke: #0f172a;
-        stroke-width: 1;
-        transition: opacity 120ms ease-in-out;
-        cursor: pointer;
-      }
-      .sand-arc:hover {
-        opacity: 0.7;
-      }
-      .selection {
-        font-size: 0.95rem;
-        color: #e0f2fe;
-        text-align: center;
-        min-height: 1.4rem;
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <h1>Sand.js Sunburst Demo</h1>
-      <p>Run <code>npm run build</code> first, then open this file in a static server.</p>
-    </header>
-    <figure>
-      <svg id="sunburst" role="img" aria-label="Sand.js demo sunburst"></svg>
-      <figcaption>Hover arcs to inspect their colors; data-driven layout via Sand.js.</figcaption>
-    </figure>
-    <p id="selection" class="selection">Hover an arc to preview details, click to pin.</p>
-    <script type="module">
-      import { renderSVG } from '../dist/sandjs.mjs';
+<head>
+  <meta charset="utf-8" />
+  <title>Sand.js Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    body { margin: 0; padding: 2rem; display: flex; flex-direction: column; gap: 2rem; align-items: center; }
+    header { text-align: center; }
+    svg { max-width: min(480px, 90vw); max-height: min(480px, 90vw); width: 100%; height: auto; display: block; }
+    figcaption { margin-top: 1rem; font-size: 0.9rem; color: #cbd5f5; }
+    .sand-arc { stroke: #0f172a; stroke-width: 1; transition: opacity 120ms ease-in-out; cursor: pointer; }
+    .sand-arc:hover { opacity: 0.7; }
+    .selection { font-size: 0.95rem; color: #e0f2fe; text-align: center; min-height: 1.4rem; }
+    .error { color:#fecaca }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Sand.js Sunburst Demo</h1>
+  <p>Run <code>npm run build</code>, then serve <code>demo/</code> with a static server (e.g. <code>npx http-server demo</code>).</p>
+</header>
 
-      const palette = ['#f97316', '#facc15', '#22d3ee', '#a855f7', '#4ade80', '#fb7185'];
-      const colors = new Map();
-      let paletteIndex = 0;
+<figure>
+  <svg id="sunburst" role="img" aria-label="Sand.js demo sunburst"></svg>
+  <figcaption>Data-driven layout via <code>demo/data.json</code>.</figcaption>
+</figure>
 
-      const assignColor = (key) => {
-        if (!colors.has(key)) {
-          colors.set(key, palette[paletteIndex % palette.length]);
-          paletteIndex += 1;
-        }
-        return colors.get(key);
-      };
+<p id="selection" class="selection">Loading data…</p>
 
-      const selectionEl = document.getElementById('selection');
-      const defaultSelectionText = 'Hover an arc to preview details, click to pin.';
-      let pinnedArc = null;
+<script type="module">
+  import { renderSVG } from '../dist/sandjs.mjs';
 
-      const setSelectionText = (message) => {
-        if (selectionEl) {
-          selectionEl.textContent = message;
-        }
-      };
-      setSelectionText(defaultSelectionText);
+  const selectionEl = document.getElementById('selection');
+  const setSelection = (msg, cls='') => {
+    selectionEl.className = `selection ${cls}`.trim();
+    selectionEl.textContent = msg;
+  };
 
-      const formatArcLabel = (arc) => {
-        const percent = (arc.percentage * 100).toFixed(1);
-        return `${arc.data.name} · ${percent}%`;
-      };
+  // simple categorical palette (fallback if node.color not provided)
+  const palette = ['#f97316','#facc15','#22d3ee','#a855f7','#4ade80','#fb7185'];
+  const colorByKey = new Map();
+  let idx = 0;
+  const assignColor = (k) => {
+    if (!colorByKey.has(k)) colorByKey.set(k, palette[idx++ % palette.length]);
+    return colorByKey.get(k);
+  };
 
-      const config = {
-        size: { radius: 300 },
-        layers: [
-          {
-            id: 'categories',
-            radialUnits: [0, 3],
-            angleMode: 'free',
-            tree: [
-              {
-                name: 'Analytics',
-                value: 12,
-                key: 'analytics',
-                color: assignColor('analytics'),
-                tooltip: 'Analytics (12 projects)',
-                expandLevels: 2,
-                children: [
-                  { name: 'Funnels', value: 4 },
-                  { name: 'Dashboards', value: 5 },
-                  { name: 'Insights', value: 3 },
-                ],
-              },
-              {
-                name: 'Growth',
-                value: 10,
-                key: 'growth',
-                color: assignColor('growth'),
-                tooltip: 'Growth (10 projects)',
-                expandLevels: 2,
-                children: [
-                  { name: 'Automation', value: 6 },
-                  { name: 'Lifecycle', value: 4 },
-                ],
-              },
-              {
-                name: 'Design',
-                value: 8,
-                key: 'design',
-                color: assignColor('design'),
-                expandLevels: 2,
-                tooltip: 'Design (8 projects)',
-                children: [
-                  { name: 'Brand', value: 3 },
-                  { name: 'UI', value: 5 },
-                ],
-              },
-            ],
-          },
-          {
-            id: 'aligned-details',
-            radialUnits: [3, 6],
-            angleMode: 'align',
-            alignWith: 'categories',
-            padAngle: 0.02,
-            arcOffsetMode: 'relative',
-            defaultArcOffset: 0,
-            tree: [
-              {
-                name: 'Analytics detail',
-                key: 'analytics',
-                expandLevels: 2,
-                tooltip: 'Analytics projects split by focus',
-                offset: 0.1,
-                children: [
-                  { name: 'Dashboards', value: 5 },
-                  { name: 'Funnels', value: 4 },
-                  { name: 'Insights', value: 3 },
-                ],
-              },
-              {
-                name: 'Growth detail',
-                key: 'growth',
-                expandLevels: 2,
-                tooltip: 'Growth initiatives',
-                offset: 0,
-                children: [
-                  { name: 'Automation', value: 6 },
-                  { name: 'Lifecycle', value: 4 },
-                ],
-              },
-              {
-                name: 'Design detail',
-                key: 'design',
-                expandLevels: 2,
-                tooltip: 'Design efforts',
-                children: [
-                  { name: 'Brand', value: 3 },
-                  { name: 'UI', value: 5 },
-                ],
-              },
-            ],
-          },
-          {
-            id: 'absolute-layer',
-            radialUnits: [6, 7.5],
-            angleMode: 'free',
-            arcOffsetMode: 'absolute',
-            defaultArcOffset: 0.4,
-            tree: [
-              { name: 'Pinned A', value: 1 },
-              { name: 'Pinned B', value: 1, offset: 2.2 },
-              { name: 'Pinned C', value: 1.5 },
-            ],
-          },
-        ],
-      };
+  // load and render
+  try {
+    // IMPORTANT: this path is relative to demo/index.html
+    const config = await fetch('./demo/data.json').then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    });
 
-      renderSVG({
-        el: '#sunburst',
-        config,
-        classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
-        decoratePath(path, arc) {
-          path.setAttribute('aria-label', `${arc.data.name}: ${(arc.percentage * 100).toFixed(1)}%`);
-          if (!path.getAttribute('fill') || path.getAttribute('fill') === 'currentColor') {
-            const key = arc.key || arc.data.name;
-            path.setAttribute('fill', assignColor(key));
-          }
-        },
-        tooltip: true,
-        onArcEnter: ({ arc }) => {
-          if (pinnedArc) return;
-          setSelectionText(`Preview: ${formatArcLabel(arc)}`);
-        },
-        onArcMove: ({ arc }) => {
-          if (pinnedArc) return;
-          setSelectionText(`Preview: ${formatArcLabel(arc)}`);
-        },
-        onArcLeave: () => {
-          if (pinnedArc) return;
-          setSelectionText(defaultSelectionText);
-        },
-        onArcClick: ({ arc }) => {
-          if (pinnedArc === arc) {
-            pinnedArc = null;
-            setSelectionText(defaultSelectionText);
-          } else {
-            pinnedArc = arc;
-            setSelectionText(`Pinned: ${formatArcLabel(arc)}`);
-          }
-        },
-      });
-    </script>
-  </body>
+    // If your data doesn’t embed colors, this decorator gives stable colors per key
+    const chart = renderSVG({
+      el: '#sunburst',
+      config,
+      classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
+      decoratePath(path, arc) {
+        path.setAttribute('aria-label', `${arc.data.name}: ${(arc.percentage * 100).toFixed(1)}%`);
+        // prefer explicit node color; otherwise color by key/name
+        const explicit = arc.data.color;
+        const k = arc.key || arc.data.key || arc.data.name;
+        const fill = explicit || assignColor(k);
+        path.setAttribute('fill', fill);
+      },
+      tooltip: true,
+      onArcEnter: ({ arc }) => setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`),
+      onArcMove:  ({ arc }) => setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`),
+      onArcLeave: () => setSelection('Hover an arc to preview details, click to pin.'),
+      onArcClick: ({ arc }) => setSelection(`Pinned: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`)
+    });
+
+    // optional: expose for debugging in console
+    window.chart = chart;
+    setSelection('Hover an arc to preview details, click to pin.');
+  } catch (err) {
+    console.error(err);
+    setSelection(`Failed to load demo/data.json: ${err.message}`, 'error');
+  }
+</script>
+</body>
 </html>
