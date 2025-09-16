@@ -120,3 +120,53 @@ test('aligned layers throw when references are misconfigured', () => {
 
   assert.throws(() => layout(config), /does not expose keyed root arcs/);
 });
+
+test('relative offsets shift arc start angles using defaults and overrides', () => {
+  const config: SunburstConfig = {
+    size: { radius: 50 },
+    layers: [
+      {
+        id: 'offsets',
+        radialUnits: [0, 1],
+        angleMode: 'free',
+        padAngle: 0.4,
+        defaultArcOffset: 0.2,
+        arcOffsetMode: 'relative',
+        tree: [
+          { name: 'A', value: 1 },
+          { name: 'B', value: 1, offset: -0.1 },
+        ],
+      },
+    ],
+  };
+
+  const arcs = layout(config);
+  assert.equal(arcs.length, 2);
+  roughlyEqual(arcs[0].x0, 0.4);
+  roughlyEqual(arcs[1].x0, Math.PI - 0.13415926535897926);
+});
+
+test('absolute offsets ignore the allocated slot', () => {
+  const config: SunburstConfig = {
+    size: { radius: 40 },
+    layers: [
+      {
+        id: 'absolute',
+        radialUnits: [0, 1],
+        angleMode: 'free',
+        padAngle: 0.4,
+        arcOffsetMode: 'absolute',
+        defaultArcOffset: 1,
+        tree: [
+          { name: 'First', value: 1 },
+          { name: 'Second', value: 1, offset: 2 },
+        ],
+      },
+    ],
+  };
+
+  const arcs = layout(config);
+  assert.equal(arcs.length, 2);
+  roughlyEqual(arcs[0].x0, 0.4);
+  roughlyEqual(arcs[1].x0, Math.PI + 0.2);
+});

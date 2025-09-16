@@ -12,6 +12,7 @@ export interface TreeNodeInput {
   expandLevels?: number;
   offset?: number;
   color?: string;
+  padAngle?: number;
   children?: TreeNodeInput[];
   tooltip?: string;
   hidden?: boolean;
@@ -25,6 +26,7 @@ export interface LayerConfig {
   padAngle?: number;
   baseOffset?: number;
   arcOffsetMode?: 'relative' | 'absolute';
+  defaultArcOffset?: number;
   tree: TreeNodeInput | TreeNodeInput[];
 }
 

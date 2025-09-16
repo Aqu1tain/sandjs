@@ -92,11 +92,11 @@
       };
 
       const config = {
-        size: { radius: 200 },
+        size: { radius: 300 },
         layers: [
           {
             id: 'categories',
-            radialUnits: [0, 2],
+            radialUnits: [0, 3],
             angleMode: 'free',
             tree: [
               {
@@ -105,6 +105,7 @@
                 key: 'analytics',
                 color: assignColor('analytics'),
                 tooltip: 'Analytics (12 projects)',
+                expandLevels: 2,
                 children: [
                   { name: 'Funnels', value: 4 },
                   { name: 'Dashboards', value: 5 },
@@ -117,6 +118,7 @@
                 key: 'growth',
                 color: assignColor('growth'),
                 tooltip: 'Growth (10 projects)',
+                expandLevels: 2,
                 children: [
                   { name: 'Automation', value: 6 },
                   { name: 'Lifecycle', value: 4 },
@@ -127,6 +129,7 @@
                 value: 8,
                 key: 'design',
                 color: assignColor('design'),
+                expandLevels: 2,
                 tooltip: 'Design (8 projects)',
                 children: [
                   { name: 'Brand', value: 3 },
@@ -141,12 +144,15 @@
             angleMode: 'align',
             alignWith: 'categories',
             padAngle: 0.02,
+            arcOffsetMode: 'relative',
+            defaultArcOffset: 0,
             tree: [
               {
                 name: 'Analytics detail',
                 key: 'analytics',
                 expandLevels: 2,
                 tooltip: 'Analytics projects split by focus',
+                offset: 0.1,
                 children: [
                   { name: 'Dashboards', value: 5 },
                   { name: 'Funnels', value: 4 },
@@ -158,6 +164,7 @@
                 key: 'growth',
                 expandLevels: 2,
                 tooltip: 'Growth initiatives',
+                offset: 0,
                 children: [
                   { name: 'Automation', value: 6 },
                   { name: 'Lifecycle', value: 4 },
@@ -173,6 +180,18 @@
                   { name: 'UI', value: 5 },
                 ],
               },
+            ],
+          },
+          {
+            id: 'absolute-layer',
+            radialUnits: [6, 7.5],
+            angleMode: 'free',
+            arcOffsetMode: 'absolute',
+            defaultArcOffset: 0.4,
+            tree: [
+              { name: 'Pinned A', value: 1 },
+              { name: 'Pinned B', value: 1, offset: 2.2 },
+              { name: 'Pinned C', value: 1.5 },
             ],
           },
         ],

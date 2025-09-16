@@ -87,7 +87,10 @@ function layoutLayer(params: {
     return layoutAlignedLayer(roots, context, totalAngle, previousLayers);
   }
 
-  const startAngle = typeof layer.baseOffset === 'number' ? layer.baseOffset : 0;
+  const startAngle = normalizeRotation(
+    typeof layer.baseOffset === 'number' ? layer.baseOffset : 0,
+    totalAngle,
+  );
   const span = totalAngle;
   layoutSiblingsFree({
     siblings: roots,
@@ -132,6 +135,9 @@ function layoutAlignedLayer(
     throw new Error(`Layer "${alignWith}" does not expose keyed root arcs for alignment`);
   }
 
+  const layerPad = normalizePad(layer.padAngle);
+  const baseRotation = typeof layer.baseOffset === 'number' ? layer.baseOffset : 0;
+
   for (const node of roots) {
     const key = node.input.key;
     if (!key) {
@@ -143,32 +149,43 @@ function layoutAlignedLayer(
       throw new Error(`Layer "${layer.id}" could not find aligned arc for key "${key}" on layer "${alignWith}"`);
     }
 
-    const padAngle = normalizePad(layer.padAngle);
     const span = slot.x1 - slot.x0;
     if (span < ZERO_TOLERANCE) {
       continue;
     }
 
-    const arc = createArc({
+    const trimmedStart = slot.x0 + layerPad * 0.5;
+    const trimmedEnd = slot.x1 - layerPad * 0.5;
+    if (trimmedEnd - trimmedStart < ZERO_TOLERANCE) {
+      continue;
+    }
+
+    const localSpan = trimmedEnd - trimmedStart;
+    const rotation = normalizeRotation(baseRotation, localSpan > ZERO_TOLERANCE ? localSpan : span);
+    const baseStart = trimmedStart + rotation;
+
+    const placement = createArc({
       node,
       context,
-      startAngle: slot.x0,
-      span,
+      startAngle: baseStart,
+      span: localSpan,
+      parentStart: trimmedStart,
+      parentEnd: trimmedEnd,
       depthUnits: 0,
       depth: 0,
       percentage: slot.percentage,
     });
-    context.arcs.push(arc);
+    context.arcs.push(placement.arc);
 
     if (node.children.length > 0) {
       layoutSiblingsFree({
         siblings: node.children,
         context,
-        startAngle: slot.x0,
-        span,
+        startAngle: placement.startAngle,
+        span: placement.span,
         depthUnits: node.expandLevels,
         depth: 1,
-        padAngle,
+        padAngle: layerPad,
       });
     }
 
@@ -210,9 +227,14 @@ function layoutSiblingsFree(params: {
     return;
   }
 
+  const layer = context.layer;
   const totalValue = visible.reduce((sum, node) => sum + Math.max(node.value, 0), 0);
-  const gapCount = Math.max(visible.length - 1, 0);
-  const gapTotal = padAngle * gapCount;
+  const gaps: number[] = visible.map((node, index) =>
+    index < visible.length - 1
+      ? normalizePad(node.input.padAngle ?? layer.padAngle ?? padAngle)
+      : 0,
+  );
+  const gapTotal = gaps.reduce((sum, gap) => sum + gap, 0);
   const availableSpan = Math.max(span - gapTotal, 0);
 
   let cursor = startAngle;
@@ -222,49 +244,67 @@ function layoutSiblingsFree(params: {
     const weight = totalValue > 0 ? Math.max(node.value, 0) : 1;
     const share = denominator > 0 ? weight / denominator : 0;
     const nodeSpan = share * availableSpan;
+    const gapAfter = gaps[index] ?? 0;
+    const gapBefore = index > 0 ? gaps[index - 1] ?? 0 : 0;
+    const slotStart = cursor;
+    const slotEnd = slotStart + nodeSpan;
+    const groupStart = startAngle;
+    const groupEnd = startAngle + span;
+    const parentStart = Math.max(groupStart, slotStart - gapBefore);
+    const parentEnd = Math.min(groupEnd, slotEnd + gapAfter);
 
     if (nodeSpan < ZERO_TOLERANCE) {
-      cursor += index < visible.length - 1 ? padAngle : 0;
+      cursor = parentEnd + gapAfter;
       return;
     }
 
-    const arc = createArc({
+    const placement = createArc({
       node,
       context,
       startAngle: cursor,
       span: nodeSpan,
+      parentStart,
+      parentEnd,
       depthUnits,
       depth,
       percentage: share,
     });
-    context.arcs.push(arc);
+    context.arcs.push(placement.arc);
 
     if (node.children.length > 0) {
       layoutSiblingsFree({
         siblings: node.children,
         context,
-        startAngle: cursor,
-        span: nodeSpan,
+        startAngle: placement.startAngle,
+        span: placement.span,
         depthUnits: depthUnits + node.expandLevels,
         depth: depth + 1,
         padAngle,
       });
     }
 
-    cursor = cursor + nodeSpan + (index < visible.length - 1 ? padAngle : 0);
+    cursor = slotEnd + gapAfter;
   });
 }
+
+type ArcPlacement = {
+  arc: LayoutArc;
+  startAngle: number;
+  span: number;
+};
 
 function createArc(params: {
   node: NormalizedNode;
   context: LayerContext;
   startAngle: number;
   span: number;
+  parentStart: number;
+  parentEnd: number;
   depthUnits: number;
   depth: number;
   percentage: number;
-}): LayoutArc {
-  const { node, context, startAngle, span, depthUnits, depth, percentage } = params;
+}): ArcPlacement {
+  const { node, context, startAngle, span, parentStart, parentEnd, depthUnits, depth, percentage } = params;
   const { unitToRadius, layerStart, layerEnd, layer } = context;
 
   const y0Units = layerStart + depthUnits;
@@ -274,10 +314,14 @@ function createArc(params: {
     throw new Error(`Layer "${layer.id}" ran out of radial space while placing node "${node.input.name}"`);
   }
 
-  const x0 = startAngle;
-  const x1 = startAngle + span;
+  const x0 = clampArcStart(
+    resolveArcStart(startAngle, span, parentStart, parentEnd, node.input, layer),
+    parentStart,
+    parentEnd - span,
+  );
+  const x1 = x0 + span;
 
-  return {
+  const arc: LayoutArc = {
     layerId: layer.id,
     data: node.input,
     x0,
@@ -288,6 +332,40 @@ function createArc(params: {
     key: node.input.key,
     percentage,
   };
+  return { arc, startAngle: x0, span };
+}
+
+function resolveArcStart(
+  baseStart: number,
+  span: number,
+  parentStart: number,
+  parentEnd: number,
+  node: TreeNodeInput,
+  layer: LayerConfig,
+): number {
+  const offset = resolveNodeOffset(node, layer);
+  if (!offset) {
+    return baseStart;
+  }
+
+  const mode = layer.arcOffsetMode ?? 'relative';
+  if (mode === 'absolute') {
+    return baseStart + offset;
+  }
+
+  const available = Math.max(parentEnd - parentStart, 0);
+  const scaled = available > 0 ? offset * available : 0;
+  return baseStart + scaled;
+}
+
+function resolveNodeOffset(node: TreeNodeInput, layer: LayerConfig): number {
+  if (typeof node.offset === 'number') {
+    return node.offset;
+  }
+  if (typeof layer.defaultArcOffset === 'number') {
+    return layer.defaultArcOffset;
+  }
+  return 0;
 }
 
 function normalizeTree(tree: LayerConfig['tree']): NormalizedNode[] {
@@ -330,4 +408,25 @@ function normalizePad(value: number | undefined): number {
     return value;
   }
   return 0;
+}
+
+function clampArcStart(value: number, min: number, max: number): number {
+  if (max < min) {
+    return min;
+  }
+  if (value < min) {
+    return min;
+  }
+  if (value > max) {
+    return max;
+  }
+  return value;
+}
+
+function normalizeRotation(offset: number, span: number): number {
+  if (!Number.isFinite(offset) || span <= ZERO_TOLERANCE) {
+    return 0;
+  }
+  const mod = offset % span;
+  return mod >= 0 ? mod : mod + span;
 }
