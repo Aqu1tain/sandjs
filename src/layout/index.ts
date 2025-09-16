@@ -1,4 +1,4 @@
-import { LayoutArc, LayerConfig, SunburstConfig, TreeNodeInput } from '../types';
+import { LayoutArc, LayerConfig, SunburstConfig, TreeNodeInput } from '../types/index.js';
 
 type NormalizedNode = {
   input: TreeNodeInput;

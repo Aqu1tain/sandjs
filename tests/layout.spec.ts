@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { layout } from '../src';
-import type { SunburstConfig } from '../src';
+import { layout } from '../src/index.js';
+import type { SunburstConfig } from '../src/index.js';
 
 const TOLERANCE = 1e-6;
 
