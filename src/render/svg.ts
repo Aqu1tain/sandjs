@@ -144,8 +144,8 @@ function createTooltipRuntime(
           arc.data.tooltip ?? `${arc.data.name} · ${(arc.percentage * 100).toFixed(1)}%`;
 
   const position = (event: PointerEvent) => {
-    const offsetY = 10;
-    const offsetX = 12;
+    const offsetY = 8;
+    const offsetX = 8;
     const x = event.clientX + offsetX;
     const y = event.clientY - offsetY;
     element.style.left = `${x}px`;
