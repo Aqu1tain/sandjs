@@ -7,4 +7,9 @@ export type {
   TreeNodeInput,
   AngleMode,
 } from './types/index.js';
-export type { RenderSvgOptions, TooltipOptions } from './render/svg.js';
+export type {
+  RenderSvgOptions,
+  TooltipOptions,
+  ArcPointerEventPayload,
+  ArcClickEventPayload,
+} from './render/svg.js';

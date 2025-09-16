@@ -42,6 +42,12 @@
       .sand-arc:hover {
         opacity: 0.7;
       }
+      .selection {
+        font-size: 0.95rem;
+        color: #e0f2fe;
+        text-align: center;
+        min-height: 1.4rem;
+      }
     </style>
   </head>
   <body>
@@ -53,6 +59,7 @@
       <svg id="sunburst" role="img" aria-label="Sand.js demo sunburst"></svg>
       <figcaption>Hover arcs to inspect their colors; data-driven layout via Sand.js.</figcaption>
     </figure>
+    <p id="selection" class="selection">Hover an arc to preview details, click to pin.</p>
     <script type="module">
       import { renderSVG } from '../dist/sandjs.mjs';
 
@@ -66,6 +73,22 @@
           paletteIndex += 1;
         }
         return colors.get(key);
+      };
+
+      const selectionEl = document.getElementById('selection');
+      const defaultSelectionText = 'Hover an arc to preview details, click to pin.';
+      let pinnedArc = null;
+
+      const setSelectionText = (message) => {
+        if (selectionEl) {
+          selectionEl.textContent = message;
+        }
+      };
+      setSelectionText(defaultSelectionText);
+
+      const formatArcLabel = (arc) => {
+        const percent = (arc.percentage * 100).toFixed(1);
+        return `${arc.data.name} · ${percent}%`;
       };
 
       const config = {
@@ -167,6 +190,27 @@
           }
         },
         tooltip: true,
+        onArcEnter: ({ arc }) => {
+          if (pinnedArc) return;
+          setSelectionText(`Preview: ${formatArcLabel(arc)}`);
+        },
+        onArcMove: ({ arc }) => {
+          if (pinnedArc) return;
+          setSelectionText(`Preview: ${formatArcLabel(arc)}`);
+        },
+        onArcLeave: () => {
+          if (pinnedArc) return;
+          setSelectionText(defaultSelectionText);
+        },
+        onArcClick: ({ arc }) => {
+          if (pinnedArc === arc) {
+            pinnedArc = null;
+            setSelectionText(defaultSelectionText);
+          } else {
+            pinnedArc = arc;
+            setSelectionText(`Pinned: ${formatArcLabel(arc)}`);
+          }
+        },
       });
     </script>
   </body>

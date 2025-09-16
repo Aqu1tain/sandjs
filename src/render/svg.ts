@@ -9,6 +9,18 @@ export interface TooltipOptions {
   container?: HTMLElement | string;
 }
 
+export interface ArcPointerEventPayload {
+  arc: LayoutArc;
+  path: SVGPathElement;
+  event: PointerEvent;
+}
+
+export interface ArcClickEventPayload {
+  arc: LayoutArc;
+  path: SVGPathElement;
+  event: MouseEvent;
+}
+
 export interface RenderSvgOptions {
   el: SVGElement | string;
   config: SunburstConfig;
@@ -16,6 +28,10 @@ export interface RenderSvgOptions {
   classForArc?: (arc: LayoutArc) => string | string[] | undefined;
   decoratePath?: (path: SVGPathElement, arc: LayoutArc) => void;
   tooltip?: boolean | TooltipOptions;
+  onArcEnter?: (payload: ArcPointerEventPayload) => void;
+  onArcMove?: (payload: ArcPointerEventPayload) => void;
+  onArcLeave?: (payload: ArcPointerEventPayload) => void;
+  onArcClick?: (payload: ArcClickEventPayload) => void;
 }
 
 export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
@@ -71,14 +87,34 @@ export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
       path.setAttribute('data-tooltip', arc.data.tooltip);
     }
 
-    if (tooltip) {
-      const handleEnter = (event: PointerEvent) => tooltip.show(event, arc);
-      const handleMove = (event: PointerEvent) => tooltip.move(event);
-      const handleLeave = () => tooltip.hide();
+    const wantsPointerTracking = Boolean(
+      tooltip || options.onArcEnter || options.onArcMove || options.onArcLeave,
+    );
+
+    if (wantsPointerTracking) {
+      const handleEnter = (event: PointerEvent) => {
+        tooltip?.show(event, arc);
+        options.onArcEnter?.({ arc, path, event });
+      };
+      const handleMove = (event: PointerEvent) => {
+        tooltip?.move(event);
+        options.onArcMove?.({ arc, path, event });
+      };
+      const handleLeave = (event: PointerEvent) => {
+        tooltip?.hide();
+        options.onArcLeave?.({ arc, path, event });
+      };
       path.addEventListener('pointerenter', handleEnter);
       path.addEventListener('pointermove', handleMove);
       path.addEventListener('pointerleave', handleLeave);
       path.addEventListener('pointercancel', handleLeave);
+    }
+
+    if (options.onArcClick) {
+      const handleClick = (event: MouseEvent) => {
+        options.onArcClick?.({ arc, path, event });
+      };
+      path.addEventListener('click', handleClick);
     }
 
     options.decoratePath?.(path, arc);
