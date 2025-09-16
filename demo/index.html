@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sand.js Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        align-items: center;
+      }
+      header {
+        text-align: center;
+      }
+      svg {
+        max-width: min(480px, 90vw);
+        max-height: min(480px, 90vw);
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      figcaption {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        color: #cbd5f5;
+      }
+      .sand-arc {
+        stroke: #0f172a;
+        stroke-width: 1;
+        transition: opacity 120ms ease-in-out;
+        cursor: pointer;
+      }
+      .sand-arc:hover {
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Sand.js Sunburst Demo</h1>
+      <p>Run <code>npm run build</code> first, then open this file in a static server.</p>
+    </header>
+    <figure>
+      <svg id="sunburst" role="img" aria-label="Sand.js demo sunburst"></svg>
+      <figcaption>Hover arcs to inspect their colors; data-driven layout via Sand.js.</figcaption>
+    </figure>
+    <script type="module">
+      import { renderSVG } from '../dist/sandjs.mjs';
+
+      const palette = ['#f97316', '#facc15', '#22d3ee', '#a855f7', '#4ade80', '#fb7185'];
+      const colors = new Map();
+      let paletteIndex = 0;
+
+      const assignColor = (key) => {
+        if (!colors.has(key)) {
+          colors.set(key, palette[paletteIndex % palette.length]);
+          paletteIndex += 1;
+        }
+        return colors.get(key);
+      };
+
+      const config = {
+        size: { radius: 200 },
+        layers: [
+          {
+            id: 'categories',
+            radialUnits: [0, 2],
+            angleMode: 'free',
+            tree: [
+              {
+                name: 'Analytics',
+                value: 12,
+                key: 'analytics',
+                color: assignColor('analytics'),
+                tooltip: 'Analytics (12 projects)',
+                children: [
+                  { name: 'Funnels', value: 4 },
+                  { name: 'Dashboards', value: 5 },
+                  { name: 'Insights', value: 3 },
+                ],
+              },
+              {
+                name: 'Growth',
+                value: 10,
+                key: 'growth',
+                color: assignColor('growth'),
+                tooltip: 'Growth (10 projects)',
+                children: [
+                  { name: 'Automation', value: 6 },
+                  { name: 'Lifecycle', value: 4 },
+                ],
+              },
+              {
+                name: 'Design',
+                value: 8,
+                key: 'design',
+                color: assignColor('design'),
+                tooltip: 'Design (8 projects)',
+                children: [
+                  { name: 'Brand', value: 3 },
+                  { name: 'UI', value: 5 },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'aligned-details',
+            radialUnits: [3, 6],
+            angleMode: 'align',
+            alignWith: 'categories',
+            padAngle: 0.02,
+            tree: [
+              {
+                name: 'Analytics detail',
+                key: 'analytics',
+                expandLevels: 2,
+                tooltip: 'Analytics projects split by focus',
+                children: [
+                  { name: 'Dashboards', value: 5 },
+                  { name: 'Funnels', value: 4 },
+                  { name: 'Insights', value: 3 },
+                ],
+              },
+              {
+                name: 'Growth detail',
+                key: 'growth',
+                expandLevels: 2,
+                tooltip: 'Growth initiatives',
+                children: [
+                  { name: 'Automation', value: 6 },
+                  { name: 'Lifecycle', value: 4 },
+                ],
+              },
+              {
+                name: 'Design detail',
+                key: 'design',
+                expandLevels: 2,
+                tooltip: 'Design efforts',
+                children: [
+                  { name: 'Brand', value: 3 },
+                  { name: 'UI', value: 5 },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      renderSVG({
+        el: '#sunburst',
+        config,
+        classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
+        decoratePath(path, arc) {
+          path.setAttribute('aria-label', `${arc.data.name}: ${(arc.percentage * 100).toFixed(1)}%`);
+          if (!path.getAttribute('fill') || path.getAttribute('fill') === 'currentColor') {
+            const key = arc.key || arc.data.name;
+            path.setAttribute('fill', assignColor(key));
+          }
+        },
+        tooltip: true,
+      });
+    </script>
+  </body>
+</html>
