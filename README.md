@@ -83,6 +83,82 @@ Sand.js is designed to be:
 
 ---
 
+## 🚀 Getting Started
+
+```bash
+npm install sandjs
+```
+
+Render a sunburst in the browser:
+
+```html
+<svg id="chart"></svg>
+<script type="module">
+  import { renderSVG } from 'sandjs';
+
+  const config = {
+    size: { radius: 160 },
+    layers: [
+      {
+        id: 'root',
+        radialUnits: [0, 2],
+        angleMode: 'free',
+        tree: [
+          { name: 'Data', value: 6, key: 'data' },
+          {
+            name: 'Design',
+            key: 'design',
+            value: 4,
+            children: [
+              { name: 'UI', value: 2 },
+              { name: 'Brand', value: 2 }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
+  renderSVG({
+    el: '#chart',
+    config,
+    tooltip: true,
+    onArcClick: ({ arc }) => console.log('Pinned', arc.data.name)
+  });
+</script>
+```
+
+The demo under `demo/` shows relative/absolute offsets, tooltips, and selection callbacks. Run `npm run build` and serve the folder (for example `npx http-server demo`) to experiment.
+
+### Configuration essentials
+
+- **Layers** (`free` or `align`): `free` splits siblings by value; `align` reuses the angular span of a keyed arc in another layer.
+- **Offsets**: `defaultArcOffset` and per-node `offset` shift arcs. In `relative` mode the offset is a fraction of the available span; in `absolute` mode it is applied in radians.
+- **Padding**: Use `padAngle` on a layer or node to reserve gap space between siblings.
+- **Callbacks**: `renderSVG` exposes `onArcEnter`, `onArcMove`, `onArcLeave`, and `onArcClick` with the arc metadata and the rendered `path`.
+- **Tooltips**: enable with `tooltip: true` or pass `{ formatter, container }` for custom markup.
+
+See `src/types/index.ts` for the full TypeScript contracts.
+
+## 🧪 Build & Test
+
+```bash
+npm run test    # type check + node test runner
+npm run build   # rollup (ESM + minified IIFE bundles)
+npm run verify  # convenience: runs tests and build
+```
+
+`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/sandjs/dist/sandjs.iife.min.js`).
+
+## ✅ Release Checklist
+
+1. `npm run verify`
+2. Manually review the `demo/` example in a browser.
+3. Update `CHANGELOG.md` and bump the package version.
+4. `npm publish --access public`
+
+---
+
 ## 🛣️ Roadmap
 
 ### Phase 0.1 – MVP (npm + CDN)

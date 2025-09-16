@@ -1,7 +1,7 @@
 {
   "name": "sandjs",
-  "version": "0.0.1",
-  "description": "**Sunburst Advanced Node Data**",
+  "version": "0.1.0",
+  "description": "Sunburst Advanced Node Data",
   "main": "dist/sandjs.mjs",
   "scripts": {
     "clean": "rimraf dist",
@@ -9,7 +9,8 @@
     "prepublishOnly": "npm run build",
     "clean:test": "rimraf dist-tests",
     "test:build": "npm run clean:test && tsc --project tsconfig.test.json",
-    "test": "npm run test:build && node --test dist-tests/tests/**/*.js"
+    "test": "npm run test:build && node --test dist-tests/tests/**/*.js",
+    "verify": "npm run test && npm run build"
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,7 @@
     "rimraf": "^6.0.1",
     "rollup": "^4.50.2",
     "rollup-plugin-copy": "^3.5.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "tslib": "^2.8.1",
     "typescript": "^5.9.2"
   },
@@ -35,11 +37,16 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/sandjs.mjs",
       "default": "./dist/sandjs.mjs"
-    }
+    },
+    "./dist/sandjs.iife.min.js": "./dist/sandjs.iife.min.js"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "sideEffects": false,
+  "unpkg": "dist/sandjs.iife.min.js",
+  "jsdelivr": "dist/sandjs.iife.min.js"
 }

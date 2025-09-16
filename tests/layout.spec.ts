@@ -227,3 +227,49 @@ test('align fallback normalizes base offset for free layout', () => {
   assert.equal(arcs.length, 1);
   roughlyEqual(arcs[0].x0, Math.PI + 0.5);
 });
+
+test('hidden nodes are skipped while preserving siblings', () => {
+  const config: SunburstConfig = {
+    size: { radius: 60 },
+    layers: [
+      {
+        id: 'hidden-test',
+        radialUnits: [0, 1],
+        angleMode: 'free',
+        tree: [
+          { name: 'Visible', value: 2 },
+          { name: 'Masked', value: 5, hidden: true },
+          { name: 'Trailing', value: 3 },
+        ],
+      },
+    ],
+  };
+
+  const arcs = layout(config);
+  assert.equal(arcs.length, 2);
+  const totalSpan = arcs.reduce((sum, arc) => sum + (arc.x1 - arc.x0), 0);
+  roughlyEqual(totalSpan, Math.PI * 2);
+});
+
+test('partial sunbursts honour the configured angle', () => {
+  const angle = Math.PI * 1.5;
+  const config: SunburstConfig = {
+    size: { radius: 90, angle },
+    layers: [
+      {
+        id: 'partial',
+        radialUnits: [0, 1],
+        angleMode: 'free',
+        tree: [
+          { name: 'Left', value: 1 },
+          { name: 'Right', value: 1 },
+        ],
+      },
+    ],
+  };
+
+  const arcs = layout(config);
+  assert.equal(arcs.length, 2);
+  roughlyEqual(arcs[0].x0, 0);
+  roughlyEqual(arcs[1].x1, angle);
+});

@@ -1,5 +1,6 @@
 import typescript from '@rollup/plugin-typescript';
 import copy from 'rollup-plugin-copy';
+import terser from '@rollup/plugin-terser';
 
 const input = 'src/index.ts';
 
@@ -16,6 +17,22 @@ export default {
       format: 'iife',
       name: 'SandJS',
       sourcemap: true,
+    },
+    {
+      file: 'dist/sandjs.iife.min.js',
+      format: 'iife',
+      name: 'SandJS',
+      sourcemap: true,
+      plugins: [
+        terser({
+          format: {
+            comments: false,
+          },
+          compress: {
+            passes: 2,
+          },
+        }),
+      ],
     },
   ],
   plugins: [

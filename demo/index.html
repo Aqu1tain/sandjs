@@ -15,7 +15,8 @@
     svg { max-width: min(480px, 90vw); max-height: min(480px, 90vw); width: 100%; height: auto; display: block; }
     figcaption { margin-top: 1rem; font-size: 0.9rem; color: #cbd5f5; }
     .sand-arc { stroke: #0f172a; stroke-width: 1; transition: opacity 120ms ease-in-out; cursor: pointer; }
-    .sand-arc:hover { opacity: 0.7; }
+    .sand-arc[data-state="hover"] { opacity: 0.7; }
+    .sand-arc[data-state="pinned"] { opacity: 0.9; stroke-width: 2; stroke: #f1f5f9; }
     .selection { font-size: 0.95rem; color: #e0f2fe; text-align: center; min-height: 1.4rem; }
     .error { color:#fecaca }
   </style>
@@ -37,6 +38,7 @@
   import { renderSVG } from '../dist/sandjs.mjs';
 
   const selectionEl = document.getElementById('selection');
+  const defaultMessage = 'Hover an arc to preview details, click to pin.';
   const setSelection = (msg, cls='') => {
     selectionEl.className = `selection ${cls}`.trim();
     selectionEl.textContent = msg;
@@ -49,6 +51,30 @@
   const assignColor = (k) => {
     if (!colorByKey.has(k)) colorByKey.set(k, palette[idx++ % palette.length]);
     return colorByKey.get(k);
+  };
+
+  const state = {
+    pinnedPath: null,
+  };
+
+  const clearHover = () => {
+    document.querySelectorAll('.sand-arc[data-state="hover"]').forEach((el) => {
+      if (el !== state.pinnedPath) {
+        el.removeAttribute('data-state');
+      }
+    });
+  };
+
+  const setPinned = (path) => {
+    if (state.pinnedPath && state.pinnedPath !== path) {
+      state.pinnedPath.removeAttribute('data-state');
+    }
+    if (state.pinnedPath === path) {
+      state.pinnedPath = null;
+    } else {
+      state.pinnedPath = path;
+      path.setAttribute('data-state', 'pinned');
+    }
   };
 
   // load and render
@@ -73,15 +99,44 @@
         path.setAttribute('fill', fill);
       },
       tooltip: true,
-      onArcEnter: ({ arc }) => setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`),
-      onArcMove:  ({ arc }) => setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`),
-      onArcLeave: () => setSelection('Hover an arc to preview details, click to pin.'),
-      onArcClick: ({ arc }) => setSelection(`Pinned: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`)
+      onArcEnter: ({ arc, path }) => {
+        if (state.pinnedPath && state.pinnedPath !== path) {
+          path.setAttribute('data-state', 'hover');
+        } else if (!state.pinnedPath) {
+          path.setAttribute('data-state', 'hover');
+        }
+        setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`);
+      },
+      onArcMove:  ({ arc, path }) => {
+        if (!state.pinnedPath || state.pinnedPath === path) {
+          path.setAttribute('data-state', state.pinnedPath === path ? 'pinned' : 'hover');
+          setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`);
+        }
+      },
+      onArcLeave: ({ path }) => {
+        if (state.pinnedPath !== path) {
+          path.removeAttribute('data-state');
+        }
+        if (!state.pinnedPath) {
+          setSelection(defaultMessage);
+        }
+      },
+      onArcClick: ({ arc, path }) => {
+        if (state.pinnedPath === path) {
+          setPinned(path);
+          path.removeAttribute('data-state');
+          setSelection(defaultMessage);
+          return;
+        }
+        clearHover();
+        setPinned(path);
+        setSelection(`Pinned: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`);
+      }
     });
 
     // optional: expose for debugging in console
     window.chart = chart;
-    setSelection('Hover an arc to preview details, click to pin.');
+    setSelection(defaultMessage);
   } catch (err) {
     console.error(err);
     setSelection(`Failed to load demo/data.json: ${err.message}`, 'error');
