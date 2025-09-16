@@ -1,0 +1,31 @@
+{
+  "name": "sandjs",
+  "version": "0.0.1",
+  "description": "**Sunburst Advanced Node Data**",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && rollup -c",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aqu1tain/sandjs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Aqu1tain/sandjs/issues"
+  },
+  "homepage": "https://github.com/Aqu1tain/sandjs#readme",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.4",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.50.2",
+    "rollup-plugin-copy": "^3.5.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.2"
+  }
+}
