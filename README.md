@@ -86,7 +86,7 @@ Sand.js is designed to be:
 ## 🚀 Getting Started
 
 ```bash
-npm install sandjs
+npm install @akitain/sandjs
 ```
 
 Render a sunburst in the browser:
@@ -128,7 +128,7 @@ Render a sunburst in the browser:
 </script>
 ```
 
-The demo under `demo/` shows relative/absolute offsets, tooltips, and selection callbacks. Run `npm run build` and serve the folder (for example `npx http-server demo`) to experiment.
+The demo under `demo/` shows relative/absolute offsets, tooltips, and selection callbacks. Run `npm run build` and serve the folder (for example `npx http-server .`) to experiment.
 
 ### Configuration essentials
 

@@ -1,6 +1,6 @@
 {
-  "name": "sandjs",
-  "version": "0.1.0",
+  "name": "@akitain/sandjs",
+  "version": "0.1.1",
   "description": "Sunburst Advanced Node Data",
   "main": "dist/sandjs.mjs",
   "scripts": {
