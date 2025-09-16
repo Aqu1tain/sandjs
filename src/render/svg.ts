@@ -1,5 +1,5 @@
-import { layout } from '../layout/index.js';
-import { LayoutArc, SunburstConfig } from '../types/index.js';
+import { layout } from '../layout';
+import { LayoutArc, SunburstConfig } from '../types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ZERO_TOLERANCE = 1e-6;

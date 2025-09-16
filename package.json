@@ -2,11 +2,14 @@
   "name": "sandjs",
   "version": "0.0.1",
   "description": "**Sunburst Advanced Node Data**",
-  "main": "index.js",
+  "main": "dist/sandjs.mjs",
   "scripts": {
     "clean": "rimraf dist",
     "build": "npm run clean && rollup -c",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "clean:test": "rimraf dist-tests",
+    "test:build": "npm run clean:test && tsc --project tsconfig.test.json",
+    "test": "npm run test:build && node --test dist-tests/tests/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -27,5 +30,16 @@
     "rollup-plugin-copy": "^3.5.0",
     "tslib": "^2.8.1",
     "typescript": "^5.9.2"
-  }
+  },
+  "module": "dist/sandjs.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/sandjs.mjs",
+      "default": "./dist/sandjs.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ]
 }
