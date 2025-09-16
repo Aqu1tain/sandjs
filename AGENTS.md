@@ -14,3 +14,6 @@ Adopt Vitest (preferred) or Jest for unit coverage. Place specs beside the code 
 
 ## Commit & Pull Request Guidelines
 The history follows Conventional Commits (`feat:`, `fix:`, `chore:`). Keep commits focused and include migration notes in the body when APIs change. Pull requests require: a clear summary, linked GitHub issue, testing notes, and screenshots or GIFs for visual updates. Request review before merging, wait for CI (once added), and never publish new versions without maintainer approval.
+
+## After
+When you've finished with your modifications, always suggest a short commit name for these modifications to the user.
