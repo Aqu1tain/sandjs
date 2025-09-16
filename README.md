@@ -1,5 +1,12 @@
+<div align="center">
+
 # 🏝️ Sand.js
 **Sunburst Advanced Node Data**
+
+[![npm version](https://img.shields.io/npm/v/@akitain/sandjs.svg)](https://www.npmjs.com/package/@akitain/sandjs)
+[![GitHub stars](https://img.shields.io/github/stars/aqu1tain/sandjs.svg?style=social&label=Star)](https://github.com/aQu1tain/sandjs)
+
+</div>
 
 ---
 
