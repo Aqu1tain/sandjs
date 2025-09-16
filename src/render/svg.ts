@@ -3,6 +3,7 @@ import { LayoutArc, SunburstConfig } from '../types/index.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ZERO_TOLERANCE = 1e-6;
+const TAU = Math.PI * 2;
 
 export interface TooltipOptions {
   formatter?: (arc: LayoutArc) => string;
@@ -266,9 +267,46 @@ function describeArcPath(arc: LayoutArc, cx: number, cy: number): string | null 
     return null;
   }
 
+  const fullCircle = span >= TAU - ZERO_TOLERANCE;
+
   const outerStart = polarToCartesian(cx, cy, arc.y1, arc.x0);
   const outerEnd = polarToCartesian(cx, cy, arc.y1, arc.x1);
   const largeArc = span > Math.PI ? 1 : 0;
+
+  if (fullCircle && arc.y0 <= ZERO_TOLERANCE) {
+    const outerRadius = arc.y1;
+    const start = { x: cx + outerRadius, y: cy };
+    const mid = { x: cx - outerRadius, y: cy };
+    return [
+      `M ${start.x} ${start.y}`,
+      `A ${outerRadius} ${outerRadius} 0 1 1 ${mid.x} ${mid.y}`,
+      `A ${outerRadius} ${outerRadius} 0 1 1 ${start.x} ${start.y}`,
+      'Z',
+    ].join(' ');
+  }
+
+  if (fullCircle) {
+    const outerRadius = arc.y1;
+    const innerRadius = arc.y0;
+    const outerStartPoint = { x: cx + outerRadius, y: cy };
+    const outerMidPoint = { x: cx - outerRadius, y: cy };
+    const parts = [
+      `M ${outerStartPoint.x} ${outerStartPoint.y}`,
+      `A ${outerRadius} ${outerRadius} 0 1 1 ${outerMidPoint.x} ${outerMidPoint.y}`,
+      `A ${outerRadius} ${outerRadius} 0 1 1 ${outerStartPoint.x} ${outerStartPoint.y}`,
+    ];
+    if (innerRadius > ZERO_TOLERANCE) {
+      const innerStartPoint = { x: cx + innerRadius, y: cy };
+      const innerMidPoint = { x: cx - innerRadius, y: cy };
+      parts.push(
+        `M ${innerStartPoint.x} ${innerStartPoint.y}`,
+        `A ${innerRadius} ${innerRadius} 0 1 0 ${innerMidPoint.x} ${innerMidPoint.y}`,
+        `A ${innerRadius} ${innerRadius} 0 1 0 ${innerStartPoint.x} ${innerStartPoint.y}`,
+      );
+    }
+    parts.push('Z');
+    return parts.join(' ');
+  }
 
   if (arc.y0 <= ZERO_TOLERANCE) {
     return [
