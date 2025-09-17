@@ -337,6 +337,7 @@ function createArc(params: {
     y1: unitToRadius(y1Units),
     depth,
     key: node.input.key,
+    value: node.value,
     percentage,
   };
   return { arc, startAngle: x0, span };

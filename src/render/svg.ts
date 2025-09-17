@@ -177,8 +177,16 @@ function createTooltipRuntime(
   const formatter =
     typeof options.formatter === 'function'
       ? options.formatter
-      : (arc: LayoutArc) =>
-          arc.data.tooltip ?? `${arc.data.name} · ${(arc.percentage * 100).toFixed(1)}%`;
+      : (arc: LayoutArc) => {
+          if (typeof arc.data.tooltip === 'string' && arc.data.tooltip.length > 0) {
+            return arc.data.tooltip;
+          }
+          const formattedValue = Number.isFinite(arc.value)
+            ? arc.value.toLocaleString()
+            : '—';
+          const formattedPercentage = (arc.percentage * 100).toFixed(1);
+          return `${arc.data.name} · ${formattedValue} · ${formattedPercentage}%`;
+        };
 
   const position = (event: PointerEvent) => {
     const offsetY = 8;

@@ -39,6 +39,8 @@
 
   const selectionEl = document.getElementById('selection');
   const defaultMessage = 'Hover an arc to preview details, click to pin.';
+  const formatValue = (value) => (Number.isFinite(value) ? value.toLocaleString() : '—');
+
   const setSelection = (msg, cls='') => {
     selectionEl.className = `selection ${cls}`.trim();
     selectionEl.textContent = msg;
@@ -91,7 +93,11 @@
       config,
       classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
       decoratePath(path, arc) {
-        path.setAttribute('aria-label', `${arc.data.name}: ${(arc.percentage * 100).toFixed(1)}%`);
+        const labelValue = formatValue(arc.value);
+        path.setAttribute(
+          'aria-label',
+          `${arc.data.name}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
+        );
         // prefer explicit node color; otherwise color by key/name
         const explicit = arc.data.color;
         const k = arc.key || arc.data.key || arc.data.name;
@@ -105,12 +111,16 @@
         } else if (!state.pinnedPath) {
           path.setAttribute('data-state', 'hover');
         }
-        setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`);
+        setSelection(
+          `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+        );
       },
       onArcMove:  ({ arc, path }) => {
         if (!state.pinnedPath || state.pinnedPath === path) {
           path.setAttribute('data-state', state.pinnedPath === path ? 'pinned' : 'hover');
-          setSelection(`Preview: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`);
+          setSelection(
+            `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+          );
         }
       },
       onArcLeave: ({ path }) => {
@@ -130,7 +140,9 @@
         }
         clearHover();
         setPinned(path);
-        setSelection(`Pinned: ${arc.data.name} · ${(arc.percentage*100).toFixed(1)}%`);
+        setSelection(
+          `Pinned: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+        );
       }
     });
 

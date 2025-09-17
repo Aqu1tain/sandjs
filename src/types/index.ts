@@ -44,5 +44,6 @@ export interface LayoutArc {
   y1: number;
   depth: number;
   key?: string;
+  value: number;
   percentage: number;
 }
