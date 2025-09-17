@@ -16,7 +16,7 @@
     "verify": "npm run test && npm run build",
     "clean:docs": "rimraf temp docs/api",
     "docs:extract": "api-extractor run --local",
-    "docs:build": "npm run build && npm run clean:docs && npm run docs:extract && api-documenter markdown --input-folder temp --output-folder docs/api"
+    "docs:build": "npm run build && npm run clean:docs && npm run docs:extract && api-documenter markdown --input-folder temp --output-folder docs/api && node scripts/postprocess-docs.mjs"
   },
   "repository": {
     "type": "git",
