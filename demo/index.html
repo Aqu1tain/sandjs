@@ -14,9 +14,16 @@
     header { text-align: center; }
     svg { max-width: min(480px, 90vw); max-height: min(480px, 90vw); width: 100%; height: auto; display: block; }
     figcaption { margin-top: 1rem; font-size: 0.9rem; color: #cbd5f5; }
-    .sand-arc { stroke: #0f172a; stroke-width: 1; transition: opacity 120ms ease-in-out; cursor: pointer; }
-    .sand-arc[data-state="hover"] { opacity: 0.7; }
-    .sand-arc[data-state="pinned"] { opacity: 0.9; stroke-width: 2; stroke: #f1f5f9; }
+    .sand-arc {
+      stroke: #0f172a;
+      stroke-width: 1;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: opacity 120ms ease-in-out, stroke-width 120ms ease-in-out, stroke 120ms ease-in-out;
+      cursor: pointer;
+    }
+    .sand-arc.is-hover { opacity: 0.7; stroke-width: 1.5; stroke: #e2e8f0; }
+    .sand-arc.is-pinned { opacity: 0.95; stroke-width: 2.5; stroke: #f1f5f9; }
     .selection { font-size: 0.95rem; color: #e0f2fe; text-align: center; min-height: 1.4rem; }
     .breadcrumbs { font-size: 0.85rem; color: #cbd5f5; text-align: center; min-height: 1.2rem; letter-spacing: 0.01em; }
     .error { color:#fecaca }
@@ -65,27 +72,52 @@
   };
 
   const state = {
-    pinnedPath: null,
+    pinned: null,
   };
 
-  const clearHover = () => {
-    document.querySelectorAll('.sand-arc[data-state="hover"]').forEach((el) => {
-      if (el !== state.pinnedPath) {
-        el.removeAttribute('data-state');
-      }
-    });
+  const clearHovers = () => {
+    document.querySelectorAll('.sand-arc.is-hover').forEach((el) => el.classList.remove('is-hover'));
   };
 
-  const setPinned = (path) => {
-    if (state.pinnedPath && state.pinnedPath !== path) {
-      state.pinnedPath.removeAttribute('data-state');
+  const applyHover = (path) => {
+    if (state.pinned?.path === path) {
+      return;
     }
-    if (state.pinnedPath === path) {
-      state.pinnedPath = null;
-    } else {
-      state.pinnedPath = path;
-      path.setAttribute('data-state', 'pinned');
+    path.classList.add('is-hover');
+  };
+
+  const showPinnedInfo = () => {
+    if (!state.pinned) {
+      setSelection(defaultMessage);
+      setBreadcrumbs(defaultBreadcrumbs);
+      return;
     }
+    const { arc } = state.pinned;
+    setSelection(
+      `Pinned: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+    );
+    setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
+  };
+
+  const togglePinned = (path, arc) => {
+    if (state.pinned?.path === path) {
+      state.pinned.path.classList.remove('is-pinned');
+      state.pinned = null;
+      clearHovers();
+      setSelection(defaultMessage);
+      setBreadcrumbs(defaultBreadcrumbs);
+      return;
+    }
+
+    if (state.pinned) {
+      state.pinned.path.classList.remove('is-pinned');
+    }
+
+    clearHovers();
+    path.classList.remove('is-hover');
+    path.classList.add('is-pinned');
+    state.pinned = { path, arc };
+    showPinnedInfo();
   };
 
   // load and render
@@ -115,48 +147,33 @@
       },
       tooltip: true,
       onArcEnter: ({ arc, path }) => {
-        if (state.pinnedPath && state.pinnedPath !== path) {
-          path.setAttribute('data-state', 'hover');
-        } else if (!state.pinnedPath) {
-          path.setAttribute('data-state', 'hover');
-        }
+        applyHover(path);
         setSelection(
           `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
         setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
       },
-      onArcMove:  ({ arc, path }) => {
-        if (!state.pinnedPath || state.pinnedPath === path) {
-          path.setAttribute('data-state', state.pinnedPath === path ? 'pinned' : 'hover');
-          setSelection(
-            `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-          );
-          setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
-        }
-      },
-      onArcLeave: ({ path }) => {
-        if (state.pinnedPath !== path) {
-          path.removeAttribute('data-state');
-        }
-        if (!state.pinnedPath) {
-          setSelection(defaultMessage);
-          setBreadcrumbs(defaultBreadcrumbs);
-        }
-      },
-      onArcClick: ({ arc, path }) => {
-        if (state.pinnedPath === path) {
-          setPinned(path);
-          path.removeAttribute('data-state');
-          setSelection(defaultMessage);
-          setBreadcrumbs(defaultBreadcrumbs);
-          return;
-        }
-        clearHover();
-        setPinned(path);
+      onArcMove: ({ arc, path }) => {
+        applyHover(path);
         setSelection(
-          `Pinned: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+          `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
         setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
+      },
+      onArcLeave: ({ path }) => {
+        if (!state.pinned || state.pinned.path !== path) {
+          path.classList.remove('is-hover');
+        }
+        if (state.pinned) {
+          showPinnedInfo();
+        } else {
+          setSelection(defaultMessage);
+          setBreadcrumbs(defaultBreadcrumbs);
+        }
+      },
+      onArcClick: ({ arc, path, event }) => {
+        event.preventDefault();
+        togglePinned(path, arc);
       }
     });
 
