@@ -86,7 +86,6 @@ out
 dist
 dist-tests
 temp
-docs/api
 
 # Gatsby files
 .cache/
