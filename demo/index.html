@@ -115,6 +115,10 @@
 
     clearHovers();
     path.classList.remove('is-hover');
+    // Move the pinned arc to the end of the SVG so the white stroke sits above neighbors.
+    if (path.parentNode) {
+      path.parentNode.appendChild(path);
+    }
     path.classList.add('is-pinned');
     state.pinned = { path, arc };
     showPinnedInfo();
