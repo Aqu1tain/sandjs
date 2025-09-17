@@ -23,6 +23,7 @@
       cursor: pointer;
     }
     .sand-arc.is-hover { opacity: 0.7; stroke-width: 1.5; stroke: #e2e8f0; }
+    .sand-arc.is-related { opacity: 0.55; stroke-width: 1.5; stroke: #94a3b8; }
     .sand-arc.is-pinned { opacity: 0.95; stroke-width: 2.5; stroke: #f1f5f9; }
     .selection { font-size: 0.95rem; color: #e0f2fe; text-align: center; min-height: 1.4rem; }
     .breadcrumbs { font-size: 0.85rem; color: #cbd5f5; text-align: center; min-height: 1.2rem; letter-spacing: 0.01em; }
@@ -74,16 +75,70 @@
   const state = {
     pinned: null,
   };
+  const arcsByKey = new Map();
+  let hoverKey = null;
+
+  const getArcKey = (arc) => arc.key || arc.data.key || null;
+
+  const registerArc = (path, arc) => {
+    const key = getArcKey(arc);
+    if (!key) {
+      return;
+    }
+    path.dataset.key = key;
+    if (!arcsByKey.has(key)) {
+      arcsByKey.set(key, []);
+    }
+    arcsByKey.get(key).push({ path, arc });
+  };
+
+  const setGroupHighlight = (arcOrKey, active, excludePath) => {
+    const key = typeof arcOrKey === 'string' ? arcOrKey : getArcKey(arcOrKey);
+    if (!key) {
+      return;
+    }
+    const group = arcsByKey.get(key);
+    if (!group) {
+      return;
+    }
+    for (const entry of group) {
+      if (excludePath && active && entry.path === excludePath) {
+        continue;
+      }
+      entry.path.classList.toggle('is-related', active);
+    }
+  };
+
+  const clearRelatedHighlights = () => {
+    document
+      .querySelectorAll('.sand-arc.is-related')
+      .forEach((el) => el.classList.remove('is-related'));
+  };
 
   const clearHovers = () => {
     document.querySelectorAll('.sand-arc.is-hover').forEach((el) => el.classList.remove('is-hover'));
+    if (hoverKey && (!state.pinned || getArcKey(state.pinned.arc) !== hoverKey)) {
+      setGroupHighlight(hoverKey, false);
+    }
+    hoverKey = null;
   };
 
-  const applyHover = (path) => {
+  const applyHover = (path, arc) => {
     if (state.pinned?.path === path) {
+      hoverKey = null;
       return;
     }
+    const key = getArcKey(arc);
+    if (hoverKey && hoverKey !== key && (!state.pinned || getArcKey(state.pinned.arc) !== hoverKey)) {
+      setGroupHighlight(hoverKey, false);
+    }
     path.classList.add('is-hover');
+    if (key && (!state.pinned || getArcKey(state.pinned.arc) !== key)) {
+      setGroupHighlight(key, true, path);
+      hoverKey = key;
+    } else {
+      hoverKey = null;
+    }
   };
 
   const showPinnedInfo = () => {
@@ -100,7 +155,9 @@
   };
 
   const togglePinned = (path, arc) => {
+    const key = getArcKey(arc);
     if (state.pinned?.path === path) {
+      clearRelatedHighlights();
       state.pinned.path.classList.remove('is-pinned');
       state.pinned = null;
       clearHovers();
@@ -110,7 +167,9 @@
     }
 
     if (state.pinned) {
+      clearRelatedHighlights();
       state.pinned.path.classList.remove('is-pinned');
+      state.pinned = null;
     }
 
     clearHovers();
@@ -121,6 +180,9 @@
     }
     path.classList.add('is-pinned');
     state.pinned = { path, arc };
+    if (key) {
+      setGroupHighlight(key, true, path);
+    }
     showPinnedInfo();
   };
 
@@ -148,25 +210,33 @@
         const k = arc.key || arc.data.key || arc.data.name;
         const fill = explicit || assignColor(k);
         path.setAttribute('fill', fill);
+        registerArc(path, arc);
       },
       tooltip: true,
       onArcEnter: ({ arc, path }) => {
-        applyHover(path);
+        applyHover(path, arc);
         setSelection(
           `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
         setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
       },
       onArcMove: ({ arc, path }) => {
-        applyHover(path);
+        applyHover(path, arc);
         setSelection(
           `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
         setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
       },
-      onArcLeave: ({ path }) => {
+      onArcLeave: ({ arc, path }) => {
+        const key = getArcKey(arc);
         if (!state.pinned || state.pinned.path !== path) {
           path.classList.remove('is-hover');
+        }
+        if (!state.pinned || getArcKey(state.pinned.arc) !== key) {
+          setGroupHighlight(key, false);
+        }
+        if (hoverKey === key) {
+          hoverKey = null;
         }
         if (state.pinned) {
           showPinnedInfo();
