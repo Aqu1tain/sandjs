@@ -19,13 +19,12 @@ The generated Markdown files are not committed yet; inspect and publish them whe
 
 ## Folder Structure
 
-- `docs/api/` – auto-generated reference files (gitignored).
-- `docs/guides/` – add long-form guides and tutorials here (create as needed).
-- `docs/README.md` – this overview.
+- `docs/api/` — generated API reference (gitignored; regenerate via the script above).
+- `docs/guides/` — optional long-form guides and tutorials (create as needed).
+- `docs/README.md` — overview and build instructions.
 
 ## Authoring Notes
 
 - Add TSDoc comments to the source code to control the API reference output. API Documenter understands `@remarks`, `@example`, and other TSDoc tags.
 - Ensure all exported symbols you want documented are part of the `src/index.ts` barrel so they appear in `dist/index.d.ts`.
 - Run `npm run docs:extract` locally if you only need to validate the API report without generating Markdown.
-

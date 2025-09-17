@@ -1,10 +1,25 @@
+/**
+ * Controls how angles are distributed across a layer.
+ *
+ * @public
+ */
 export type AngleMode = 'free' | 'align';
 
+/**
+ * Radial sizing information for the entire sunburst.
+ *
+ * @public
+ */
 export interface SunburstSize {
   radius: number;
   angle?: number;
 }
 
+/**
+ * Immutable tree node definition accepted by the layout.
+ *
+ * @public
+ */
 export interface TreeNodeInput {
   name: string;
   value?: number;
@@ -18,6 +33,11 @@ export interface TreeNodeInput {
   hidden?: boolean;
 }
 
+/**
+ * Configuration for a radial layer in the sunburst.
+ *
+ * @public
+ */
 export interface LayerConfig {
   id: string;
   radialUnits: [number, number];
@@ -30,11 +50,21 @@ export interface LayerConfig {
   tree: TreeNodeInput | TreeNodeInput[];
 }
 
+/**
+ * Top-level configuration accepted by the `layout` and `renderSVG` APIs.
+ *
+ * @public
+ */
 export interface SunburstConfig {
   size: SunburstSize;
   layers: LayerConfig[];
 }
 
+/**
+ * Fully resolved arc emitted by the layout processor.
+ *
+ * @public
+ */
 export interface LayoutArc {
   layerId: string;
   data: TreeNodeInput;

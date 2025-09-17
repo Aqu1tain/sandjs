@@ -5,23 +5,43 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const ZERO_TOLERANCE = 1e-6;
 const TAU = Math.PI * 2;
 
+/**
+ * Configures tooltip behaviour for `renderSVG`.
+ *
+ * @public
+ */
 export interface TooltipOptions {
   formatter?: (arc: LayoutArc) => string;
   container?: HTMLElement | string;
 }
 
+/**
+ * Pointer event payload emitted from arc interaction callbacks.
+ *
+ * @public
+ */
 export interface ArcPointerEventPayload {
   arc: LayoutArc;
   path: SVGPathElement;
   event: PointerEvent;
 }
 
+/**
+ * Click event payload emitted from arc interaction callbacks.
+ *
+ * @public
+ */
 export interface ArcClickEventPayload {
   arc: LayoutArc;
   path: SVGPathElement;
   event: MouseEvent;
 }
 
+/**
+ * Options accepted by the `renderSVG` entry point.
+ *
+ * @public
+ */
 export interface RenderSvgOptions {
   el: SVGElement | string;
   config: SunburstConfig;
@@ -35,6 +55,11 @@ export interface RenderSvgOptions {
   onArcClick?: (payload: ArcClickEventPayload) => void;
 }
 
+/**
+ * Renders the supplied `SunburstConfig` into the target SVG element.
+ *
+ * @public
+ */
 export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
   const { el, config } = options;
   const doc = resolveDocument(options.document);

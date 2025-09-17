@@ -4,6 +4,7 @@ export type {
   LayoutArc,
   LayerConfig,
   SunburstConfig,
+  SunburstSize,
   TreeNodeInput,
   AngleMode,
 } from './types/index.js';

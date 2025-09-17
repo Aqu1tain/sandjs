@@ -18,6 +18,11 @@ type LayerContext = {
 
 const ZERO_TOLERANCE = 1e-6;
 
+/**
+ * Computes the polar coordinates for every visible arc in the provided configuration.
+ *
+ * @public
+ */
 export function layout(config: SunburstConfig): LayoutArc[] {
   if (!config.size || !(config.size.radius > 0)) {
     throw new Error('Sunburst size.radius must be a positive number');
