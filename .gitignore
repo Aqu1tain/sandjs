@@ -85,6 +85,8 @@ out
 .nuxt
 dist
 dist-tests
+temp
+docs/api
 
 # Gatsby files
 .cache/
