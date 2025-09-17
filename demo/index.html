@@ -65,12 +65,13 @@
 
   // simple categorical palette (fallback if node.color not provided)
   const palette = ['#f97316','#facc15','#22d3ee','#a855f7','#4ade80','#fb7185'];
-  const colorByKey = new Map();
+  const colorsById = new Map();
   let idx = 0;
-  const assignColor = (k) => {
-    if (!colorByKey.has(k)) colorByKey.set(k, palette[idx++ % palette.length]);
-    return colorByKey.get(k);
+  const assignColor = (id) => {
+    if (!colorsById.has(id)) colorsById.set(id, palette[idx++ % palette.length]);
+    return colorsById.get(id);
   };
+  const colorIdForArc = (arc) => arc.path.map((node) => node.name).join(' › ');
 
   const state = {
     pinned: null,
@@ -205,10 +206,9 @@
           'aria-label',
           `${formatBreadcrumb(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
         );
-        // prefer explicit node color; otherwise color by key/name
+        // prefer explicit node color; otherwise derive a unique color per hierarchy path
         const explicit = arc.data.color;
-        const k = arc.key || arc.data.key || arc.data.name;
-        const fill = explicit || assignColor(k);
+        const fill = explicit || assignColor(colorIdForArc(arc));
         path.setAttribute('fill', fill);
         registerArc(path, arc);
       },
