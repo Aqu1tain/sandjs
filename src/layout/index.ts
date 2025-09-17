@@ -5,6 +5,7 @@ type NormalizedNode = {
   value: number;
   expandLevels: number;
   children: NormalizedNode[];
+  path: TreeNodeInput[];
 };
 
 type LayerContext = {
@@ -338,6 +339,7 @@ function createArc(params: {
     depth,
     key: node.input.key,
     value: node.value,
+    path: node.path,
     percentage,
   };
   return { arc, startAngle: x0, span };
@@ -376,7 +378,7 @@ function resolveNodeOffset(node: TreeNodeInput, layer: LayerConfig): number {
   return 0;
 }
 
-function normalizeTree(tree: LayerConfig['tree']): NormalizedNode[] {
+function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = []): NormalizedNode[] {
   const nodes = Array.isArray(tree) ? tree : [tree];
   const normalized: NormalizedNode[] = [];
 
@@ -386,7 +388,8 @@ function normalizeTree(tree: LayerConfig['tree']): NormalizedNode[] {
     }
 
     const children = Array.isArray(node.children) ? node.children : [];
-    const normalizedChildren = normalizeTree(children);
+    const path = parentPath.concat(node);
+    const normalizedChildren = normalizeTree(children, path);
     const childrenValue = normalizedChildren.reduce((sum, child) => sum + Math.max(child.value, 0), 0);
 
     const rawValue = typeof node.value === 'number' ? node.value : childrenValue;
@@ -398,6 +401,7 @@ function normalizeTree(tree: LayerConfig['tree']): NormalizedNode[] {
       value,
       expandLevels,
       children: normalizedChildren,
+      path,
     });
   }
 

@@ -18,6 +18,7 @@
     .sand-arc[data-state="hover"] { opacity: 0.7; }
     .sand-arc[data-state="pinned"] { opacity: 0.9; stroke-width: 2; stroke: #f1f5f9; }
     .selection { font-size: 0.95rem; color: #e0f2fe; text-align: center; min-height: 1.4rem; }
+    .breadcrumbs { font-size: 0.85rem; color: #cbd5f5; text-align: center; min-height: 1.2rem; letter-spacing: 0.01em; }
     .error { color:#fecaca }
   </style>
 </head>
@@ -33,17 +34,25 @@
 </figure>
 
 <p id="selection" class="selection">Loading data…</p>
+<p id="breadcrumbs" class="breadcrumbs">Path: —</p>
 
 <script type="module">
   import { renderSVG } from '../dist/sandjs.mjs';
 
   const selectionEl = document.getElementById('selection');
+  const breadcrumbsEl = document.getElementById('breadcrumbs');
   const defaultMessage = 'Hover an arc to preview details, click to pin.';
+  const defaultBreadcrumbs = 'Path: —';
   const formatValue = (value) => (Number.isFinite(value) ? value.toLocaleString() : '—');
+  const formatBreadcrumb = (arc) => arc.path.map((node) => node.name).join(' › ');
 
   const setSelection = (msg, cls='') => {
     selectionEl.className = `selection ${cls}`.trim();
     selectionEl.textContent = msg;
+  };
+
+  const setBreadcrumbs = (msg) => {
+    breadcrumbsEl.textContent = msg;
   };
 
   // simple categorical palette (fallback if node.color not provided)
@@ -96,7 +105,7 @@
         const labelValue = formatValue(arc.value);
         path.setAttribute(
           'aria-label',
-          `${arc.data.name}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
+          `${formatBreadcrumb(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
         );
         // prefer explicit node color; otherwise color by key/name
         const explicit = arc.data.color;
@@ -114,6 +123,7 @@
         setSelection(
           `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
+        setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
       },
       onArcMove:  ({ arc, path }) => {
         if (!state.pinnedPath || state.pinnedPath === path) {
@@ -121,6 +131,7 @@
           setSelection(
             `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
           );
+          setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
         }
       },
       onArcLeave: ({ path }) => {
@@ -129,6 +140,7 @@
         }
         if (!state.pinnedPath) {
           setSelection(defaultMessage);
+          setBreadcrumbs(defaultBreadcrumbs);
         }
       },
       onArcClick: ({ arc, path }) => {
@@ -136,6 +148,7 @@
           setPinned(path);
           path.removeAttribute('data-state');
           setSelection(defaultMessage);
+          setBreadcrumbs(defaultBreadcrumbs);
           return;
         }
         clearHover();
@@ -143,15 +156,18 @@
         setSelection(
           `Pinned: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
+        setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
       }
     });
 
     // optional: expose for debugging in console
     window.chart = chart;
     setSelection(defaultMessage);
+    setBreadcrumbs(defaultBreadcrumbs);
   } catch (err) {
     console.error(err);
     setSelection(`Failed to load demo/data.json: ${err.message}`, 'error');
+    setBreadcrumbs(defaultBreadcrumbs);
   }
 </script>
 </body>
