@@ -26,6 +26,21 @@ type RuntimeSet = {
   breadcrumbs: BreadcrumbRuntime | null;
 };
 
+type ManagedPath = {
+  key: string;
+  element: SVGPathElement;
+  arc: LayoutArc;
+  options: RenderSvgOptions;
+  runtime: RuntimeSet;
+  listeners: {
+    enter: (event: PointerEvent) => void;
+    move: (event: PointerEvent) => void;
+    leave: (event: PointerEvent) => void;
+    click?: (event: MouseEvent) => void;
+  };
+  dispose: () => void;
+};
+
 export function renderSVG(options: RenderSvgOptions): RenderHandle {
   const doc = resolveDocument(options.document);
   const host = resolveHostElement(options.el, doc);
@@ -37,6 +52,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
   };
 
   let runtimes = createRuntimeSet(doc, currentOptions);
+  const pathRegistry = new Map<string, ManagedPath>();
 
   const execute = (opts: RenderSvgOptions, runtime: RuntimeSet): LayoutArc[] => {
     const arcs = layout(opts.config);
@@ -55,79 +71,48 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     runtime.tooltip?.hide();
     runtime.breadcrumbs?.clear();
 
-    for (const arc of arcs) {
+    const usedKeys = new Set<string>();
+
+    for (let index = 0; index < arcs.length; index += 1) {
+      const arc = arcs[index];
       const d = describeArcPath(arc, cx, cy);
       if (!d) {
         continue;
       }
 
-      const path = doc.createElementNS(SVG_NS, 'path');
-      path.setAttribute('d', d);
-      path.setAttribute('fill', arc.data.color ?? 'currentColor');
-      path.setAttribute('data-layer', arc.layerId);
-      path.setAttribute('data-name', arc.data.name);
-      if (arc.key) {
-        path.setAttribute('data-key', arc.key);
+      const key = createArcKey(arc, index);
+      usedKeys.add(key);
+
+      let managed = pathRegistry.get(key);
+      if (!managed) {
+        managed = createManagedPath({
+          key,
+          arc,
+          options: opts,
+          runtime,
+          doc,
+        });
+        pathRegistry.set(key, managed);
       }
 
-      runtime.highlight?.register(arc, path);
+      updateManagedPath(managed, {
+        arc,
+        options: opts,
+        runtime,
+        pathData: d,
+      });
 
-      const classList = ['sand-arc'];
-      const dynamicClass = opts.classForArc?.(arc);
-      if (typeof dynamicClass === 'string' && dynamicClass.trim().length > 0) {
-        classList.push(dynamicClass.trim());
-      } else if (Array.isArray(dynamicClass)) {
-        for (const candidate of dynamicClass) {
-          if (candidate && candidate.trim().length > 0) {
-            classList.push(candidate.trim());
-          }
-        }
-      }
-      path.setAttribute('class', classList.join(' '));
-
-      if (typeof arc.data.tooltip === 'string') {
-        path.setAttribute('data-tooltip', arc.data.tooltip);
-      }
-
-    const wantsPointerTracking = Boolean(
-      runtime.tooltip || runtime.highlight || runtime.breadcrumbs || opts.onArcEnter || opts.onArcMove || opts.onArcLeave,
-    );
-
-    if (wantsPointerTracking) {
-      const handleEnter = (event: PointerEvent) => {
-        runtime.tooltip?.show(event, arc);
-        runtime.highlight?.pointerEnter(arc, path);
-        runtime.breadcrumbs?.show(arc);
-        opts.onArcEnter?.({ arc, path, event });
-      };
-      const handleMove = (event: PointerEvent) => {
-        runtime.tooltip?.move(event);
-        runtime.highlight?.pointerMove(arc, path);
-        opts.onArcMove?.({ arc, path, event });
-      };
-      const handleLeave = (event: PointerEvent) => {
-        runtime.tooltip?.hide();
-        runtime.highlight?.pointerLeave(arc, path);
-        runtime.breadcrumbs?.clear();
-        opts.onArcLeave?.({ arc, path, event });
-      };
-        path.addEventListener('pointerenter', handleEnter);
-        path.addEventListener('pointermove', handleMove);
-        path.addEventListener('pointerleave', handleLeave);
-        path.addEventListener('pointercancel', handleLeave);
-      }
-
-    const wantsClick = Boolean(opts.onArcClick || runtime.highlight?.handlesClick);
-    if (wantsClick) {
-      const handleClick = (event: MouseEvent) => {
-        runtime.highlight?.handleClick?.(arc, path, event);
-        opts.onArcClick?.({ arc, path, event });
-      };
-      path.addEventListener('click', handleClick);
+      host.appendChild(managed.element);
     }
 
-      opts.decoratePath?.(path, arc);
-      host.appendChild(path);
+    for (const [key, managed] of pathRegistry) {
+      if (!usedKeys.has(key)) {
+        managed.dispose();
+        if (managed.element.parentNode === host) {
+          host.removeChild(managed.element);
+        }
+        pathRegistry.delete(key);
+      }
     }
 
     return arcs;
@@ -201,6 +186,134 @@ function isSunburstConfig(value: unknown): value is SunburstConfig {
   }
   const record = value as Record<string, unknown>;
   return 'size' in record && 'layers' in record;
+}
+
+function createManagedPath(params: {
+  key: string;
+  arc: LayoutArc;
+  options: RenderSvgOptions;
+  runtime: RuntimeSet;
+  doc: Document;
+}): ManagedPath {
+  const { key, arc, options, runtime, doc } = params;
+  const element = doc.createElementNS(SVG_NS, 'path');
+
+  const managed: ManagedPath = {
+    key,
+    element,
+    arc,
+    options,
+    runtime,
+    listeners: {} as ManagedPath['listeners'],
+    dispose: () => {
+      element.removeEventListener('pointerenter', managed.listeners.enter);
+      element.removeEventListener('pointermove', managed.listeners.move);
+      element.removeEventListener('pointerleave', managed.listeners.leave);
+      element.removeEventListener('pointercancel', managed.listeners.leave);
+      if (managed.listeners.click) {
+        element.removeEventListener('click', managed.listeners.click);
+      }
+    },
+  };
+
+  const handleEnter = (event: PointerEvent) => {
+    const currentArc = managed.arc;
+    managed.runtime.tooltip?.show(event, currentArc);
+    managed.runtime.highlight?.pointerEnter(currentArc, element);
+    managed.runtime.breadcrumbs?.show(currentArc);
+    managed.options.onArcEnter?.({ arc: currentArc, path: element, event });
+  };
+
+  const handleMove = (event: PointerEvent) => {
+    const currentArc = managed.arc;
+    managed.runtime.tooltip?.move(event);
+    managed.runtime.highlight?.pointerMove(currentArc, element);
+    managed.options.onArcMove?.({ arc: currentArc, path: element, event });
+  };
+
+  const handleLeave = (event: PointerEvent) => {
+    const currentArc = managed.arc;
+    managed.runtime.tooltip?.hide();
+    managed.runtime.highlight?.pointerLeave(currentArc, element);
+    managed.runtime.breadcrumbs?.clear();
+    managed.options.onArcLeave?.({ arc: currentArc, path: element, event });
+  };
+
+  const handleClick = (event: MouseEvent) => {
+    const currentArc = managed.arc;
+    managed.runtime.highlight?.handleClick?.(currentArc, element, event);
+    managed.options.onArcClick?.({ arc: currentArc, path: element, event });
+  };
+
+  element.addEventListener('pointerenter', handleEnter);
+  element.addEventListener('pointermove', handleMove);
+  element.addEventListener('pointerleave', handleLeave);
+  element.addEventListener('pointercancel', handleLeave);
+  element.addEventListener('click', handleClick);
+
+  managed.listeners = {
+    enter: handleEnter,
+    move: handleMove,
+    leave: handleLeave,
+    click: handleClick,
+  };
+
+  return managed;
+}
+
+function updateManagedPath(
+  managed: ManagedPath,
+  params: { arc: LayoutArc; options: RenderSvgOptions; runtime: RuntimeSet; pathData: string },
+): void {
+  const { arc, options, runtime, pathData } = params;
+  managed.arc = arc;
+  managed.options = options;
+  managed.runtime = runtime;
+
+  const element = managed.element;
+  element.setAttribute('d', pathData);
+  element.setAttribute('fill', arc.data.color ?? 'currentColor');
+  element.setAttribute('data-layer', arc.layerId);
+  element.setAttribute('data-name', arc.data.name);
+  if (arc.key) {
+    element.setAttribute('data-key', arc.key);
+  } else {
+    element.removeAttribute('data-key');
+  }
+
+  if (typeof arc.data.tooltip === 'string') {
+    element.setAttribute('data-tooltip', arc.data.tooltip);
+  } else {
+    element.removeAttribute('data-tooltip');
+  }
+
+  const classList = ['sand-arc'];
+  const dynamicClass = options.classForArc?.(arc);
+  if (typeof dynamicClass === 'string' && dynamicClass.trim().length > 0) {
+    classList.push(dynamicClass.trim());
+  } else if (Array.isArray(dynamicClass)) {
+    for (const candidate of dynamicClass) {
+      if (candidate && candidate.trim().length > 0) {
+        classList.push(candidate.trim());
+      }
+    }
+  }
+  element.setAttribute('class', classList.join(' '));
+
+  options.decoratePath?.(element, arc);
+  runtime.highlight?.register(arc, element);
+}
+
+function createArcKey(arc: LayoutArc, index: number): string {
+  if (typeof arc.key === 'string' && arc.key.length > 0) {
+    return `${arc.layerId}#key:${arc.key}`;
+  }
+  const dataKey = arc.data?.key;
+  if (typeof dataKey === 'string' && dataKey.length > 0) {
+    return `${arc.layerId}#data:${dataKey}:${arc.depth}`;
+  }
+  const breadcrumb = arc.path.map((node) => node?.name ?? '').join('/');
+  return `${arc.layerId}:${arc.depth}:${breadcrumb}:${index}`;
 }
 
 function createRuntimeSet(doc: Document, options: RenderSvgOptions): RuntimeSet {

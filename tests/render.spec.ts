@@ -26,6 +26,13 @@ class StubElement {
     }
   }
 
+  removeAttribute(name: string) {
+    this.attributes.delete(name);
+    if (name.startsWith('data-')) {
+      delete this.dataset[name.slice(5)];
+    }
+  }
+
   appendChild<T extends StubElement>(child: T): T {
     child.parentNode = this;
     this.children.push(child);
@@ -44,6 +51,10 @@ class StubElement {
   }
 
   addEventListener(): void {
+    /* no-op for tests */
+  }
+
+  removeEventListener(): void {
     /* no-op for tests */
   }
 
