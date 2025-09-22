@@ -251,61 +251,65 @@
       setSelection(defaultMessage);
       setBreadcrumbs(defaultBreadcrumbs);
 
-      chart = renderSVG({
-        el: '#sunburst',
-        config: nextConfig,
-        classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
-        decoratePath(path, arc) {
-          const labelValue = formatValue(arc.value);
-          path.setAttribute(
-            'aria-label',
-            `${breadcrumbPath(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
-          );
-          const explicit = arc.data.color;
-          const fill = explicit || assignColor(colorIdForArc(arc));
-          path.setAttribute('fill', fill);
-          if (arc.data.collapsed) {
-            path.classList.add('is-collapsed');
-            path.setAttribute('data-collapsed', 'true');
+      if (!chart) {
+        chart = renderSVG({
+          el: '#sunburst',
+          config: nextConfig,
+          classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
+          decoratePath(path, arc) {
+            const labelValue = formatValue(arc.value);
+            path.setAttribute(
+              'aria-label',
+              `${breadcrumbPath(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
+            );
+            const explicit = arc.data.color;
+            const fill = explicit || assignColor(colorIdForArc(arc));
+            path.setAttribute('fill', fill);
+            if (arc.data.collapsed) {
+              path.classList.add('is-collapsed');
+              path.setAttribute('data-collapsed', 'true');
+            }
+          },
+          tooltip: true,
+          highlightByKey: {
+            className: 'is-related',
+            pinOnClick: true,
+            pinClassName: 'is-pinned',
+            onPinChange: handlePinChange,
+          },
+          breadcrumbs: {
+            container: breadcrumbsEl,
+            formatter: breadcrumbLabel,
+            emptyLabel: defaultBreadcrumbs,
+          },
+          onArcEnter: ({ arc, path }) => {
+            applyHover(path);
+            setSelection(
+              `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+            );
+          },
+          onArcMove: ({ arc, path }) => {
+            applyHover(path);
+            setSelection(
+              `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+            );
+          },
+          onArcLeave: ({ path }) => {
+            clearHover(path);
+            if (state.pinned) {
+              showPinnedInfo();
+            } else {
+              setSelection(defaultMessage);
+              setBreadcrumbs(defaultBreadcrumbs);
+            }
+          },
+          onArcClick: ({ event }) => {
+            event.preventDefault();
           }
-        },
-        tooltip: true,
-        highlightByKey: {
-          className: 'is-related',
-          pinOnClick: true,
-          pinClassName: 'is-pinned',
-          onPinChange: handlePinChange,
-        },
-        breadcrumbs: {
-          container: breadcrumbsEl,
-          formatter: breadcrumbLabel,
-          emptyLabel: defaultBreadcrumbs,
-        },
-        onArcEnter: ({ arc, path }) => {
-          applyHover(path);
-          setSelection(
-            `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-          );
-        },
-        onArcMove: ({ arc, path }) => {
-          applyHover(path);
-          setSelection(
-            `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-          );
-        },
-        onArcLeave: ({ path }) => {
-          clearHover(path);
-          if (state.pinned) {
-            showPinnedInfo();
-          } else {
-            setSelection(defaultMessage);
-            setBreadcrumbs(defaultBreadcrumbs);
-          }
-        },
-        onArcClick: ({ event }) => {
-          event.preventDefault();
-        }
-      });
+        });
+      } else {
+        chart.update({ config: nextConfig });
+      }
 
       window.chart = chart;
     };

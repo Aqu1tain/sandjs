@@ -127,11 +127,19 @@ Render a sunburst in the browser:
     ]
   };
 
-  renderSVG({
+  const chart = renderSVG({
     el: '#chart',
     config,
     tooltip: true,
     onArcClick: ({ arc }) => console.log('Pinned', arc.data.name)
+  });
+
+  // Update the chart later without re-attaching listeners
+  chart.update({
+    config: {
+      ...config,
+      size: { radius: 180 },
+    }
   });
 </script>
 ```
@@ -148,6 +156,7 @@ The demo under `demo/` shows relative/absolute offsets, tooltips, and selection 
 - **Breadcrumbs**: pass `breadcrumbs: true` to auto-render a trail or supply `{ container, formatter, separator }`; `formatArcBreadcrumb(arc)` helps generate custom labels.
 - **Highlights**: enable `highlightByKey: true` (or supply options) to add a shared class for arcs with the same `key`, and optionally toggle pinned highlights via `pinOnClick`.
 - **Collapsing**: set `collapsed: true` on a node to keep its descendants hidden from the rendered layout while preserving its aggregated value.
+- **Updates**: keep the returned handle from `renderSVG` and call `chart.update({ config: nextConfig })` (or pass a full config) to redraw without re-binding listeners.
 
 See `src/types/index.ts` for the full TypeScript contracts.
 

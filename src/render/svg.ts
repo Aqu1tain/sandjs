@@ -84,110 +84,177 @@ export interface RenderSvgOptions {
 }
 
 /**
+ * Result of calling {@link renderSVG}. Acts like an array of arcs with helper methods.
+ *
+ * @public
+ */
+export interface RenderHandle extends Array<LayoutArc> {
+  update(input: RenderSvgUpdateInput): RenderHandle;
+  destroy(): void;
+  getOptions(): RenderSvgOptions;
+}
+
+/**
+ * Accepted input when updating an existing SVG render.
+ *
+ * @public
+ */
+export type RenderSvgUpdateInput = SunburstConfig | RenderSvgUpdateOptions;
+
+/**
+ * Partial options accepted when updating an existing render.
+ *
+ * @public
+ */
+export interface RenderSvgUpdateOptions extends Partial<Omit<RenderSvgOptions, 'el'>> {
+  config?: SunburstConfig;
+}
+
+/**
  * Renders the supplied `SunburstConfig` into the target SVG element.
  *
  * @public
  */
-export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
-  const { el, config } = options;
+export function renderSVG(options: RenderSvgOptions): RenderHandle {
   const doc = resolveDocument(options.document);
-  const host = resolveHostElement(el, doc);
+  const host = resolveHostElement(options.el, doc);
 
-  const arcs = layout(config);
-  const diameter = config.size.radius * 2;
-  const cx = config.size.radius;
-  const cy = config.size.radius;
+  let currentOptions: RenderSvgOptions = {
+    ...options,
+    el: host,
+    document: doc,
+  };
 
-  host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
-  host.setAttribute('width', `${diameter}`);
-  host.setAttribute('height', `${diameter}`);
+  const execute = (opts: RenderSvgOptions): LayoutArc[] => {
+    const arcs = layout(opts.config);
+    const diameter = opts.config.size.radius * 2;
+    const cx = opts.config.size.radius;
+    const cy = opts.config.size.radius;
 
-  while (host.firstChild) {
-    host.removeChild(host.firstChild);
-  }
+    host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
+    host.setAttribute('width', `${diameter}`);
+    host.setAttribute('height', `${diameter}`);
 
-  const tooltip = createTooltipRuntime(doc, options.tooltip);
-  tooltip?.hide();
-  const highlight = createHighlightRuntime(options.highlightByKey);
-  const breadcrumbs = createBreadcrumbRuntime(doc, options.breadcrumbs);
-  breadcrumbs?.clear();
-
-  for (const arc of arcs) {
-    const d = describeArcPath(arc, cx, cy);
-    if (!d) {
-      continue;
+    while (host.firstChild) {
+      host.removeChild(host.firstChild as ChildNode);
     }
 
-    const path = doc.createElementNS(SVG_NS, 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('fill', arc.data.color ?? 'currentColor');
-    path.setAttribute('data-layer', arc.layerId);
-    path.setAttribute('data-name', arc.data.name);
-    if (arc.key) {
-      path.setAttribute('data-key', arc.key);
-    }
+    const tooltip = createTooltipRuntime(doc, opts.tooltip);
+    tooltip?.hide();
+    const highlight = createHighlightRuntime(opts.highlightByKey);
+    const breadcrumbs = createBreadcrumbRuntime(doc, opts.breadcrumbs);
+    breadcrumbs?.clear();
 
-    highlight?.register(arc, path);
+    for (const arc of arcs) {
+      const d = describeArcPath(arc, cx, cy);
+      if (!d) {
+        continue;
+      }
 
-    const classList = ['sand-arc'];
-    const dynamicClass = options.classForArc?.(arc);
-    if (typeof dynamicClass === 'string' && dynamicClass.trim().length > 0) {
-      classList.push(dynamicClass.trim());
-    } else if (Array.isArray(dynamicClass)) {
-      for (const candidate of dynamicClass) {
-        if (candidate && candidate.trim().length > 0) {
-          classList.push(candidate.trim());
+      const path = doc.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', arc.data.color ?? 'currentColor');
+      path.setAttribute('data-layer', arc.layerId);
+      path.setAttribute('data-name', arc.data.name);
+      if (arc.key) {
+        path.setAttribute('data-key', arc.key);
+      }
+
+      highlight?.register(arc, path);
+
+      const classList = ['sand-arc'];
+      const dynamicClass = opts.classForArc?.(arc);
+      if (typeof dynamicClass === 'string' && dynamicClass.trim().length > 0) {
+        classList.push(dynamicClass.trim());
+      } else if (Array.isArray(dynamicClass)) {
+        for (const candidate of dynamicClass) {
+          if (candidate && candidate.trim().length > 0) {
+            classList.push(candidate.trim());
+          }
         }
       }
+      path.setAttribute('class', classList.join(' '));
+
+      if (typeof arc.data.tooltip === 'string') {
+        path.setAttribute('data-tooltip', arc.data.tooltip);
+      }
+
+      const wantsPointerTracking = Boolean(
+        tooltip || highlight || breadcrumbs || opts.onArcEnter || opts.onArcMove || opts.onArcLeave,
+      );
+
+      if (wantsPointerTracking) {
+        const handleEnter = (event: PointerEvent) => {
+          tooltip?.show(event, arc);
+          highlight?.pointerEnter(arc, path);
+          breadcrumbs?.show(arc);
+          opts.onArcEnter?.({ arc, path, event });
+        };
+        const handleMove = (event: PointerEvent) => {
+          tooltip?.move(event);
+          highlight?.pointerMove(arc, path);
+          opts.onArcMove?.({ arc, path, event });
+        };
+        const handleLeave = (event: PointerEvent) => {
+          tooltip?.hide();
+          highlight?.pointerLeave(arc, path);
+          breadcrumbs?.clear();
+          opts.onArcLeave?.({ arc, path, event });
+        };
+        path.addEventListener('pointerenter', handleEnter);
+        path.addEventListener('pointermove', handleMove);
+        path.addEventListener('pointerleave', handleLeave);
+        path.addEventListener('pointercancel', handleLeave);
+      }
+
+      const wantsClick = Boolean(opts.onArcClick || highlight?.handlesClick);
+      if (wantsClick) {
+        const handleClick = (event: MouseEvent) => {
+          highlight?.handleClick?.(arc, path, event);
+          opts.onArcClick?.({ arc, path, event });
+        };
+        path.addEventListener('click', handleClick);
+      }
+
+      opts.decoratePath?.(path, arc);
+      host.appendChild(path);
     }
-    path.setAttribute('class', classList.join(' '));
 
-    if (typeof arc.data.tooltip === 'string') {
-      path.setAttribute('data-tooltip', arc.data.tooltip);
-    }
+    return arcs;
+  };
 
-    const wantsPointerTracking = Boolean(
-      tooltip || highlight || breadcrumbs || options.onArcEnter || options.onArcMove || options.onArcLeave,
-    );
+  const initialArcs = execute(currentOptions);
+  const handle = initialArcs as unknown as RenderHandle;
 
-    if (wantsPointerTracking) {
-      const handleEnter = (event: PointerEvent) => {
-        tooltip?.show(event, arc);
-        highlight?.pointerEnter(arc, path);
-        breadcrumbs?.show(arc);
-        options.onArcEnter?.({ arc, path, event });
-      };
-      const handleMove = (event: PointerEvent) => {
-        tooltip?.move(event);
-        highlight?.pointerMove(arc, path);
-        options.onArcMove?.({ arc, path, event });
-      };
-      const handleLeave = (event: PointerEvent) => {
-        tooltip?.hide();
-        highlight?.pointerLeave(arc, path);
-        breadcrumbs?.clear();
-        options.onArcLeave?.({ arc, path, event });
-      };
-      path.addEventListener('pointerenter', handleEnter);
-      path.addEventListener('pointermove', handleMove);
-      path.addEventListener('pointerleave', handleLeave);
-      path.addEventListener('pointercancel', handleLeave);
-    }
+  Object.defineProperties(handle, {
+    update: {
+      enumerable: false,
+      value(input: RenderSvgUpdateInput) {
+        currentOptions = normalizeUpdateOptions(currentOptions, input, host, doc);
+        const nextArcs = execute(currentOptions);
+        handle.length = 0;
+        handle.push(...nextArcs);
+        return handle;
+      },
+    },
+    destroy: {
+      enumerable: false,
+      value() {
+        while (host.firstChild) {
+          host.removeChild(host.firstChild as ChildNode);
+        }
+        handle.length = 0;
+      },
+    },
+    getOptions: {
+      enumerable: false,
+      value() {
+        return { ...currentOptions };
+      },
+    },
+  });
 
-    const wantsClick = Boolean(options.onArcClick || highlight?.handlesClick);
-    if (wantsClick) {
-      const handleClick = (event: MouseEvent) => {
-        highlight?.handleClick?.(arc, path, event);
-        options.onArcClick?.({ arc, path, event });
-      };
-      path.addEventListener('click', handleClick);
-    }
-
-    options.decoratePath?.(path, arc);
-    host.appendChild(path);
-  }
-
-  return arcs;
+  return handle;
 }
 
 function resolveDocument(explicit: Document | undefined): Document {
@@ -275,6 +342,38 @@ function applyDefaultBreadcrumbStyles(element: HTMLElement): void {
   if (!style.color) style.color = 'inherit';
   if (!style.minHeight) style.minHeight = '1.2em';
   if (!style.letterSpacing) style.letterSpacing = '0.01em';
+}
+
+function normalizeUpdateOptions(
+  current: RenderSvgOptions,
+  input: RenderSvgUpdateInput,
+  host: SVGElement,
+  doc: Document,
+): RenderSvgOptions {
+  if (isSunburstConfig(input)) {
+    return {
+      ...current,
+      config: input,
+      el: host,
+      document: doc,
+    };
+  }
+
+  const nextConfig = input.config ?? current.config;
+  return {
+    ...current,
+    ...input,
+    config: nextConfig,
+    el: host,
+    document: doc,
+  };
+}
+
+function isSunburstConfig(value: unknown): value is SunburstConfig {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  return 'size' in value && 'layers' in value;
 }
 
 type HighlightRuntime = {

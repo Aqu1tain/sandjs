@@ -131,12 +131,34 @@ Fully resolved arc emitted by the layout processor.
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.renderhandle.html">RenderHandle</a>
+
+
+</td><td>
+
+Result of calling <a href="./sandjs.rendersvg.html">renderSVG()</a><!-- -->. Acts like an array of arcs with helper methods.
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.rendersvgoptions.html">RenderSvgOptions</a>
 
 
 </td><td>
 
 Options accepted by the `renderSVG` entry point.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.rendersvgupdateoptions.html">RenderSvgUpdateOptions</a>
+
+
+</td><td>
+
+Partial options accepted when updating an existing render.
 
 
 </td></tr>
@@ -207,6 +229,17 @@ Description
 </td><td>
 
 Controls how angles are distributed across a layer.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.rendersvgupdateinput.html">RenderSvgUpdateInput</a>
+
+
+</td><td>
+
+Accepted input when updating an existing SVG render.
 
 
 </td></tr>
