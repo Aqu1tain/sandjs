@@ -281,6 +281,12 @@ test('collapsed nodes suppress descendants but keep aggregate value', () => {
   assert.equal(branch!.value, 5, 'collapsed branch should keep sum of children');
   const hasLeaf = arcs.some((arc) => arc.data.name === 'Leaf A' || arc.data.name === 'Leaf B');
   assert.equal(hasLeaf, false, 'collapsed descendants should not produce arcs');
+  roughlyEqual(branch!.y0, 0);
+  roughlyEqual(branch!.y1, config.size.radius);
+
+  const sibling = arcs.find((arc) => arc.data.name === 'Sibling');
+  assert.ok(sibling, 'expected sibling arc');
+  roughlyEqual(sibling!.y1, config.size.radius / 2);
 });
 
 test('partial sunbursts honour the configured angle', () => {

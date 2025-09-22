@@ -7,6 +7,7 @@ type NormalizedNode = {
   children: NormalizedNode[];
   path: TreeNodeInput[];
   collapsed: boolean;
+  subtreeThickness: number;
 };
 
 type LayerContext = {
@@ -398,10 +399,16 @@ function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = 
     const normalizedChildren = normalizeTree(children, path);
     const collapsed = Boolean(node.collapsed);
     const childrenValue = normalizedChildren.reduce((sum, child) => sum + Math.max(child.value, 0), 0);
+    const childThickness = normalizedChildren.reduce(
+      (max, child) => Math.max(max, child.subtreeThickness),
+      0,
+    );
 
     const rawValue = typeof node.value === 'number' ? node.value : childrenValue;
     const value = Number.isFinite(rawValue) ? Math.max(rawValue, 0) : 0;
-    const expandLevels = normalizeExpandLevels(node.expandLevels);
+    const baseExpand = normalizeExpandLevels(node.expandLevels);
+    const expandLevels = collapsed ? baseExpand + childThickness : baseExpand;
+    const subtreeThickness = expandLevels + (collapsed ? 0 : childThickness);
 
     normalized.push({
       input: node,
@@ -410,6 +417,7 @@ function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = 
       children: collapsed ? [] : normalizedChildren,
       path,
       collapsed,
+      subtreeThickness,
     });
   }
 
