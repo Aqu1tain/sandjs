@@ -10,5 +10,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "tests"]
 }
