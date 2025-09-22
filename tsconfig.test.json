@@ -8,5 +8,9 @@
     "emitDeclarationOnly": false,
     "noEmit": false
   },
-  "include": ["tests/**/*.ts", "src/**/*.ts"]
+  "include": ["tests/**/*.ts", "src/**/*.ts"],
+  "files": [
+    "tests/layout.spec.ts",
+    "tests/render.spec.ts"
+  ]
 }
