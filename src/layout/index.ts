@@ -6,6 +6,7 @@ type NormalizedNode = {
   expandLevels: number;
   children: NormalizedNode[];
   path: TreeNodeInput[];
+  collapsed: boolean;
 };
 
 type LayerContext = {
@@ -395,6 +396,7 @@ function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = 
     const children = Array.isArray(node.children) ? node.children : [];
     const path = parentPath.concat(node);
     const normalizedChildren = normalizeTree(children, path);
+    const collapsed = Boolean(node.collapsed);
     const childrenValue = normalizedChildren.reduce((sum, child) => sum + Math.max(child.value, 0), 0);
 
     const rawValue = typeof node.value === 'number' ? node.value : childrenValue;
@@ -405,8 +407,9 @@ function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = 
       input: node,
       value,
       expandLevels,
-      children: normalizedChildren,
+      children: collapsed ? [] : normalizedChildren,
       path,
+      collapsed,
     });
   }
 

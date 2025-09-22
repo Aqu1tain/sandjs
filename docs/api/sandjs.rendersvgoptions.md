@@ -37,6 +37,25 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
+<a href="./sandjs.rendersvgoptions.breadcrumbs.html">breadcrumbs?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+boolean \| <a href="./sandjs.breadcrumboptions.html">BreadcrumbOptions</a>
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.rendersvgoptions.classforarc.html">classForArc?</a>
 
 
@@ -123,6 +142,25 @@ SVGElement \| string
 
 
 </td><td>
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.rendersvgoptions.highlightbykey.html">highlightByKey?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+boolean \| <a href="./sandjs.highlightbykeyoptions.html">HighlightByKeyOptions</a>
+
+
+</td><td>
+
+_(Optional)_
 
 
 </td></tr>

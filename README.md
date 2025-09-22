@@ -73,6 +73,7 @@ Sand.js is designed to be:
 | `color?`     | `string`   | Custom arc color (overrides palette). |
 | `children?`  | `Node[]`   | Child nodes (tree mode only). |
 | `tooltip?`   | `string`   | Custom tooltip text. |
+| `collapsed?` | `boolean`  | Keep descendants hidden from layout while their values contribute to the parent arc. |
 | `hidden?`    | `boolean`  | Hides the node completely. |
 
 ---
@@ -146,6 +147,7 @@ The demo under `demo/` shows relative/absolute offsets, tooltips, and selection 
 - **Tooltips**: enable with `tooltip: true` or pass `{ formatter, container }` for custom markup.
 - **Breadcrumbs**: pass `breadcrumbs: true` to auto-render a trail or supply `{ container, formatter, separator }`; `formatArcBreadcrumb(arc)` helps generate custom labels.
 - **Highlights**: enable `highlightByKey: true` (or supply options) to add a shared class for arcs with the same `key`, and optionally toggle pinned highlights via `pinOnClick`.
+- **Collapsing**: set `collapsed: true` on a node to keep its descendants hidden from the rendered layout while preserving its aggregated value.
 
 See `src/types/index.ts` for the full TypeScript contracts.
 

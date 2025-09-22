@@ -19,6 +19,15 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
+<a href="./sandjs.formatarcbreadcrumb.html">formatArcBreadcrumb(arc, separator)</a>
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.layout.html">layout(config)</a>
 
 
@@ -73,6 +82,28 @@ Click event payload emitted from arc interaction callbacks.
 </td><td>
 
 Pointer event payload emitted from arc interaction callbacks.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.breadcrumboptions.html">BreadcrumbOptions</a>
+
+
+</td><td>
+
+Configures breadcrumb behaviour for `renderSVG`<!-- -->.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.highlightbykeyoptions.html">HighlightByKeyOptions</a>
+
+
+</td><td>
+
+Enables automatic highlighting for arcs that share the same key.
 
 
 </td></tr>

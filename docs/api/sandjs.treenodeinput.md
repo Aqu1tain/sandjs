@@ -56,6 +56,25 @@ _(Optional)_
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.treenodeinput.collapsed.html">collapsed?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+boolean
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.treenodeinput.color.html">color?</a>
 
 

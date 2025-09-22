@@ -17,7 +17,7 @@ test('layout computes arcs for free layers using value weights', () => {
         id: 'root',
         radialUnits: [0, 3],
         angleMode: 'free',
-        tree: [
+         tree: [
           { name: 'A', value: 2 },
           { name: 'B', value: 1 },
         ],
@@ -249,6 +249,38 @@ test('hidden nodes are skipped while preserving siblings', () => {
   assert.equal(arcs.length, 2);
   const totalSpan = arcs.reduce((sum, arc) => sum + (arc.x1 - arc.x0), 0);
   roughlyEqual(totalSpan, Math.PI * 2);
+});
+
+test('collapsed nodes suppress descendants but keep aggregate value', () => {
+  const config: SunburstConfig = {
+    size: { radius: 90 },
+    layers: [
+      {
+        id: 'collapse',
+        radialUnits: [0, 2],
+        angleMode: 'free',
+        tree: [
+          {
+            name: 'Branch',
+            collapsed: true,
+            children: [
+              { name: 'Leaf A', value: 2 },
+              { name: 'Leaf B', value: 3 },
+            ],
+          },
+          { name: 'Sibling', value: 5 },
+        ],
+      },
+    ],
+  };
+
+  const arcs = layout(config);
+  assert.equal(arcs.length, 2);
+  const branch = arcs.find((arc) => arc.data.name === 'Branch');
+  assert.ok(branch, 'expected branch arc to be present');
+  assert.equal(branch!.value, 5, 'collapsed branch should keep sum of children');
+  const hasLeaf = arcs.some((arc) => arc.data.name === 'Leaf A' || arc.data.name === 'Leaf B');
+  assert.equal(hasLeaf, false, 'collapsed descendants should not produce arcs');
 });
 
 test('partial sunbursts honour the configured angle', () => {

@@ -31,6 +31,7 @@ export interface TreeNodeInput {
   children?: TreeNodeInput[];
   tooltip?: string;
   hidden?: boolean;
+  collapsed?: boolean;
 }
 
 /**
