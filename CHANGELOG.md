@@ -22,3 +22,17 @@
 
 ### Changed
 - Changed `publishConfig` into `package.json` in order to make the package public
+
+## [0.2.0] - 2025-09-20
+
+### Added
+- Highlight-by-key runtime with optional pinning, plus demo integration showing related arc highlighting.
+- Collapsed node support in layout, including demo toggles to expand/collapse branches while preserving radial depth.
+- Breadcrumb helpers and tooltip enhancements exposed via `formatArcBreadcrumb`.
+- `renderSVG` update/destroy handle for redrawing in place without re-binding listeners.
+- API docs generation workflow and GitHub Pages docs landing page.
+
+### Changed
+- Demo data refreshed with Pulp Fiction network theme and interactive controls.
+- README examples and configuration essentials updated to cover new interactions.
+- Build tooling configured to generate API reference via API Extractor/Documenter.

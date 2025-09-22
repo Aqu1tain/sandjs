@@ -168,7 +168,7 @@ npm run build   # rollup (ESM + minified IIFE bundles)
 npm run verify  # convenience: runs tests and build
 ```
 
-`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/@akitain/sandjs@0.1.2/dist/sandjs.iife.min.js`).
+`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/@akitain/sandjs@0.2.0/dist/sandjs.iife.min.js`).
 
 ## ✅ Release Checklist
 
