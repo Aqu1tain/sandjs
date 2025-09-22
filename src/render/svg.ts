@@ -305,15 +305,17 @@ function updateManagedPath(
 }
 
 function createArcKey(arc: LayoutArc, index: number): string {
+  const segments: string[] = [arc.layerId, String(arc.depth)];
   if (typeof arc.key === 'string' && arc.key.length > 0) {
-    return `${arc.layerId}#key:${arc.key}`;
+    segments.push(`key=${arc.key}`);
+  } else if (typeof arc.data?.key === 'string' && arc.data.key.length > 0) {
+    segments.push(`data=${arc.data.key}`);
+  } else {
+    const breadcrumb = arc.path.map((node) => node?.name ?? '').join('/');
+    segments.push(`path=${breadcrumb}`);
   }
-  const dataKey = arc.data?.key;
-  if (typeof dataKey === 'string' && dataKey.length > 0) {
-    return `${arc.layerId}#data:${dataKey}:${arc.depth}`;
-  }
-  const breadcrumb = arc.path.map((node) => node?.name ?? '').join('/');
-  return `${arc.layerId}:${arc.depth}:${breadcrumb}:${index}`;
+  segments.push(`idx=${index}`);
+  return segments.join('|');
 }
 
 function createRuntimeSet(doc: Document, options: RenderSvgOptions): RuntimeSet {
