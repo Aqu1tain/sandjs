@@ -29,6 +29,9 @@
     .selection { font-size: 0.95rem; color: #e0f2fe; text-align: center; min-height: 1.4rem; }
     .breadcrumbs { font-size: 0.85rem; color: #cbd5f5; text-align: center; min-height: 1.2rem; letter-spacing: 0.01em; }
     .error { color:#fecaca }
+    .controls { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; font-size: 0.85rem; max-width: 480px; }
+    .controls__label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .controls__toggle { accent-color: #22d3ee; }
   </style>
 </head>
 <body>
@@ -44,6 +47,7 @@
 
 <p id="selection" class="selection">Loading data…</p>
 <p id="breadcrumbs" class="breadcrumbs">Path: —</p>
+<div id="controls" class="controls" aria-live="polite"></div>
 
 <script type="module">
   import { renderSVG, formatArcBreadcrumb } from '../dist/sandjs.mjs';
@@ -77,6 +81,7 @@
 
   const state = {
     pinned: null,
+    collapsedKeys: new Set(),
   };
   let hoverPath = null;
 
@@ -136,66 +141,178 @@
       return r.json();
     });
 
-    // If your data doesn’t embed colors, this decorator gives stable colors per key
-    const chart = renderSVG({
-      el: '#sunburst',
-      config,
-      classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
-      decoratePath(path, arc) {
-        const labelValue = formatValue(arc.value);
-        path.setAttribute(
-          'aria-label',
-          `${breadcrumbPath(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
-        );
-        // prefer explicit node color; otherwise derive a unique color per hierarchy path
-        const explicit = arc.data.color;
-        const fill = explicit || assignColor(colorIdForArc(arc));
-        path.setAttribute('fill', fill);
-        if (arc.data.collapsed) {
-          path.classList.add('is-collapsed');
-          path.setAttribute('data-collapsed', 'true');
-        }
-      },
-      tooltip: true,
-      highlightByKey: {
-        className: 'is-related',
-        pinOnClick: true,
-        pinClassName: 'is-pinned',
-        onPinChange: handlePinChange,
-      },
-      breadcrumbs: {
-        container: breadcrumbsEl,
-        formatter: breadcrumbLabel,
-        emptyLabel: defaultBreadcrumbs,
-      },
-      onArcEnter: ({ arc, path }) => {
-        applyHover(path);
-        setSelection(
-          `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-        );
-      },
-      onArcMove: ({ arc, path }) => {
-        applyHover(path);
-        setSelection(
-          `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-        );
-      },
-      onArcLeave: ({ path }) => {
-        clearHover(path);
-        if (state.pinned) {
-          showPinnedInfo();
-        } else {
-          setSelection(defaultMessage);
-          setBreadcrumbs(defaultBreadcrumbs);
-        }
-      },
-      onArcClick: ({ event }) => {
-        event.preventDefault();
-      }
-    });
+    const controlsEl = document.getElementById('controls');
 
-    // optional: expose for debugging in console
-    window.chart = chart;
+    const KEY_SEPARATOR = '\u241F';
+    const encodePath = (parts) => parts.join(KEY_SEPARATOR);
+
+    const cloneConfig = (input) =>
+      (typeof structuredClone === 'function' ? structuredClone(input) : JSON.parse(JSON.stringify(input)));
+
+    const collectCollapsedNodes = (sunburstConfig) => {
+      const entries = [];
+      for (const layer of sunburstConfig.layers) {
+        const roots = Array.isArray(layer.tree) ? layer.tree : [layer.tree];
+        for (const root of roots) {
+          walkNode(root, []);
+        }
+      }
+
+      function walkNode(node, ancestry) {
+        if (!node) return;
+        const nextPath = ancestry.concat(node.name ?? '');
+        if (node.collapsed) {
+          entries.push({
+            key: encodePath(nextPath),
+            label: node.name ?? 'Unnamed node',
+            breadcrumb: nextPath.join(' › '),
+          });
+        }
+        if (Array.isArray(node.children)) {
+          node.children.forEach((child) => walkNode(child, nextPath));
+        }
+      }
+
+      return entries;
+    };
+
+    const applyCollapsedState = (sunburstConfig, collapsedSet) => {
+      for (const layer of sunburstConfig.layers) {
+        const roots = Array.isArray(layer.tree) ? layer.tree : [layer.tree];
+        const updated = roots.map((root) => updateNode(root, []));
+        layer.tree = Array.isArray(layer.tree) ? updated : updated[0];
+      }
+
+      function updateNode(node, ancestry) {
+        if (!node) {
+          return node;
+        }
+        const clone = { ...node };
+        const nextPath = ancestry.concat(clone.name ?? '');
+        const pathKey = encodePath(nextPath);
+        if (collapsedSet.has(pathKey)) {
+          clone.collapsed = true;
+        } else if (clone.collapsed) {
+          delete clone.collapsed;
+        }
+        if (Array.isArray(clone.children)) {
+          clone.children = clone.children.map((child) => updateNode(child, nextPath));
+        }
+        return clone;
+      }
+    };
+
+    const collapsedEntries = collectCollapsedNodes(config);
+    collapsedEntries.forEach((entry) => state.collapsedKeys.add(entry.key));
+
+    const renderControls = () => {
+      controlsEl.innerHTML = '';
+      if (collapsedEntries.length === 0) {
+        controlsEl.textContent = 'No collapsible branches in this dataset.';
+        return;
+      }
+
+      const heading = document.createElement('strong');
+      heading.textContent = 'Collapsed branches';
+      controlsEl.appendChild(heading);
+
+      collapsedEntries.forEach((entry) => {
+        const wrapper = document.createElement('label');
+        wrapper.className = 'controls__label';
+        const toggle = document.createElement('input');
+        toggle.type = 'checkbox';
+        toggle.className = 'controls__toggle';
+        toggle.checked = !state.collapsedKeys.has(entry.key);
+        toggle.setAttribute('aria-label', `Toggle children for ${entry.breadcrumb}`);
+        const text = document.createElement('span');
+        text.textContent = toggle.checked ? `Expanded: ${entry.label}` : `Collapsed: ${entry.label}`;
+        toggle.addEventListener('change', () => {
+          if (toggle.checked) {
+            state.collapsedKeys.delete(entry.key);
+          } else {
+            state.collapsedKeys.add(entry.key);
+          }
+          text.textContent = toggle.checked ? `Expanded: ${entry.label}` : `Collapsed: ${entry.label}`;
+          renderChart();
+        });
+        wrapper.appendChild(toggle);
+        wrapper.appendChild(text);
+        controlsEl.appendChild(wrapper);
+      });
+    };
+
+    let chart = null;
+
+    const renderChart = () => {
+      const nextConfig = cloneConfig(config);
+      applyCollapsedState(nextConfig, state.collapsedKeys);
+      state.pinned = null;
+      clearHover();
+      setSelection(defaultMessage);
+      setBreadcrumbs(defaultBreadcrumbs);
+
+      chart = renderSVG({
+        el: '#sunburst',
+        config: nextConfig,
+        classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
+        decoratePath(path, arc) {
+          const labelValue = formatValue(arc.value);
+          path.setAttribute(
+            'aria-label',
+            `${breadcrumbPath(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
+          );
+          const explicit = arc.data.color;
+          const fill = explicit || assignColor(colorIdForArc(arc));
+          path.setAttribute('fill', fill);
+          if (arc.data.collapsed) {
+            path.classList.add('is-collapsed');
+            path.setAttribute('data-collapsed', 'true');
+          }
+        },
+        tooltip: true,
+        highlightByKey: {
+          className: 'is-related',
+          pinOnClick: true,
+          pinClassName: 'is-pinned',
+          onPinChange: handlePinChange,
+        },
+        breadcrumbs: {
+          container: breadcrumbsEl,
+          formatter: breadcrumbLabel,
+          emptyLabel: defaultBreadcrumbs,
+        },
+        onArcEnter: ({ arc, path }) => {
+          applyHover(path);
+          setSelection(
+            `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+          );
+        },
+        onArcMove: ({ arc, path }) => {
+          applyHover(path);
+          setSelection(
+            `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+          );
+        },
+        onArcLeave: ({ path }) => {
+          clearHover(path);
+          if (state.pinned) {
+            showPinnedInfo();
+          } else {
+            setSelection(defaultMessage);
+            setBreadcrumbs(defaultBreadcrumbs);
+          }
+        },
+        onArcClick: ({ event }) => {
+          event.preventDefault();
+        }
+      });
+
+      window.chart = chart;
+    };
+
+    renderControls();
+    renderChart();
+
     setSelection(defaultMessage);
     setBreadcrumbs(defaultBreadcrumbs);
   } catch (err) {
