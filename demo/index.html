@@ -45,14 +45,15 @@
 <p id="breadcrumbs" class="breadcrumbs">Path: —</p>
 
 <script type="module">
-  import { renderSVG } from '../dist/sandjs.mjs';
+  import { renderSVG, formatArcBreadcrumb } from '../dist/sandjs.mjs';
 
   const selectionEl = document.getElementById('selection');
   const breadcrumbsEl = document.getElementById('breadcrumbs');
   const defaultMessage = 'Hover an arc to preview details, click to pin.';
   const defaultBreadcrumbs = 'Path: —';
   const formatValue = (value) => (Number.isFinite(value) ? value.toLocaleString() : '—');
-  const formatBreadcrumb = (arc) => arc.path.map((node) => node.name).join(' › ');
+  const breadcrumbPath = (arc) => formatArcBreadcrumb(arc);
+  const breadcrumbLabel = (arc) => `Path: ${breadcrumbPath(arc)}`;
 
   const setSelection = (msg, cls='') => {
     selectionEl.className = `selection ${cls}`.trim();
@@ -76,70 +77,25 @@
   const state = {
     pinned: null,
   };
-  const arcsByKey = new Map();
-  let hoverKey = null;
+  let hoverPath = null;
 
-  const getArcKey = (arc) => arc.key || arc.data.key || null;
-
-  const registerArc = (path, arc) => {
-    const key = getArcKey(arc);
-    if (!key) {
-      return;
-    }
-    path.dataset.key = key;
-    if (!arcsByKey.has(key)) {
-      arcsByKey.set(key, []);
-    }
-    arcsByKey.get(key).push({ path, arc });
-  };
-
-  const setGroupHighlight = (arcOrKey, active, excludePath) => {
-    const key = typeof arcOrKey === 'string' ? arcOrKey : getArcKey(arcOrKey);
-    if (!key) {
-      return;
-    }
-    const group = arcsByKey.get(key);
-    if (!group) {
-      return;
-    }
-    for (const entry of group) {
-      if (excludePath && active && entry.path === excludePath) {
-        continue;
-      }
-      entry.path.classList.toggle('is-related', active);
+  const clearHover = (path) => {
+    if (hoverPath && (!path || hoverPath === path)) {
+      hoverPath.classList.remove('is-hover');
+      hoverPath = null;
     }
   };
 
-  const clearRelatedHighlights = () => {
-    document
-      .querySelectorAll('.sand-arc.is-related')
-      .forEach((el) => el.classList.remove('is-related'));
-  };
-
-  const clearHovers = () => {
-    document.querySelectorAll('.sand-arc.is-hover').forEach((el) => el.classList.remove('is-hover'));
-    if (hoverKey && (!state.pinned || getArcKey(state.pinned.arc) !== hoverKey)) {
-      setGroupHighlight(hoverKey, false);
-    }
-    hoverKey = null;
-  };
-
-  const applyHover = (path, arc) => {
+  const applyHover = (path) => {
     if (state.pinned?.path === path) {
-      hoverKey = null;
+      clearHover(path);
       return;
     }
-    const key = getArcKey(arc);
-    if (hoverKey && hoverKey !== key && (!state.pinned || getArcKey(state.pinned.arc) !== hoverKey)) {
-      setGroupHighlight(hoverKey, false);
+    if (hoverPath && hoverPath !== path) {
+      hoverPath.classList.remove('is-hover');
     }
     path.classList.add('is-hover');
-    if (key && (!state.pinned || getArcKey(state.pinned.arc) !== key)) {
-      setGroupHighlight(key, true, path);
-      hoverKey = key;
-    } else {
-      hoverKey = null;
-    }
+    hoverPath = path;
   };
 
   const showPinnedInfo = () => {
@@ -152,37 +108,21 @@
     setSelection(
       `Pinned: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
     );
-    setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
+    setBreadcrumbs(breadcrumbLabel(arc));
   };
 
-  const togglePinned = (path, arc) => {
-    const key = getArcKey(arc);
-    if (state.pinned?.path === path) {
-      clearRelatedHighlights();
-      state.pinned.path.classList.remove('is-pinned');
-      state.pinned = null;
-      clearHovers();
-      setSelection(defaultMessage);
-      setBreadcrumbs(defaultBreadcrumbs);
+  const handlePinChange = ({ arc, path, pinned }) => {
+    clearHover();
+    if (pinned) {
+      if (path.parentNode) {
+        path.parentNode.appendChild(path);
+      }
+      state.pinned = { arc, path };
+      showPinnedInfo();
       return;
     }
-
-    if (state.pinned) {
-      clearRelatedHighlights();
-      state.pinned.path.classList.remove('is-pinned');
+    if (state.pinned?.path === path) {
       state.pinned = null;
-    }
-
-    clearHovers();
-    path.classList.remove('is-hover');
-    // Move the pinned arc to the end of the SVG so the white stroke sits above neighbors.
-    if (path.parentNode) {
-      path.parentNode.appendChild(path);
-    }
-    path.classList.add('is-pinned');
-    state.pinned = { path, arc };
-    if (key) {
-      setGroupHighlight(key, true, path);
     }
     showPinnedInfo();
   };
@@ -190,7 +130,7 @@
   // load and render
   try {
     // IMPORTANT: this path is relative to demo/index.html
-    const config = await fetch('./demo/data.json').then(r => {
+    const config = await fetch('./data.json').then(r => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
     });
@@ -204,40 +144,39 @@
         const labelValue = formatValue(arc.value);
         path.setAttribute(
           'aria-label',
-          `${formatBreadcrumb(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
+          `${breadcrumbPath(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
         );
         // prefer explicit node color; otherwise derive a unique color per hierarchy path
         const explicit = arc.data.color;
         const fill = explicit || assignColor(colorIdForArc(arc));
         path.setAttribute('fill', fill);
-        registerArc(path, arc);
       },
       tooltip: true,
+      highlightByKey: {
+        className: 'is-related',
+        pinOnClick: true,
+        pinClassName: 'is-pinned',
+        onPinChange: handlePinChange,
+      },
+      breadcrumbs: {
+        container: breadcrumbsEl,
+        formatter: breadcrumbLabel,
+        emptyLabel: defaultBreadcrumbs,
+      },
       onArcEnter: ({ arc, path }) => {
-        applyHover(path, arc);
+        applyHover(path);
         setSelection(
           `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
-        setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
       },
       onArcMove: ({ arc, path }) => {
-        applyHover(path, arc);
+        applyHover(path);
         setSelection(
           `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
         );
-        setBreadcrumbs(`Path: ${formatBreadcrumb(arc)}`);
       },
-      onArcLeave: ({ arc, path }) => {
-        const key = getArcKey(arc);
-        if (!state.pinned || state.pinned.path !== path) {
-          path.classList.remove('is-hover');
-        }
-        if (!state.pinned || getArcKey(state.pinned.arc) !== key) {
-          setGroupHighlight(key, false);
-        }
-        if (hoverKey === key) {
-          hoverKey = null;
-        }
+      onArcLeave: ({ path }) => {
+        clearHover(path);
         if (state.pinned) {
           showPinnedInfo();
         } else {
@@ -245,9 +184,8 @@
           setBreadcrumbs(defaultBreadcrumbs);
         }
       },
-      onArcClick: ({ arc, path, event }) => {
+      onArcClick: ({ event }) => {
         event.preventDefault();
-        togglePinned(path, arc);
       }
     });
 

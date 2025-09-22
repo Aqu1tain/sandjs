@@ -1,5 +1,5 @@
 export { layout } from './layout/index.js';
-export { renderSVG } from './render/svg.js';
+export { renderSVG, formatArcBreadcrumb } from './render/svg.js';
 export type {
   LayoutArc,
   LayerConfig,
@@ -11,6 +11,8 @@ export type {
 export type {
   RenderSvgOptions,
   TooltipOptions,
+  BreadcrumbOptions,
+  HighlightByKeyOptions,
   ArcPointerEventPayload,
   ArcClickEventPayload,
 } from './render/svg.js';

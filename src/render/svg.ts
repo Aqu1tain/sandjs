@@ -16,6 +16,32 @@ export interface TooltipOptions {
 }
 
 /**
+ * Configures breadcrumb behaviour for `renderSVG`.
+ *
+ * @public
+ */
+export interface BreadcrumbOptions {
+  container?: HTMLElement | string;
+  formatter?: (arc: LayoutArc) => string;
+  separator?: string;
+  emptyLabel?: string;
+}
+
+/**
+ * Enables automatic highlighting for arcs that share the same key.
+ *
+ * @public
+ */
+export interface HighlightByKeyOptions {
+  className?: string;
+  includeSource?: boolean;
+  deriveKey?: (arc: LayoutArc) => string | null;
+  pinOnClick?: boolean;
+  pinClassName?: string;
+  onPinChange?: (payload: { arc: LayoutArc; path: SVGPathElement; pinned: boolean; event: MouseEvent }) => void;
+}
+
+/**
  * Pointer event payload emitted from arc interaction callbacks.
  *
  * @public
@@ -49,6 +75,8 @@ export interface RenderSvgOptions {
   classForArc?: (arc: LayoutArc) => string | string[] | undefined;
   decoratePath?: (path: SVGPathElement, arc: LayoutArc) => void;
   tooltip?: boolean | TooltipOptions;
+  highlightByKey?: boolean | HighlightByKeyOptions;
+  breadcrumbs?: boolean | BreadcrumbOptions;
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
   onArcLeave?: (payload: ArcPointerEventPayload) => void;
@@ -80,6 +108,9 @@ export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
 
   const tooltip = createTooltipRuntime(doc, options.tooltip);
   tooltip?.hide();
+  const highlight = createHighlightRuntime(options.highlightByKey);
+  const breadcrumbs = createBreadcrumbRuntime(doc, options.breadcrumbs);
+  breadcrumbs?.clear();
 
   for (const arc of arcs) {
     const d = describeArcPath(arc, cx, cy);
@@ -95,6 +126,8 @@ export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
     if (arc.key) {
       path.setAttribute('data-key', arc.key);
     }
+
+    highlight?.register(arc, path);
 
     const classList = ['sand-arc'];
     const dynamicClass = options.classForArc?.(arc);
@@ -114,20 +147,25 @@ export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
     }
 
     const wantsPointerTracking = Boolean(
-      tooltip || options.onArcEnter || options.onArcMove || options.onArcLeave,
+      tooltip || highlight || breadcrumbs || options.onArcEnter || options.onArcMove || options.onArcLeave,
     );
 
     if (wantsPointerTracking) {
       const handleEnter = (event: PointerEvent) => {
         tooltip?.show(event, arc);
+        highlight?.pointerEnter(arc, path);
+        breadcrumbs?.show(arc);
         options.onArcEnter?.({ arc, path, event });
       };
       const handleMove = (event: PointerEvent) => {
         tooltip?.move(event);
+        highlight?.pointerMove(arc, path);
         options.onArcMove?.({ arc, path, event });
       };
       const handleLeave = (event: PointerEvent) => {
         tooltip?.hide();
+        highlight?.pointerLeave(arc, path);
+        breadcrumbs?.clear();
         options.onArcLeave?.({ arc, path, event });
       };
       path.addEventListener('pointerenter', handleEnter);
@@ -136,8 +174,10 @@ export function renderSVG(options: RenderSvgOptions): LayoutArc[] {
       path.addEventListener('pointercancel', handleLeave);
     }
 
-    if (options.onArcClick) {
+    const wantsClick = Boolean(options.onArcClick || highlight?.handlesClick);
+    if (wantsClick) {
       const handleClick = (event: MouseEvent) => {
+        highlight?.handleClick?.(arc, path, event);
         options.onArcClick?.({ arc, path, event });
       };
       path.addEventListener('click', handleClick);
@@ -175,6 +215,218 @@ function resolveHostElement(target: SVGElement | string, doc: Document): SVGElem
   }
 
   return target;
+}
+
+const BREADCRUMB_ATTRIBUTE = 'data-sandjs-breadcrumbs';
+
+type BreadcrumbRuntime = {
+  show: (arc: LayoutArc) => void;
+  clear: () => void;
+};
+
+function createBreadcrumbRuntime(
+  doc: Document,
+  input: RenderSvgOptions['breadcrumbs'],
+): BreadcrumbRuntime | null {
+  if (!input) {
+    return null;
+  }
+
+  const options: BreadcrumbOptions =
+    typeof input === 'object' && input !== null ? (input as BreadcrumbOptions) : {};
+  const container = resolveTooltipContainer(doc, options.container);
+  const element = ensureBreadcrumbElement(doc, container);
+  applyDefaultBreadcrumbStyles(element);
+
+  const separator = options.separator ?? ' › ';
+  const formatter =
+    typeof options.formatter === 'function'
+      ? options.formatter
+      : (arc: LayoutArc) => formatArcBreadcrumb(arc, separator);
+  const emptyLabel = options.emptyLabel ?? '';
+  element.textContent = emptyLabel;
+
+  return {
+    show(arc) {
+      element.textContent = formatter(arc);
+    },
+    clear() {
+      element.textContent = emptyLabel;
+    },
+  };
+}
+
+function ensureBreadcrumbElement(doc: Document, container: HTMLElement): HTMLElement {
+  const existing = container.querySelector<HTMLElement>(`[${BREADCRUMB_ATTRIBUTE}]`);
+  if (existing) {
+    return existing;
+  }
+  const element = doc.createElement('div');
+  element.setAttribute(BREADCRUMB_ATTRIBUTE, '');
+  element.setAttribute('role', 'status');
+  container.appendChild(element);
+  return element;
+}
+
+function applyDefaultBreadcrumbStyles(element: HTMLElement): void {
+  const style = element.style;
+  if (!style.display) style.display = 'block';
+  if (!style.fontSize) style.fontSize = '0.85rem';
+  if (!style.color) style.color = 'inherit';
+  if (!style.minHeight) style.minHeight = '1.2em';
+  if (!style.letterSpacing) style.letterSpacing = '0.01em';
+}
+
+type HighlightRuntime = {
+  register: (arc: LayoutArc, path: SVGPathElement) => void;
+  pointerEnter: (arc: LayoutArc, path: SVGPathElement) => void;
+  pointerMove: (arc: LayoutArc, path: SVGPathElement) => void;
+  pointerLeave: (arc: LayoutArc, path: SVGPathElement) => void;
+  handleClick?: (arc: LayoutArc, path: SVGPathElement, event: MouseEvent) => void;
+  handlesClick: boolean;
+};
+
+function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']): HighlightRuntime | null {
+  if (!input) {
+    return null;
+  }
+
+  const options: HighlightByKeyOptions =
+    typeof input === 'object' && input !== null ? (input as HighlightByKeyOptions) : {};
+  const className = options.className?.trim() ?? 'is-related';
+  const includeSource = options.includeSource ?? false;
+  const deriveKey =
+    typeof options.deriveKey === 'function' ? options.deriveKey : defaultHighlightKey;
+  const pinOnClick = options.pinOnClick ?? false;
+  const pinClassName = options.pinClassName?.trim() ?? 'is-pinned';
+
+  const groups = new Map<string, Set<SVGPathElement>>();
+  let hoverKey: string | null = null;
+  let pinnedKey: string | null = null;
+  let pinnedPath: SVGPathElement | null = null;
+
+  const removeGroup = (key: string) => {
+    const group = groups.get(key);
+    if (!group) {
+      return;
+    }
+    for (const candidate of group) {
+      candidate.classList.remove(className);
+    }
+  };
+
+  const applyGroup = (key: string, exclude?: SVGPathElement | null) => {
+    const group = groups.get(key);
+    if (!group) {
+      return;
+    }
+    for (const candidate of group) {
+      if (!includeSource && exclude && candidate === exclude) {
+        candidate.classList.remove(className);
+        continue;
+      }
+      candidate.classList.add(className);
+    }
+  };
+
+  const clearPinned = () => {
+    if (pinnedKey) {
+      removeGroup(pinnedKey);
+    }
+    if (pinnedPath) {
+      pinnedPath.classList.remove(pinClassName);
+    }
+    pinnedKey = null;
+    pinnedPath = null;
+  };
+
+  const runtime: HighlightRuntime = {
+    register(arc, path) {
+      const key = deriveKey(arc);
+      if (!key) {
+        return;
+      }
+      if (!groups.has(key)) {
+        groups.set(key, new Set());
+      }
+      groups.get(key)!.add(path);
+      if (!path.hasAttribute('data-key')) {
+        path.setAttribute('data-key', key);
+      }
+    },
+    pointerEnter(arc, path) {
+      const key = deriveKey(arc);
+      if (!key) {
+        return;
+      }
+      hoverKey = key;
+      if (pinnedKey && pinnedKey === key) {
+        if (!includeSource && path === pinnedPath) {
+          // ensure related arcs remain highlighted, but skip the pinned path itself
+          applyGroup(key, path);
+        }
+        return;
+      }
+      applyGroup(key, includeSource ? null : path);
+    },
+    pointerMove(arc, path) {
+      runtime.pointerEnter(arc, path);
+    },
+    pointerLeave(arc, path) {
+      const key = deriveKey(arc);
+      if (!key) {
+        return;
+      }
+      if (pinnedKey && pinnedKey === key) {
+        return;
+      }
+      if (hoverKey === key) {
+        removeGroup(key);
+        hoverKey = null;
+      }
+    },
+    handleClick: pinOnClick
+      ? (arc, path, event) => {
+          const key = deriveKey(arc);
+          if (!key) {
+            return;
+          }
+
+          const isPinned = pinnedKey === key && pinnedPath === path;
+          if (isPinned) {
+            clearPinned();
+            if (hoverKey === key) {
+              applyGroup(key, includeSource ? null : path);
+            }
+            options.onPinChange?.({ arc, path, pinned: false, event });
+            return;
+          }
+
+          clearPinned();
+          pinnedKey = key;
+          pinnedPath = path;
+          if (pinClassName) {
+            path.classList.add(pinClassName);
+          }
+          applyGroup(key, includeSource ? null : path);
+          options.onPinChange?.({ arc, path, pinned: true, event });
+        }
+      : undefined,
+    handlesClick: pinOnClick,
+  };
+
+  return runtime;
+}
+
+function defaultHighlightKey(arc: LayoutArc): string | null {
+  if (typeof arc.key === 'string' && arc.key.length > 0) {
+    return arc.key;
+  }
+  const dataKey = arc.data?.key;
+  if (typeof dataKey === 'string' && dataKey.length > 0) {
+    return dataKey;
+  }
+  return null;
 }
 
 const TOOLTIP_ATTRIBUTE = 'data-sandjs-tooltip';
@@ -292,6 +544,20 @@ function applyDefaultTooltipStyles(element: HTMLElement): void {
   if (!style.transition) style.transition = 'opacity 120ms ease';
   if (!style.transform) style.transform = 'translate(-50%, -120%)';
   if (!style.zIndex) style.zIndex = '9999';
+}
+
+export function formatArcBreadcrumb(arc: LayoutArc, separator = ' › '): string {
+  if (!arc) {
+    return '';
+  }
+  const segments = Array.isArray(arc.path) && arc.path.length > 0 ? arc.path : [arc.data];
+  const names = segments
+    .map((node) => node?.name)
+    .filter((name): name is string => typeof name === 'string' && name.length > 0);
+  if (names.length === 0) {
+    return typeof arc.data?.name === 'string' ? arc.data.name : '';
+  }
+  return names.join(separator);
 }
 
 function describeArcPath(arc: LayoutArc, cx: number, cy: number): string | null {

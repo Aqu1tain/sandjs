@@ -144,6 +144,8 @@ The demo under `demo/` shows relative/absolute offsets, tooltips, and selection 
 - **Padding**: Use `padAngle` on a layer or node to reserve gap space between siblings.
 - **Callbacks**: `renderSVG` exposes `onArcEnter`, `onArcMove`, `onArcLeave`, and `onArcClick` with the arc metadata and the rendered `path`.
 - **Tooltips**: enable with `tooltip: true` or pass `{ formatter, container }` for custom markup.
+- **Breadcrumbs**: pass `breadcrumbs: true` to auto-render a trail or supply `{ container, formatter, separator }`; `formatArcBreadcrumb(arc)` helps generate custom labels.
+- **Highlights**: enable `highlightByKey: true` (or supply options) to add a shared class for arcs with the same `key`, and optionally toggle pinned highlights via `pinOnClick`.
 
 See `src/types/index.ts` for the full TypeScript contracts.
 
