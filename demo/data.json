@@ -16,6 +16,7 @@
             "value": 50,
             "expandLevels": 1,
             "key": "crew-la",
+            "collapsed": true,
             "children": [
               { "name": "Nightclub Protection", "value": 20, "key": "crew-la" },
               { "name": "Street Loans", "value": 15, "key": "crew-la" },
@@ -51,6 +52,7 @@
           "value": 10,
           "expandLevels": 1,
           "key": "vincent",
+          "collapsed": true,
           "children": [
             {
               "name": "Amsterdam Flat",

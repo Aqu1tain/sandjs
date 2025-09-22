@@ -25,6 +25,7 @@
     .sand-arc.is-hover { opacity: 0.7; stroke-width: 1.5; stroke: #e2e8f0; }
     .sand-arc.is-related { opacity: 0.55; stroke-width: 1.5; stroke: #94a3b8; }
     .sand-arc.is-pinned { opacity: 0.95; stroke-width: 2.5; stroke: #f1f5f9; }
+    .sand-arc.is-collapsed { stroke-dasharray: 4 2; opacity: 0.85; }
     .selection { font-size: 0.95rem; color: #e0f2fe; text-align: center; min-height: 1.4rem; }
     .breadcrumbs { font-size: 0.85rem; color: #cbd5f5; text-align: center; min-height: 1.2rem; letter-spacing: 0.01em; }
     .error { color:#fecaca }
@@ -38,7 +39,7 @@
 
 <figure>
   <svg id="sunburst" role="img" aria-label="Sand.js demo sunburst"></svg>
-  <figcaption>Data-driven layout via <code>demo/data.json</code>.</figcaption>
+  <figcaption>Data-driven layout via <code>demo/data.json</code>. Dashed outlines mark collapsed branches.</figcaption>
 </figure>
 
 <p id="selection" class="selection">Loading data…</p>
@@ -49,7 +50,7 @@
 
   const selectionEl = document.getElementById('selection');
   const breadcrumbsEl = document.getElementById('breadcrumbs');
-  const defaultMessage = 'Hover an arc to preview details, click to pin.';
+  const defaultMessage = 'Hover an arc to preview details, click to pin. Dashed arcs are collapsed branches.';
   const defaultBreadcrumbs = 'Path: —';
   const formatValue = (value) => (Number.isFinite(value) ? value.toLocaleString() : '—');
   const breadcrumbPath = (arc) => formatArcBreadcrumb(arc);
@@ -150,6 +151,10 @@
         const explicit = arc.data.color;
         const fill = explicit || assignColor(colorIdForArc(arc));
         path.setAttribute('fill', fill);
+        if (arc.data.collapsed) {
+          path.classList.add('is-collapsed');
+          path.setAttribute('data-collapsed', 'true');
+        }
       },
       tooltip: true,
       highlightByKey: {
