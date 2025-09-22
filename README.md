@@ -73,6 +73,7 @@ Sand.js is designed to be:
 | `color?`     | `string`   | Custom arc color (overrides palette). |
 | `children?`  | `Node[]`   | Child nodes (tree mode only). |
 | `tooltip?`   | `string`   | Custom tooltip text. |
+| `collapsed?` | `boolean`  | Keep descendants hidden from layout while their values contribute to the parent arc. |
 | `hidden?`    | `boolean`  | Hides the node completely. |
 
 ---
@@ -126,11 +127,19 @@ Render a sunburst in the browser:
     ]
   };
 
-  renderSVG({
+  const chart = renderSVG({
     el: '#chart',
     config,
     tooltip: true,
     onArcClick: ({ arc }) => console.log('Pinned', arc.data.name)
+  });
+
+  // Update the chart later without re-attaching listeners
+  chart.update({
+    config: {
+      ...config,
+      size: { radius: 180 },
+    }
   });
 </script>
 ```
@@ -144,6 +153,10 @@ The demo under `demo/` shows relative/absolute offsets, tooltips, and selection 
 - **Padding**: Use `padAngle` on a layer or node to reserve gap space between siblings.
 - **Callbacks**: `renderSVG` exposes `onArcEnter`, `onArcMove`, `onArcLeave`, and `onArcClick` with the arc metadata and the rendered `path`.
 - **Tooltips**: enable with `tooltip: true` or pass `{ formatter, container }` for custom markup.
+- **Breadcrumbs**: pass `breadcrumbs: true` to auto-render a trail or supply `{ container, formatter, separator }`; `formatArcBreadcrumb(arc)` helps generate custom labels.
+- **Highlights**: enable `highlightByKey: true` (or supply options) to add a shared class for arcs with the same `key`, and optionally toggle pinned highlights via `pinOnClick`.
+- **Collapsing**: set `collapsed: true` on a node to keep its descendants hidden from the rendered layout while preserving its aggregated value.
+- **Updates**: keep the returned handle from `renderSVG` and call `chart.update({ config: nextConfig })` (or pass a full config) to redraw without re-binding listeners.
 
 See `src/types/index.ts` for the full TypeScript contracts.
 
@@ -155,7 +168,7 @@ npm run build   # rollup (ESM + minified IIFE bundles)
 npm run verify  # convenience: runs tests and build
 ```
 
-`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/@akitain/sandjs@0.1.2/dist/sandjs.iife.min.js`).
+`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/@akitain/sandjs@0.2.0/dist/sandjs.iife.min.js`).
 
 ## ✅ Release Checklist
 

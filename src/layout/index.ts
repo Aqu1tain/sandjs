@@ -5,6 +5,9 @@ type NormalizedNode = {
   value: number;
   expandLevels: number;
   children: NormalizedNode[];
+  path: TreeNodeInput[];
+  collapsed: boolean;
+  subtreeThickness: number;
 };
 
 type LayerContext = {
@@ -17,6 +20,11 @@ type LayerContext = {
 
 const ZERO_TOLERANCE = 1e-6;
 
+/**
+ * Computes the polar coordinates for every visible arc in the provided configuration.
+ *
+ * @public
+ */
 export function layout(config: SunburstConfig): LayoutArc[] {
   if (!config.size || !(config.size.radius > 0)) {
     throw new Error('Sunburst size.radius must be a positive number');
@@ -337,6 +345,8 @@ function createArc(params: {
     y1: unitToRadius(y1Units),
     depth,
     key: node.input.key,
+    value: node.value,
+    path: node.path,
     percentage,
   };
   return { arc, startAngle: x0, span };
@@ -375,7 +385,7 @@ function resolveNodeOffset(node: TreeNodeInput, layer: LayerConfig): number {
   return 0;
 }
 
-function normalizeTree(tree: LayerConfig['tree']): NormalizedNode[] {
+function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = []): NormalizedNode[] {
   const nodes = Array.isArray(tree) ? tree : [tree];
   const normalized: NormalizedNode[] = [];
 
@@ -385,18 +395,29 @@ function normalizeTree(tree: LayerConfig['tree']): NormalizedNode[] {
     }
 
     const children = Array.isArray(node.children) ? node.children : [];
-    const normalizedChildren = normalizeTree(children);
+    const path = parentPath.concat(node);
+    const normalizedChildren = normalizeTree(children, path);
+    const collapsed = Boolean(node.collapsed);
     const childrenValue = normalizedChildren.reduce((sum, child) => sum + Math.max(child.value, 0), 0);
+    const childThickness = normalizedChildren.reduce(
+      (max, child) => Math.max(max, child.subtreeThickness),
+      0,
+    );
 
     const rawValue = typeof node.value === 'number' ? node.value : childrenValue;
     const value = Number.isFinite(rawValue) ? Math.max(rawValue, 0) : 0;
-    const expandLevels = normalizeExpandLevels(node.expandLevels);
+    const baseExpand = normalizeExpandLevels(node.expandLevels);
+    const expandLevels = collapsed ? baseExpand + childThickness : baseExpand;
+    const subtreeThickness = expandLevels + (collapsed ? 0 : childThickness);
 
     normalized.push({
       input: node,
       value,
       expandLevels,
-      children: normalizedChildren,
+      children: collapsed ? [] : normalizedChildren,
+      path,
+      collapsed,
+      subtreeThickness,
     });
   }
 
