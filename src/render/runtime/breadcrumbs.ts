@@ -8,6 +8,7 @@ const BREADCRUMB_ATTRIBUTE = 'data-sandjs-breadcrumbs';
 export type BreadcrumbRuntime = {
   show: (arc: LayoutArc) => void;
   clear: () => void;
+  dispose: () => void;
 };
 
 export function createBreadcrumbRuntime(
@@ -37,6 +38,9 @@ export function createBreadcrumbRuntime(
       element.textContent = formatter(arc);
     },
     clear() {
+      element.textContent = emptyLabel;
+    },
+    dispose() {
       element.textContent = emptyLabel;
     },
   };

@@ -7,6 +7,7 @@ export type TooltipRuntime = {
   show: (event: PointerEvent, arc: LayoutArc) => void;
   move: (event: PointerEvent) => void;
   hide: () => void;
+  dispose: () => void;
 };
 
 export function createTooltipRuntime(
@@ -60,6 +61,11 @@ export function createTooltipRuntime(
       position(event);
     },
     hide() {
+      element.style.opacity = '0';
+      element.style.visibility = 'hidden';
+    },
+    dispose() {
+      element.innerHTML = '';
       element.style.opacity = '0';
       element.style.visibility = 'hidden';
     },

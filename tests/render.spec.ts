@@ -9,6 +9,7 @@ class StubElement {
   public parentNode: StubElement | null = null;
   public textContent = '';
   public firstChild: StubElement | null = null;
+  public style: Record<string, string> = {};
   public classList = {
     add: () => {},
     remove: () => {},
@@ -44,6 +45,20 @@ class StubElement {
 
   addEventListener(): void {
     /* no-op for tests */
+  }
+
+  querySelector(selector: string): StubElement | null {
+    const matchAttr = selector.startsWith('[') && selector.endsWith(']')
+      ? selector.slice(1, -1)
+      : null;
+    if (!matchAttr) {
+      return null;
+    }
+    const [attr] = matchAttr.split('=');
+    return (
+      this.children.find((child) => child.attributes.has(attr)) ??
+      this.children.reduce<StubElement | null>((found, child) => found ?? child.querySelector(selector), null)
+    );
   }
 }
 
@@ -91,9 +106,9 @@ test('renderSVG exposes update handle that patches the existing host', () => {
     el: hostStub as unknown as SVGElement,
     config: initialConfig,
     document: document as unknown as Document,
-    tooltip: false,
-    highlightByKey: false,
-    breadcrumbs: false,
+    tooltip: true,
+    highlightByKey: true,
+    breadcrumbs: true,
   });
 
   assert.equal(typeof chart.update, 'function');
@@ -115,13 +130,28 @@ test('renderSVG exposes update handle that patches the existing host', () => {
     ],
   };
 
-  chart.update(nextConfig);
+  const countByAttr = (attr: string) =>
+    document.body.children.filter((child) => child.attributes.has(attr)).length;
 
+  assert.equal(countByAttr('data-sandjs-tooltip'), 1, 'tooltip element should exist once');
+  assert.equal(countByAttr('data-sandjs-breadcrumbs'), 1, 'breadcrumb element should exist once');
+
+  const firstUpdate = chart.update(nextConfig);
+  assert.strictEqual(firstUpdate, chart, 'update should return original handle');
   assert.equal(chart.length, 1, 'handle should reflect updated arc count');
-  assert.equal(hostStub.children.length, 1, 'host children should be replaced');
-  assert.equal(chart[0].data.name, 'C');
+  assert.equal(hostStub.children.length, 1, 'host should contain new arc count');
+
+  chart.update({ config: initialConfig });
+
+  assert.equal(chart.length, 2, 'handle should reflect second update');
+  assert.equal(hostStub.children.length, 2, 'host should contain second update arcs');
+  assert.equal(countByAttr('data-sandjs-tooltip'), 1, 'tooltip element should stay singleton after updates');
+  assert.equal(countByAttr('data-sandjs-breadcrumbs'), 1, 'breadcrumb element should stay singleton after updates');
+  assert.deepEqual(chart.map((arc) => arc.data.name), ['A', 'B']);
 
   chart.destroy();
+  assert.equal(countByAttr('data-sandjs-tooltip'), 1, 'tooltip element persists for reuse');
+  assert.equal(countByAttr('data-sandjs-breadcrumbs'), 1, 'breadcrumb element persists for reuse');
   assert.equal(chart.length, 0, 'destroy should clear handle array');
   assert.equal(hostStub.children.length, 0, 'destroy should empty host');
 });

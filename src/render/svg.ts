@@ -1,11 +1,15 @@
 import { layout } from '../layout/index.js';
 import { LayoutArc, SunburstConfig } from '../types/index.js';
-import { RenderSvgOptions, RenderHandle, RenderSvgUpdateInput, RenderSvgUpdateOptions } from './types.js';
-import { createTooltipRuntime } from './runtime/tooltip.js';
-import { createBreadcrumbRuntime } from './runtime/breadcrumbs.js';
-import { createHighlightRuntime } from './runtime/highlight.js';
+import {
+  RenderSvgOptions,
+  RenderHandle,
+  RenderSvgUpdateInput,
+  RenderSvgUpdateOptions,
+} from './types.js';
+import { createTooltipRuntime, TooltipRuntime } from './runtime/tooltip.js';
+import { createBreadcrumbRuntime, BreadcrumbRuntime } from './runtime/breadcrumbs.js';
+import { createHighlightRuntime, HighlightRuntime } from './runtime/highlight.js';
 import { resolveDocument, resolveHostElement } from './runtime/document.js';
-import { formatArcBreadcrumb } from './format.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ZERO_TOLERANCE = 1e-6;
@@ -16,6 +20,12 @@ const TAU = Math.PI * 2;
  *
  * @public
  */
+type RuntimeSet = {
+  tooltip: TooltipRuntime | null;
+  highlight: HighlightRuntime | null;
+  breadcrumbs: BreadcrumbRuntime | null;
+};
+
 export function renderSVG(options: RenderSvgOptions): RenderHandle {
   const doc = resolveDocument(options.document);
   const host = resolveHostElement(options.el, doc);
@@ -26,7 +36,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     document: doc,
   };
 
-  const execute = (opts: RenderSvgOptions): LayoutArc[] => {
+  let runtimes = createRuntimeSet(doc, currentOptions);
+
+  const execute = (opts: RenderSvgOptions, runtime: RuntimeSet): LayoutArc[] => {
     const arcs = layout(opts.config);
     const diameter = opts.config.size.radius * 2;
     const cx = opts.config.size.radius;
@@ -40,11 +52,8 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
       host.removeChild(host.firstChild as ChildNode);
     }
 
-    const tooltip = createTooltipRuntime(doc, opts.tooltip);
-    tooltip?.hide();
-    const highlight = createHighlightRuntime(opts.highlightByKey);
-    const breadcrumbs = createBreadcrumbRuntime(doc, opts.breadcrumbs);
-    breadcrumbs?.clear();
+    runtime.tooltip?.hide();
+    runtime.breadcrumbs?.clear();
 
     for (const arc of arcs) {
       const d = describeArcPath(arc, cx, cy);
@@ -61,7 +70,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         path.setAttribute('data-key', arc.key);
       }
 
-      highlight?.register(arc, path);
+      runtime.highlight?.register(arc, path);
 
       const classList = ['sand-arc'];
       const dynamicClass = opts.classForArc?.(arc);
@@ -80,42 +89,42 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         path.setAttribute('data-tooltip', arc.data.tooltip);
       }
 
-      const wantsPointerTracking = Boolean(
-        tooltip || highlight || breadcrumbs || opts.onArcEnter || opts.onArcMove || opts.onArcLeave,
-      );
+    const wantsPointerTracking = Boolean(
+      runtime.tooltip || runtime.highlight || runtime.breadcrumbs || opts.onArcEnter || opts.onArcMove || opts.onArcLeave,
+    );
 
-      if (wantsPointerTracking) {
-        const handleEnter = (event: PointerEvent) => {
-          tooltip?.show(event, arc);
-          highlight?.pointerEnter(arc, path);
-          breadcrumbs?.show(arc);
-          opts.onArcEnter?.({ arc, path, event });
-        };
-        const handleMove = (event: PointerEvent) => {
-          tooltip?.move(event);
-          highlight?.pointerMove(arc, path);
-          opts.onArcMove?.({ arc, path, event });
-        };
-        const handleLeave = (event: PointerEvent) => {
-          tooltip?.hide();
-          highlight?.pointerLeave(arc, path);
-          breadcrumbs?.clear();
-          opts.onArcLeave?.({ arc, path, event });
-        };
+    if (wantsPointerTracking) {
+      const handleEnter = (event: PointerEvent) => {
+        runtime.tooltip?.show(event, arc);
+        runtime.highlight?.pointerEnter(arc, path);
+        runtime.breadcrumbs?.show(arc);
+        opts.onArcEnter?.({ arc, path, event });
+      };
+      const handleMove = (event: PointerEvent) => {
+        runtime.tooltip?.move(event);
+        runtime.highlight?.pointerMove(arc, path);
+        opts.onArcMove?.({ arc, path, event });
+      };
+      const handleLeave = (event: PointerEvent) => {
+        runtime.tooltip?.hide();
+        runtime.highlight?.pointerLeave(arc, path);
+        runtime.breadcrumbs?.clear();
+        opts.onArcLeave?.({ arc, path, event });
+      };
         path.addEventListener('pointerenter', handleEnter);
         path.addEventListener('pointermove', handleMove);
         path.addEventListener('pointerleave', handleLeave);
         path.addEventListener('pointercancel', handleLeave);
       }
 
-      const wantsClick = Boolean(opts.onArcClick || highlight?.handlesClick);
-      if (wantsClick) {
-        const handleClick = (event: MouseEvent) => {
-          highlight?.handleClick?.(arc, path, event);
-          opts.onArcClick?.({ arc, path, event });
-        };
-        path.addEventListener('click', handleClick);
-      }
+    const wantsClick = Boolean(opts.onArcClick || runtime.highlight?.handlesClick);
+    if (wantsClick) {
+      const handleClick = (event: MouseEvent) => {
+        runtime.highlight?.handleClick?.(arc, path, event);
+        opts.onArcClick?.({ arc, path, event });
+      };
+      path.addEventListener('click', handleClick);
+    }
 
       opts.decoratePath?.(path, arc);
       host.appendChild(path);
@@ -124,7 +133,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     return arcs;
   };
 
-  const initialArcs = execute(currentOptions);
+  const initialArcs = execute(currentOptions, runtimes);
   const handle = initialArcs as unknown as RenderHandle;
 
   Object.defineProperties(handle, {
@@ -132,7 +141,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
       enumerable: false,
       value(input: RenderSvgUpdateInput) {
         currentOptions = normalizeUpdateOptions(currentOptions, input, host, doc);
-        const nextArcs = execute(currentOptions);
+        disposeRuntimeSet(runtimes);
+        runtimes = createRuntimeSet(doc, currentOptions);
+        const nextArcs = execute(currentOptions, runtimes);
         handle.length = 0;
         handle.push(...nextArcs);
         return handle;
@@ -141,6 +152,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     destroy: {
       enumerable: false,
       value() {
+        disposeRuntimeSet(runtimes);
         while (host.firstChild) {
           host.removeChild(host.firstChild as ChildNode);
         }
@@ -189,6 +201,21 @@ function isSunburstConfig(value: unknown): value is SunburstConfig {
   }
   const record = value as Record<string, unknown>;
   return 'size' in record && 'layers' in record;
+}
+
+function createRuntimeSet(doc: Document, options: RenderSvgOptions): RuntimeSet {
+  const tooltip = createTooltipRuntime(doc, options.tooltip);
+  const highlight = createHighlightRuntime(options.highlightByKey);
+  const breadcrumbs = createBreadcrumbRuntime(doc, options.breadcrumbs);
+  tooltip?.hide();
+  breadcrumbs?.clear();
+  return { tooltip, highlight, breadcrumbs };
+}
+
+function disposeRuntimeSet(runtime: RuntimeSet): void {
+  runtime.tooltip?.dispose();
+  runtime.highlight?.dispose();
+  runtime.breadcrumbs?.dispose();
 }
 
 function describeArcPath(arc: LayoutArc, cx: number, cy: number): string | null {

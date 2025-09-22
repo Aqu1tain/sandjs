@@ -8,6 +8,7 @@ export type HighlightRuntime = {
   pointerLeave: (arc: LayoutArc, path: SVGPathElement) => void;
   handleClick?: (arc: LayoutArc, path: SVGPathElement, event: MouseEvent) => void;
   handlesClick: boolean;
+  dispose: () => void;
 };
 
 export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']): HighlightRuntime | null {
@@ -136,6 +137,18 @@ export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']
         }
       : undefined,
     handlesClick: pinOnClick,
+    dispose() {
+      for (const key of groups.keys()) {
+        removeGroup(key);
+      }
+      if (pinnedPath && pinClassName) {
+        pinnedPath.classList.remove(pinClassName);
+      }
+      groups.clear();
+      pinnedKey = null;
+      pinnedPath = null;
+      hoverKey = null;
+    },
   };
 
   return runtime;
