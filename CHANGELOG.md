@@ -52,3 +52,9 @@
 ### Changed
 - Normalized arc class merging to dedupe tokens when combining defaults with `classForArc` overrides.
 - Corrected Changelog 0.2.1 release date (2025-09-21 when it was 2025-09-22)
+
+## [0.2.3] - 2025-09-23 [Unreleased]
+
+### Changed
+- Aligned demo with arc metadata feature from 0.2.2
+- Updated versions numbers
