@@ -55,6 +55,9 @@
 
 ## [0.2.3] - 2025-09-23 [Unreleased]
 
+### Added
+- Introduced `npm run dev`, a Rollup watch + local server workflow for iterating on the demo and library without manual rebuilds.
+
 ### Changed
 - Aligned demo with arc metadata feature from 0.2.2
 - Updated versions numbers
