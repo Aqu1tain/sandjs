@@ -275,6 +275,14 @@ function updateManagedPath(
   element.setAttribute('fill', arc.data.color ?? 'currentColor');
   element.setAttribute('data-layer', arc.layerId);
   element.setAttribute('data-name', arc.data.name);
+  element.setAttribute('data-depth', String(arc.depth));
+
+  const isCollapsed = Boolean(arc.data.collapsed);
+  if (isCollapsed) {
+    element.setAttribute('data-collapsed', 'true');
+  } else {
+    element.removeAttribute('data-collapsed');
+  }
   if (arc.key) {
     element.setAttribute('data-key', arc.key);
   } else {
@@ -287,18 +295,41 @@ function updateManagedPath(
     element.removeAttribute('data-tooltip');
   }
 
-  const classList = ['sand-arc'];
+  const classTokens: string[] = [];
+  const seen = new Set<string>();
+  const addClass = (candidate: string | null | undefined) => {
+    if (!candidate) {
+      return;
+    }
+    const pieces = candidate.split(/\s+/);
+    for (const piece of pieces) {
+      const trimmed = piece.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        continue;
+      }
+      seen.add(trimmed);
+      classTokens.push(trimmed);
+    }
+  };
+
+  addClass('sand-arc');
+  if (arc.depth === 0) {
+    addClass('is-root');
+  }
+  if (isCollapsed) {
+    addClass('is-collapsed');
+  }
+
   const dynamicClass = options.classForArc?.(arc);
-  if (typeof dynamicClass === 'string' && dynamicClass.trim().length > 0) {
-    classList.push(dynamicClass.trim());
+  if (typeof dynamicClass === 'string') {
+    addClass(dynamicClass);
   } else if (Array.isArray(dynamicClass)) {
     for (const candidate of dynamicClass) {
-      if (candidate && candidate.trim().length > 0) {
-        classList.push(candidate.trim());
-      }
+      addClass(candidate);
     }
   }
-  element.setAttribute('class', classList.join(' '));
+
+  element.setAttribute('class', classTokens.join(' '));
 
   options.decoratePath?.(element, arc);
   runtime.highlight?.register(arc, element);
