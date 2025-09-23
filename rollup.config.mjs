@@ -3,6 +3,7 @@ import copy from 'rollup-plugin-copy';
 import terser from '@rollup/plugin-terser';
 
 const input = 'src/index.ts';
+const shouldCopyAssets = process.env.SKIP_COPY !== '1';
 
 export default {
   input,
@@ -42,13 +43,17 @@ export default {
       declarationDir: 'dist',
       sourceMap: true,
     }),
-    copy({
-      targets: [
-        { src: 'README.md', dest: 'dist' },
-        { src: 'LICENSE', dest: 'dist' },
-      ],
-      hook: 'writeBundle',
-      copyOnce: true,
-    }),
+    ...(shouldCopyAssets
+      ? [
+          copy({
+            targets: [
+              { src: 'README.md', dest: 'dist' },
+              { src: 'LICENSE', dest: 'dist' },
+            ],
+            hook: 'writeBundle',
+            copyOnce: true,
+          }),
+        ]
+      : []),
   ],
 };

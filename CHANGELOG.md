@@ -52,3 +52,14 @@
 ### Changed
 - Normalized arc class merging to dedupe tokens when combining defaults with `classForArc` overrides.
 - Corrected Changelog 0.2.1 release date (2025-09-21 when it was 2025-09-22)
+
+## [0.2.3] - 2025-09-23
+
+### Added
+- Introduced `npm run dev`, a Rollup watch + local web server workflow that auto-rebuilds bundles and serves the demo for rapid iteration.
+
+### Changed
+- Reworked the demo into the “Sand.js Studio” single-screen app with live JSON editing, collapsible branch toggles, and a leaner visual design.
+- Simplified the demo styling to better showcase built-in arc metadata and reduce custom decoration.
+- Updated the README CDN snippet to reference `@akitain/sandjs@0.2.3`.
+- Skipped redundant asset copies during dev watch runs to quiet Rollup while keeping publish builds intact.
