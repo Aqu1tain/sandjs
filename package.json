@@ -36,6 +36,7 @@
     "@microsoft/api-extractor": "^7.52.13",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.1.4",
+    "@types/node": "^24.5.2",
     "rimraf": "^6.0.1",
     "rollup": "^4.50.2",
     "rollup-plugin-copy": "^3.5.0",
