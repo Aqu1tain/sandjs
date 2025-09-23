@@ -43,3 +43,5 @@
 - Broke out render runtimes (tooltip, highlight, breadcrumbs) into reusable modules and persist them across updates to avoid re-instantiation costs.
 - Recycled keyed SVG paths so update cycles no longer churn event listeners or DOM nodes.
 - Expanded render handle tests and documentation to cover the update workflow and responsive sizing defaults.
+
+## [0.2.2] - 2025-09-21 [Unreleased]
