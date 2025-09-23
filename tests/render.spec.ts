@@ -127,6 +127,12 @@ test('renderSVG exposes update handle that patches the existing host', () => {
   assert.equal(chart.length, 2);
   assert.equal(hostStub.children.length, 2);
 
+  for (const path of hostStub.children) {
+    assert.equal(path.attributes.get('data-depth'), '0');
+    assert.equal(path.attributes.get('data-collapsed'), undefined);
+    assert.equal(path.attributes.get('class'), 'sand-arc is-root');
+  }
+
   const nextConfig: SunburstConfig = {
     size: { radius: 100 },
     layers: [
@@ -135,7 +141,14 @@ test('renderSVG exposes update handle that patches the existing host', () => {
         radialUnits: [0, 1],
         angleMode: 'free',
         tree: [
-          { name: 'C', value: 1 },
+          {
+            name: 'C',
+            value: 1,
+            collapsed: true,
+            children: [
+              { name: 'C-child', value: 1 },
+            ],
+          },
         ],
       },
     ],
@@ -151,11 +164,17 @@ test('renderSVG exposes update handle that patches the existing host', () => {
   assert.strictEqual(firstUpdate, chart, 'update should return original handle');
   assert.equal(chart.length, 1, 'handle should reflect updated arc count');
   assert.equal(hostStub.children.length, 1, 'host should contain new arc count');
+  assert.equal(hostStub.children[0].attributes.get('data-collapsed'), 'true');
+  assert.equal(hostStub.children[0].attributes.get('class'), 'sand-arc is-root is-collapsed');
 
   chart.update({ config: initialConfig });
 
   assert.equal(chart.length, 2, 'handle should reflect second update');
   assert.equal(hostStub.children.length, 2, 'host should contain second update arcs');
+  for (const path of hostStub.children) {
+    assert.equal(path.attributes.get('data-collapsed'), undefined);
+    assert.equal(path.attributes.get('class'), 'sand-arc is-root');
+  }
   assert.equal(countByAttr('data-sandjs-tooltip'), 1, 'tooltip element should stay singleton after updates');
   assert.equal(countByAttr('data-sandjs-breadcrumbs'), 1, 'breadcrumb element should stay singleton after updates');
   assert.deepEqual(chart.map((arc) => arc.data.name), ['A', 'B']);
