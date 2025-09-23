@@ -255,7 +255,7 @@
         chart = renderSVG({
           el: '#sunburst',
           config: nextConfig,
-          classForArc: (arc) => (arc.depth === 0 ? 'sand-arc is-root' : 'sand-arc'),
+          classForArc: (arc) => (arc.depth === 0 ? 'is-root' : undefined),
           decoratePath(path, arc) {
             const labelValue = formatValue(arc.value);
             path.setAttribute(
@@ -265,10 +265,6 @@
             const explicit = arc.data.color;
             const fill = explicit || assignColor(colorIdForArc(arc));
             path.setAttribute('fill', fill);
-            if (arc.data.collapsed) {
-              path.classList.add('is-collapsed');
-              path.setAttribute('data-collapsed', 'true');
-            }
           },
           tooltip: true,
           highlightByKey: {
