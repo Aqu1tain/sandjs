@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 // Define project paths using a secure method
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
+const demoRoot = join(projectRoot, 'demo');
 const publicRoot = projectRoot;
 const distRoot = join(projectRoot, 'dist');
 const port = Number.parseInt(process.env.PORT ?? '4173', 10);
@@ -38,15 +39,16 @@ const resolveStaticPath = async (urlPathRaw) => {
   }
 
   // Paths to check for the file, in order of priority
-  const candidates = [join(publicRoot, sanitized), join(distRoot, sanitized)];
+  const candidates = [join(demoRoot, sanitized), join(publicRoot, sanitized), join(distRoot, sanitized)];
 
   for (const candidate of candidates) {
     try {
       // Use normalize and resolve to handle path segments securely
       const resolvedPath = resolve(candidate);
 
-      // Check if the resolved path is within the designated public or dist root
+      // Check if the resolved path is within the designated public, demo, or dist root
       if (
+          !resolvedPath.startsWith(normalize(demoRoot) + normalize('/')) &&
           !resolvedPath.startsWith(normalize(publicRoot) + normalize('/')) &&
           !resolvedPath.startsWith(normalize(distRoot) + normalize('/'))
       ) {
@@ -68,11 +70,11 @@ const resolveStaticPath = async (urlPathRaw) => {
 };
 
 const printBanner = () => {
-  const url = `http://localhost:${port}`;
+  const url = `http://localhost:${port}/demo/`;
   console.log('');
   console.log('Sand.js dev server ready');
   console.log(`  ➜ Local:   ${url}`);
-  console.log('  ➜ Root:    ./');
+  console.log('  ➜ Root:    ./demo/index.html');
   console.log('  ➜ Bundle:  dist/sandjs.mjs');
   console.log('');
 };
@@ -142,11 +144,6 @@ const rollup = spawn(npmCommand, ['exec', '--', 'rollup', '-c', '--watch'], {
 });
 
 const server = serve();
-
-// The previous version had a bug where the banner was printed on rollup's
-// first "waiting for changes" message, even if the server wasn't fully ready.
-// This is a more robust way to handle it.
-// The `printBanner` call is already in the server's listen callback.
 
 rollup.on('exit', (code, signal) => {
   if (signal === 'SIGINT' || signal === 'SIGTERM') return;
