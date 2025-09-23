@@ -32,6 +32,19 @@
     .controls { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; font-size: 0.85rem; max-width: 480px; }
     .controls__label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
     .controls__toggle { accent-color: #22d3ee; }
+    .editor { width: min(720px, 90vw); display: flex; flex-direction: column; gap: 0.75rem; color: #cbd5f5; }
+    .editor__textarea { width: 100%; min-height: 220px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 0.75rem; padding: 1rem; color: inherit; font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; line-height: 1.45; resize: vertical; }
+    .editor__textarea:focus { outline: 2px solid #22d3ee; outline-offset: 2px; }
+    .editor__hint { font-size: 0.75rem; color: #94a3b8; margin: 0; }
+    .editor__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+    .editor__button { background: #22d3ee; color: #0f172a; border: none; border-radius: 999px; padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease; }
+    .editor__button:hover { transform: translateY(-1px); box-shadow: 0 10px 25px rgba(34, 211, 238, 0.35); }
+    .editor__button:active { transform: translateY(0); box-shadow: none; }
+    .editor__button--ghost { background: transparent; color: #22d3ee; border: 1px solid rgba(34, 211, 238, 0.6); }
+    .editor__status { min-height: 1.2rem; font-size: 0.75rem; letter-spacing: 0.01em; }
+    .editor__status--muted { color: #94a3b8; }
+    .editor__status--success { color: #bef264; }
+    .editor__status--error { color: #fecaca; }
   </style>
 </head>
 <body>
@@ -48,6 +61,16 @@
 <p id="selection" class="selection">Loading data…</p>
 <p id="breadcrumbs" class="breadcrumbs">Path: —</p>
 <div id="controls" class="controls" aria-live="polite"></div>
+<section class="editor" aria-labelledby="config-editor-title">
+  <strong id="config-editor-title">Configuration JSON</strong>
+  <p class="editor__hint">Modify <code>demo/data.json</code> inline and re-render instantly. Invalid JSON will be highlighted below.</p>
+  <textarea id="config-editor" class="editor__textarea" spellcheck="false" aria-describedby="config-editor-title"></textarea>
+  <div class="editor__actions">
+    <button type="button" id="apply-config" class="editor__button">Apply changes</button>
+    <button type="button" id="reset-config" class="editor__button editor__button--ghost">Reset to data.json</button>
+    <span id="editor-status" class="editor__status editor__status--muted" aria-live="polite"></span>
+  </div>
+</section>
 
 <script type="module">
   import { renderSVG, formatArcBreadcrumb } from '../dist/sandjs.mjs';
@@ -142,12 +165,21 @@
     });
 
     const controlsEl = document.getElementById('controls');
+    const editorEl = document.getElementById('config-editor');
+    const applyConfigButton = document.getElementById('apply-config');
+    const resetConfigButton = document.getElementById('reset-config');
+    const editorStatus = document.getElementById('editor-status');
 
     const KEY_SEPARATOR = '\u241F';
     const encodePath = (parts) => parts.join(KEY_SEPARATOR);
 
     const cloneConfig = (input) =>
       (typeof structuredClone === 'function' ? structuredClone(input) : JSON.parse(JSON.stringify(input)));
+
+    const setEditorStatus = (message, tone = 'muted') => {
+      editorStatus.textContent = message;
+      editorStatus.className = `editor__status editor__status--${tone}`;
+    };
 
     const collectCollapsedNodes = (sunburstConfig) => {
       const entries = [];
@@ -202,10 +234,22 @@
       }
     };
 
-    const collapsedEntries = collectCollapsedNodes(config);
-    collapsedEntries.forEach((entry) => state.collapsedKeys.add(entry.key));
+    let userConfig = cloneConfig(config);
+
+    const seedCollapsedKeys = () => {
+      const entries = collectCollapsedNodes(userConfig);
+      state.collapsedKeys = new Set(entries.map((entry) => entry.key));
+    };
+
+    const syncEditor = () => {
+      editorEl.value = JSON.stringify(userConfig, null, 2);
+    };
+
+    seedCollapsedKeys();
+    syncEditor();
 
     const renderControls = () => {
+      const collapsedEntries = collectCollapsedNodes(userConfig);
       controlsEl.innerHTML = '';
       if (collapsedEntries.length === 0) {
         controlsEl.textContent = 'No collapsible branches in this dataset.';
@@ -219,22 +263,31 @@
       collapsedEntries.forEach((entry) => {
         const wrapper = document.createElement('label');
         wrapper.className = 'controls__label';
+
         const toggle = document.createElement('input');
         toggle.type = 'checkbox';
         toggle.className = 'controls__toggle';
-        toggle.checked = !state.collapsedKeys.has(entry.key);
         toggle.setAttribute('aria-label', `Toggle children for ${entry.breadcrumb}`);
+
         const text = document.createElement('span');
-        text.textContent = toggle.checked ? `Expanded: ${entry.label}` : `Collapsed: ${entry.label}`;
+
+        const syncToggleUi = () => {
+          const isCollapsed = state.collapsedKeys.has(entry.key);
+          toggle.checked = !isCollapsed;
+          text.textContent = isCollapsed ? `Collapsed: ${entry.label}` : `Expanded: ${entry.label}`;
+        };
+
         toggle.addEventListener('change', () => {
           if (toggle.checked) {
             state.collapsedKeys.delete(entry.key);
           } else {
             state.collapsedKeys.add(entry.key);
           }
-          text.textContent = toggle.checked ? `Expanded: ${entry.label}` : `Collapsed: ${entry.label}`;
+          syncToggleUi();
           renderChart();
         });
+
+        syncToggleUi();
         wrapper.appendChild(toggle);
         wrapper.appendChild(text);
         controlsEl.appendChild(wrapper);
@@ -244,7 +297,7 @@
     let chart = null;
 
     const renderChart = () => {
-      const nextConfig = cloneConfig(config);
+      const nextConfig = cloneConfig(userConfig);
       applyCollapsedState(nextConfig, state.collapsedKeys);
       state.pinned = null;
       clearHover();
@@ -315,6 +368,41 @@
 
     setSelection(defaultMessage);
     setBreadcrumbs(defaultBreadcrumbs);
+    setEditorStatus('Loaded data.json', 'muted');
+
+    applyConfigButton.addEventListener('click', () => {
+      try {
+        const parsed = JSON.parse(editorEl.value);
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('Expected a JSON object.');
+        }
+        if (!parsed.size || typeof parsed.size !== 'object') {
+          throw new Error('Missing "size" definition.');
+        }
+        if (!Array.isArray(parsed.layers)) {
+          throw new Error('"layers" must be an array.');
+        }
+
+        userConfig = parsed;
+        seedCollapsedKeys();
+        syncEditor();
+        renderControls();
+        renderChart();
+        setEditorStatus('Configuration applied', 'success');
+      } catch (err) {
+        console.error(err);
+        setEditorStatus(`Invalid configuration: ${err.message}`, 'error');
+      }
+    });
+
+    resetConfigButton.addEventListener('click', () => {
+      userConfig = cloneConfig(config);
+      seedCollapsedKeys();
+      syncEditor();
+      renderControls();
+      renderChart();
+      setEditorStatus('Reset to data.json', 'muted');
+    });
   } catch (err) {
     console.error(err);
     setSelection(`Failed to load demo/data.json: ${err.message}`, 'error');
