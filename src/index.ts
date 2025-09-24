@@ -19,4 +19,5 @@ export type {
   HighlightByKeyOptions,
   ArcPointerEventPayload,
   ArcClickEventPayload,
+  TransitionOptions,
 } from './render/types.js';

@@ -6,14 +6,14 @@ import {
   RenderSvgUpdateInput,
   RenderSvgUpdateOptions,
 } from './types.js';
+import { describeArcPath } from './geometry.js';
+import { resolveTransition, interpolateArc, ResolvedTransition } from './transition.js';
 import { createTooltipRuntime, TooltipRuntime } from './runtime/tooltip.js';
 import { createBreadcrumbRuntime, BreadcrumbRuntime } from './runtime/breadcrumbs.js';
 import { createHighlightRuntime, HighlightRuntime } from './runtime/highlight.js';
 import { resolveDocument, resolveHostElement } from './runtime/document.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const ZERO_TOLERANCE = 1e-6;
-const TAU = Math.PI * 2;
 
 /**
  * Renders the supplied `SunburstConfig` into the target SVG element.
@@ -26,12 +26,25 @@ type RuntimeSet = {
   breadcrumbs: BreadcrumbRuntime | null;
 };
 
+type AnimationHandle = {
+  cancel(): void;
+};
+
+type AnimationDrivers = {
+  raf: (callback: FrameRequestCallback) => number;
+  caf: (handle: number) => void;
+  now: () => number;
+};
+
 type ManagedPath = {
   key: string;
   element: SVGPathElement;
   arc: LayoutArc;
   options: RenderSvgOptions;
   runtime: RuntimeSet;
+  animation: AnimationHandle | null;
+  fade: AnimationHandle | null;
+  pendingRemoval: boolean;
   listeners: {
     enter: (event: PointerEvent) => void;
     move: (event: PointerEvent) => void;
@@ -53,6 +66,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
 
   let runtimes = createRuntimeSet(doc, currentOptions);
   const pathRegistry = new Map<string, ManagedPath>();
+  const drivers = createAnimationDrivers(doc);
 
   const execute = (opts: RenderSvgOptions, runtime: RuntimeSet): LayoutArc[] => {
     const arcs = layout(opts.config);
@@ -64,13 +78,10 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     host.setAttribute('width', `${diameter}`);
     host.setAttribute('height', `${diameter}`);
 
-    while (host.firstChild) {
-      host.removeChild(host.firstChild as ChildNode);
-    }
-
     runtime.tooltip?.hide();
     runtime.breadcrumbs?.clear();
 
+    const transition = resolveTransition(opts.transition);
     const usedKeys = new Set<string>();
 
     for (let index = 0; index < arcs.length; index += 1) {
@@ -80,11 +91,15 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         continue;
       }
 
-      const key = createArcKey(arc, index);
+      const key = createArcKey(arc);
       usedKeys.add(key);
 
       let managed = pathRegistry.get(key);
-      if (!managed) {
+      let previousArc: LayoutArc | null = null;
+      if (managed) {
+        previousArc = { ...managed.arc };
+        cancelPendingRemoval(managed);
+      } else {
         managed = createManagedPath({
           key,
           arc,
@@ -100,6 +115,11 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         options: opts,
         runtime,
         pathData: d,
+        previousArc,
+        transition,
+        drivers,
+        cx,
+        cy,
       });
 
       host.appendChild(managed.element);
@@ -107,11 +127,14 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
 
     for (const [key, managed] of pathRegistry) {
       if (!usedKeys.has(key)) {
-        managed.dispose();
-        if (managed.element.parentNode === host) {
-          host.removeChild(managed.element);
-        }
-        pathRegistry.delete(key);
+        scheduleManagedRemoval({
+          key,
+          managed,
+          host,
+          registry: pathRegistry,
+          transition,
+          drivers,
+        });
       }
     }
 
@@ -138,9 +161,13 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
       enumerable: false,
       value() {
         disposeRuntimeSet(runtimes);
-        while (host.firstChild) {
-          host.removeChild(host.firstChild as ChildNode);
+        for (const managed of pathRegistry.values()) {
+          managed.dispose();
+          if (managed.element.parentNode === host) {
+            host.removeChild(managed.element);
+          }
         }
+        pathRegistry.clear();
         handle.length = 0;
       },
     },
@@ -204,8 +231,13 @@ function createManagedPath(params: {
     arc,
     options,
     runtime,
+    animation: null,
+    fade: null,
+    pendingRemoval: false,
     listeners: {} as ManagedPath['listeners'],
     dispose: () => {
+      stopManagedAnimations(managed);
+      managed.pendingRemoval = false;
       element.removeEventListener('pointerenter', managed.listeners.enter);
       element.removeEventListener('pointermove', managed.listeners.move);
       element.removeEventListener('pointerleave', managed.listeners.leave);
@@ -263,15 +295,45 @@ function createManagedPath(params: {
 
 function updateManagedPath(
   managed: ManagedPath,
-  params: { arc: LayoutArc; options: RenderSvgOptions; runtime: RuntimeSet; pathData: string },
+  params: {
+    arc: LayoutArc;
+    options: RenderSvgOptions;
+    runtime: RuntimeSet;
+    pathData: string;
+    previousArc: LayoutArc | null;
+    transition: ResolvedTransition | null;
+    drivers: AnimationDrivers;
+    cx: number;
+    cy: number;
+  },
 ): void {
-  const { arc, options, runtime, pathData } = params;
+  const { arc, options, runtime, pathData, previousArc, transition, drivers, cx, cy } = params;
+
   managed.arc = arc;
   managed.options = options;
   managed.runtime = runtime;
+  managed.pendingRemoval = false;
+
+  stopFade(managed);
 
   const element = managed.element;
-  element.setAttribute('d', pathData);
+  const animateArc = Boolean(transition && previousArc && hasArcGeometryChanged(previousArc, arc));
+  if (animateArc) {
+    startArcAnimation({
+      managed,
+      from: previousArc!,
+      to: arc,
+      finalPath: pathData,
+      transition: transition!,
+      drivers,
+      cx,
+      cy,
+    });
+  } else {
+    stopArcAnimation(managed);
+    applyPathData(element, pathData);
+  }
+
   element.setAttribute('fill', arc.data.color ?? 'currentColor');
   element.setAttribute('data-layer', arc.layerId);
   element.setAttribute('data-name', arc.data.name);
@@ -283,6 +345,7 @@ function updateManagedPath(
   } else {
     element.removeAttribute('data-collapsed');
   }
+
   if (arc.key) {
     element.setAttribute('data-key', arc.key);
   } else {
@@ -333,9 +396,323 @@ function updateManagedPath(
 
   options.decoratePath?.(element, arc);
   runtime.highlight?.register(arc, element);
+
+  element.style.pointerEvents = '';
+
+  if (!previousArc) {
+    if (transition) {
+      element.style.opacity = '0';
+      managed.fade = startFade({
+        managed,
+        from: 0,
+        to: 1,
+        transition,
+        drivers,
+        resetStyleOnComplete: true,
+        onComplete: () => {
+          managed.fade = null;
+        },
+        onCancel: () => {
+          managed.fade = null;
+        },
+      });
+    } else {
+      element.style.opacity = '';
+    }
+  } else {
+    element.style.opacity = '';
+  }
 }
 
-function createArcKey(arc: LayoutArc, index: number): string {
+function hasArcGeometryChanged(a: LayoutArc, b: LayoutArc): boolean {
+  return a.x0 !== b.x0 || a.x1 !== b.x1 || a.y0 !== b.y0 || a.y1 !== b.y1;
+}
+
+function applyPathData(element: SVGPathElement, pathData: string | null | undefined): void {
+  if (pathData && pathData.length > 0) {
+    element.setAttribute('d', pathData);
+  } else {
+    element.removeAttribute('d');
+  }
+}
+
+function startArcAnimation(params: {
+  managed: ManagedPath;
+  from: LayoutArc;
+  to: LayoutArc;
+  finalPath: string;
+  transition: ResolvedTransition;
+  drivers: AnimationDrivers;
+  cx: number;
+  cy: number;
+}): void {
+  const { managed, from, to, finalPath, transition, drivers, cx, cy } = params;
+  stopArcAnimation(managed);
+
+  const element = managed.element;
+  const handle = runAnimation({
+    drivers,
+    duration: transition.duration,
+    delay: transition.delay,
+    easing: transition.easing,
+    onUpdate: (progress) => {
+      const frameArc = interpolateArc(from, to, progress);
+      const framePath = describeArcPath(frameArc, cx, cy) ?? finalPath;
+      applyPathData(element, framePath);
+    },
+    onComplete: () => {
+      applyPathData(element, finalPath);
+      managed.animation = null;
+    },
+    onCancel: () => {
+      applyPathData(element, finalPath);
+      managed.animation = null;
+    },
+  });
+
+  managed.animation = handle;
+}
+
+function stopArcAnimation(managed: ManagedPath): void {
+  if (managed.animation) {
+    managed.animation.cancel();
+    managed.animation = null;
+  }
+}
+
+type FadeParams = {
+  managed: ManagedPath;
+  from: number;
+  to: number;
+  transition: ResolvedTransition;
+  drivers: AnimationDrivers;
+  resetStyleOnComplete?: boolean;
+  onComplete?: () => void;
+  onCancel?: () => void;
+};
+
+function startFade(params: FadeParams): AnimationHandle {
+  const { managed, from, to, transition, drivers, resetStyleOnComplete, onComplete, onCancel } = params;
+  const element = managed.element;
+  const start = clamp01Local(from);
+  const end = clamp01Local(to);
+
+  element.style.opacity = start.toString();
+
+  return runAnimation({
+    drivers,
+    duration: transition.duration,
+    delay: transition.delay,
+    easing: transition.easing,
+    onUpdate: (progress) => {
+      const value = start + (end - start) * progress;
+      element.style.opacity = value.toString();
+    },
+    onComplete: () => {
+      finalizeOpacity(element, end, resetStyleOnComplete);
+      onComplete?.();
+    },
+    onCancel: () => {
+      finalizeOpacity(element, end, resetStyleOnComplete);
+      onCancel?.();
+    },
+  });
+}
+
+function stopFade(managed: ManagedPath): void {
+  if (managed.fade) {
+    managed.fade.cancel();
+    managed.fade = null;
+  }
+}
+
+function stopManagedAnimations(managed: ManagedPath): void {
+  stopArcAnimation(managed);
+  stopFade(managed);
+}
+
+type RunAnimationParams = {
+  drivers: AnimationDrivers;
+  duration: number;
+  delay: number;
+  easing: (t: number) => number;
+  onUpdate: (progress: number) => void;
+  onComplete?: () => void;
+  onCancel?: () => void;
+};
+
+function runAnimation(params: RunAnimationParams): AnimationHandle {
+  const { drivers, duration, delay, easing, onUpdate, onComplete, onCancel } = params;
+
+  if (duration <= 0 && delay <= 0) {
+    onUpdate(1);
+    onComplete?.();
+    return {
+      cancel() {
+        onCancel?.();
+      },
+    };
+  }
+
+  let cancelled = false;
+  let rafId = 0;
+  const delayEnd = drivers.now() + delay;
+
+  const tick: FrameRequestCallback = (timestamp) => {
+    if (cancelled) {
+      return;
+    }
+    if (timestamp < delayEnd) {
+      rafId = drivers.raf(tick);
+      return;
+    }
+
+    const elapsed = timestamp - delayEnd;
+    const progress = duration > 0 ? Math.min(elapsed / duration, 1) : 1;
+    const eased = easing(progress);
+    onUpdate(eased);
+
+    if (progress < 1) {
+      rafId = drivers.raf(tick);
+    } else {
+      onComplete?.();
+    }
+  };
+
+  rafId = drivers.raf(tick);
+
+  return {
+    cancel() {
+      if (cancelled) {
+        return;
+      }
+      cancelled = true;
+      drivers.caf(rafId);
+      onCancel?.();
+    },
+  };
+}
+
+function cancelPendingRemoval(managed: ManagedPath): void {
+  if (!managed.pendingRemoval) {
+    return;
+  }
+  managed.pendingRemoval = false;
+  stopFade(managed);
+  managed.element.style.opacity = '';
+  managed.element.style.pointerEvents = '';
+}
+
+function scheduleManagedRemoval(params: {
+  key: string;
+  managed: ManagedPath;
+  host: SVGElement;
+  registry: Map<string, ManagedPath>;
+  transition: ResolvedTransition | null;
+  drivers: AnimationDrivers;
+}): void {
+  const { key, managed, host, registry, transition, drivers } = params;
+  if (managed.pendingRemoval) {
+    return;
+  }
+
+  managed.pendingRemoval = true;
+  stopArcAnimation(managed);
+  stopFade(managed);
+  managed.element.style.pointerEvents = 'none';
+
+  const remove = () => {
+    stopManagedAnimations(managed);
+    if (managed.element.parentNode === host) {
+      host.removeChild(managed.element);
+    }
+    registry.delete(key);
+    managed.dispose();
+  };
+
+  if (!transition) {
+    remove();
+    return;
+  }
+
+  const startOpacity = getCurrentOpacity(managed.element);
+  managed.fade = startFade({
+    managed,
+    from: startOpacity,
+    to: 0,
+    transition,
+    drivers,
+    resetStyleOnComplete: false,
+    onComplete: () => {
+      managed.fade = null;
+      remove();
+    },
+    onCancel: () => {
+      managed.fade = null;
+      managed.pendingRemoval = false;
+      managed.element.style.opacity = '';
+      managed.element.style.pointerEvents = '';
+    },
+  });
+}
+
+function getCurrentOpacity(element: SVGPathElement): number {
+  const value = element.style.opacity;
+  if (!value) {
+    return 1;
+  }
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+  return clamp01Local(parsed);
+}
+
+function finalizeOpacity(element: SVGPathElement, opacity: number, resetStyle?: boolean): void {
+  if (resetStyle && opacity === 1) {
+    element.style.opacity = '';
+  } else {
+    element.style.opacity = opacity.toString();
+  }
+}
+
+function clamp01Local(value: number): number {
+  if (value <= 0) {
+    return 0;
+  }
+  if (value >= 1) {
+    return 1;
+  }
+  return value;
+}
+
+function createAnimationDrivers(doc: Document): AnimationDrivers {
+  const view = doc.defaultView ?? (typeof window !== 'undefined' ? window : undefined);
+
+  const raf =
+    view && typeof view.requestAnimationFrame === 'function'
+      ? view.requestAnimationFrame.bind(view)
+      : (callback: FrameRequestCallback): number => {
+          const handle = setTimeout(() => callback(Date.now()), 16);
+          return Number(handle);
+        };
+
+  const caf =
+    view && typeof view.cancelAnimationFrame === 'function'
+      ? view.cancelAnimationFrame.bind(view)
+      : (handle: number) => {
+          clearTimeout(handle);
+        };
+
+  const now =
+    view && view.performance && typeof view.performance.now === 'function'
+      ? () => view.performance.now()
+      : () => Date.now();
+
+  return { raf, caf, now };
+}
+
+function createArcKey(arc: LayoutArc): string {
   const segments: string[] = [arc.layerId, String(arc.depth)];
   if (typeof arc.key === 'string' && arc.key.length > 0) {
     segments.push(`key=${arc.key}`);
@@ -345,7 +722,6 @@ function createArcKey(arc: LayoutArc, index: number): string {
     const breadcrumb = arc.path.map((node) => node?.name ?? '').join('/');
     segments.push(`path=${breadcrumb}`);
   }
-  segments.push(`idx=${index}`);
   return segments.join('|');
 }
 
@@ -362,79 +738,4 @@ function disposeRuntimeSet(runtime: RuntimeSet): void {
   runtime.tooltip?.dispose();
   runtime.highlight?.dispose();
   runtime.breadcrumbs?.dispose();
-}
-
-function describeArcPath(arc: LayoutArc, cx: number, cy: number): string | null {
-  const span = arc.x1 - arc.x0;
-  if (span <= ZERO_TOLERANCE) {
-    return null;
-  }
-
-  const fullCircle = span >= TAU - ZERO_TOLERANCE;
-
-  const outerStart = polarToCartesian(cx, cy, arc.y1, arc.x0);
-  const outerEnd = polarToCartesian(cx, cy, arc.y1, arc.x1);
-  const largeArc = span > Math.PI ? 1 : 0;
-
-  if (fullCircle && arc.y0 <= ZERO_TOLERANCE) {
-    const outerRadius = arc.y1;
-    const start = { x: cx + outerRadius, y: cy };
-    const mid = { x: cx - outerRadius, y: cy };
-    return [
-      `M ${start.x} ${start.y}`,
-      `A ${outerRadius} ${outerRadius} 0 1 1 ${mid.x} ${mid.y}`,
-      `A ${outerRadius} ${outerRadius} 0 1 1 ${start.x} ${start.y}`,
-      'Z',
-    ].join(' ');
-  }
-
-  if (fullCircle) {
-    const outerRadius = arc.y1;
-    const innerRadius = arc.y0;
-    const outerStartPoint = { x: cx + outerRadius, y: cy };
-    const outerMidPoint = { x: cx - outerRadius, y: cy };
-    const parts = [
-      `M ${outerStartPoint.x} ${outerStartPoint.y}`,
-      `A ${outerRadius} ${outerRadius} 0 1 1 ${outerMidPoint.x} ${outerMidPoint.y}`,
-      `A ${outerRadius} ${outerRadius} 0 1 1 ${outerStartPoint.x} ${outerStartPoint.y}`,
-    ];
-    if (innerRadius > ZERO_TOLERANCE) {
-      const innerStartPoint = { x: cx + innerRadius, y: cy };
-      const innerMidPoint = { x: cx - innerRadius, y: cy };
-      parts.push(
-        `M ${innerStartPoint.x} ${innerStartPoint.y}`,
-        `A ${innerRadius} ${innerRadius} 0 1 0 ${innerMidPoint.x} ${innerMidPoint.y}`,
-        `A ${innerRadius} ${innerRadius} 0 1 0 ${innerStartPoint.x} ${innerStartPoint.y}`,
-      );
-    }
-    parts.push('Z');
-    return parts.join(' ');
-  }
-
-  if (arc.y0 <= ZERO_TOLERANCE) {
-    return [
-      `M ${cx} ${cy}`,
-      `L ${outerStart.x} ${outerStart.y}`,
-      `A ${arc.y1} ${arc.y1} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
-      'Z',
-    ].join(' ');
-  }
-
-  const innerStart = polarToCartesian(cx, cy, arc.y0, arc.x1);
-  const innerEnd = polarToCartesian(cx, cy, arc.y0, arc.x0);
-
-  return [
-    `M ${outerStart.x} ${outerStart.y}`,
-    `A ${arc.y1} ${arc.y1} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
-    `L ${innerStart.x} ${innerStart.y}`,
-    `A ${arc.y0} ${arc.y0} 0 ${largeArc} 0 ${innerEnd.x} ${innerEnd.y}`,
-    'Z',
-  ].join(' ');
-}
-
-function polarToCartesian(cx: number, cy: number, radius: number, angle: number): { x: number; y: number } {
-  return {
-    x: cx + radius * Math.cos(angle),
-    y: cy + radius * Math.sin(angle),
-  };
 }

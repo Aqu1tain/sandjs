@@ -23,6 +23,17 @@ export interface BreadcrumbOptions {
 }
 
 /**
+ * Controls animated transitions when updating an existing render.
+ *
+ * @public
+ */
+export interface TransitionOptions {
+  duration?: number;
+  easing?: (progress: number) => number;
+  delay?: number;
+}
+
+/**
  * Enables automatic highlighting for arcs that share the same key.
  *
  * @public
@@ -72,6 +83,7 @@ export interface RenderSvgOptions {
   tooltip?: boolean | TooltipOptions;
   highlightByKey?: boolean | HighlightByKeyOptions;
   breadcrumbs?: boolean | BreadcrumbOptions;
+  transition?: boolean | TransitionOptions;
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
   onArcLeave?: (payload: ArcPointerEventPayload) => void;
@@ -104,4 +116,3 @@ export type RenderSvgUpdateInput = SunburstConfig | RenderSvgUpdateOptions;
 export interface RenderSvgUpdateOptions extends Partial<Omit<RenderSvgOptions, 'el'>> {
   config?: SunburstConfig;
 }
-
