@@ -77,5 +77,6 @@ export interface LayoutArc {
   key?: string;
   value: number;
   path: TreeNodeInput[];
+  pathIndices: number[];
   percentage: number;
 }

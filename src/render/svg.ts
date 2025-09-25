@@ -714,6 +714,9 @@ function createAnimationDrivers(doc: Document): AnimationDrivers {
 
 function createArcKey(arc: LayoutArc): string {
   const segments: string[] = [arc.layerId, String(arc.depth)];
+  if (Array.isArray(arc.pathIndices)) {
+    segments.push(`idx=${arc.pathIndices.join('.')}`);
+  }
   if (typeof arc.key === 'string' && arc.key.length > 0) {
     segments.push(`key=${arc.key}`);
   } else if (typeof arc.data?.key === 'string' && arc.data.key.length > 0) {

@@ -6,6 +6,7 @@ type NormalizedNode = {
   expandLevels: number;
   children: NormalizedNode[];
   path: TreeNodeInput[];
+  pathIndices: number[];
   collapsed: boolean;
   subtreeThickness: number;
 };
@@ -347,6 +348,7 @@ function createArc(params: {
     key: node.input.key,
     value: node.value,
     path: node.path,
+    pathIndices: node.pathIndices,
     percentage,
   };
   return { arc, startAngle: x0, span };
@@ -385,18 +387,23 @@ function resolveNodeOffset(node: TreeNodeInput, layer: LayerConfig): number {
   return 0;
 }
 
-function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = []): NormalizedNode[] {
+function normalizeTree(
+  tree: LayerConfig['tree'],
+  parentPath: TreeNodeInput[] = [],
+  parentIndices: number[] = [],
+): NormalizedNode[] {
   const nodes = Array.isArray(tree) ? tree : [tree];
   const normalized: NormalizedNode[] = [];
 
-  for (const node of nodes) {
+  nodes.forEach((node, index) => {
     if (!node || node.hidden) {
-      continue;
+      return;
     }
 
     const children = Array.isArray(node.children) ? node.children : [];
     const path = parentPath.concat(node);
-    const normalizedChildren = normalizeTree(children, path);
+    const pathIndices = parentIndices.concat(index);
+    const normalizedChildren = normalizeTree(children, path, pathIndices);
     const collapsed = Boolean(node.collapsed);
     const childrenValue = normalizedChildren.reduce((sum, child) => sum + Math.max(child.value, 0), 0);
     const childThickness = normalizedChildren.reduce(
@@ -416,10 +423,11 @@ function normalizeTree(tree: LayerConfig['tree'], parentPath: TreeNodeInput[] = 
       expandLevels,
       children: collapsed ? [] : normalizedChildren,
       path,
+      pathIndices,
       collapsed,
       subtreeThickness,
     });
-  }
+  });
 
   return normalized;
 }
