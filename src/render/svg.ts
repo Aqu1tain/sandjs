@@ -12,6 +12,9 @@ import { createTooltipRuntime, TooltipRuntime } from './runtime/tooltip.js';
 import { createBreadcrumbRuntime, BreadcrumbRuntime } from './runtime/breadcrumbs.js';
 import { createHighlightRuntime, HighlightRuntime } from './runtime/highlight.js';
 import { resolveDocument, resolveHostElement } from './runtime/document.js';
+import { createArcKey } from './keys.js';
+import { createNavigationRuntime, NavigationRuntime } from './runtime/navigation.js';
+import { cloneSunburstConfig } from './config.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -24,6 +27,7 @@ type RuntimeSet = {
   tooltip: TooltipRuntime | null;
   highlight: HighlightRuntime | null;
   breadcrumbs: BreadcrumbRuntime | null;
+  navigation: NavigationRuntime | null;
 };
 
 type AnimationHandle = {
@@ -64,24 +68,48 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     document: doc,
   };
 
-  let runtimes = createRuntimeSet(doc, currentOptions);
+  let baseConfig = cloneSunburstConfig(currentOptions.config);
+  currentOptions = {
+    ...currentOptions,
+    config: baseConfig,
+  };
+
   const pathRegistry = new Map<string, ManagedPath>();
   const drivers = createAnimationDrivers(doc);
+  const handleArray: LayoutArc[] = [];
+  const handle = handleArray as unknown as RenderHandle;
 
-  const execute = (opts: RenderSvgOptions, runtime: RuntimeSet): LayoutArc[] => {
-    const arcs = layout(opts.config);
-    const diameter = opts.config.size.radius * 2;
-    const cx = opts.config.size.radius;
-    const cy = opts.config.size.radius;
+  let runtimes: RuntimeSet;
+  let isRendering = false;
+  let pendingRender = false;
+
+  const execute = (): LayoutArc[] => {
+    const runtime = runtimes;
+    const navigation = runtime.navigation;
+    const activeConfig = navigation ? navigation.getActiveConfig() : currentOptions.config;
+    currentOptions = {
+      ...currentOptions,
+      config: activeConfig,
+    };
+
+    const arcs = layout(activeConfig);
+
+    navigation?.registerArcs(arcs);
+
+    const diameter = activeConfig.size.radius * 2;
+    const cx = activeConfig.size.radius;
+    const cy = activeConfig.size.radius;
 
     host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
     host.setAttribute('width', `${diameter}`);
     host.setAttribute('height', `${diameter}`);
 
     runtime.tooltip?.hide();
-    runtime.breadcrumbs?.clear();
+    if (!navigation || !navigation.handlesBreadcrumbs()) {
+      runtime.breadcrumbs?.clear();
+    }
 
-    const transition = resolveTransition(opts.transition);
+    const transition = resolveTransition(currentOptions.transition);
     const usedKeys = new Set<string>();
 
     for (let index = 0; index < arcs.length; index += 1) {
@@ -103,7 +131,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         managed = createManagedPath({
           key,
           arc,
-          options: opts,
+          options: currentOptions,
           runtime,
           doc,
         });
@@ -112,7 +140,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
 
       updateManagedPath(managed, {
         arc,
-        options: opts,
+        options: currentOptions,
         runtime,
         pathData: d,
         previousArc,
@@ -141,19 +169,52 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     return arcs;
   };
 
-  const initialArcs = execute(currentOptions, runtimes);
-  const handle = initialArcs as unknown as RenderHandle;
+  const renderLoop = () => {
+    if (isRendering) {
+      pendingRender = true;
+      return;
+    }
+    isRendering = true;
+    do {
+      pendingRender = false;
+      const arcs = execute();
+      handle.length = 0;
+      handle.push(...arcs);
+    } while (pendingRender);
+    isRendering = false;
+  };
+
+  const requestRender = () => {
+    pendingRender = true;
+    if (!isRendering) {
+      renderLoop();
+    }
+  };
+
+  runtimes = createRuntimeSet(doc, currentOptions, {
+    baseConfig,
+    requestRender,
+  });
+
+  requestRender();
 
   Object.defineProperties(handle, {
     update: {
       enumerable: false,
       value(input: RenderSvgUpdateInput) {
-        currentOptions = normalizeUpdateOptions(currentOptions, input, host, doc);
+        const nextOptions = normalizeUpdateOptions(currentOptions, input, host, doc);
+        const nextConfigInput = extractConfigFromUpdate(input, baseConfig);
+        baseConfig = cloneSunburstConfig(nextConfigInput);
+        currentOptions = {
+          ...nextOptions,
+          config: baseConfig,
+        };
         disposeRuntimeSet(runtimes);
-        runtimes = createRuntimeSet(doc, currentOptions);
-        const nextArcs = execute(currentOptions, runtimes);
-        handle.length = 0;
-        handle.push(...nextArcs);
+        runtimes = createRuntimeSet(doc, currentOptions, {
+          baseConfig,
+          requestRender,
+        });
+        requestRender();
         return handle;
       },
     },
@@ -207,6 +268,22 @@ function normalizeUpdateOptions(
   };
 }
 
+function extractConfigFromUpdate(
+  input: RenderSvgUpdateInput,
+  fallback: SunburstConfig,
+): SunburstConfig {
+  if (isSunburstConfig(input)) {
+    return input;
+  }
+  if (input && typeof input === 'object') {
+    const candidate = (input as RenderSvgUpdateOptions).config;
+    if (candidate) {
+      return candidate;
+    }
+  }
+  return fallback;
+}
+
 function isSunburstConfig(value: unknown): value is SunburstConfig {
   if (!value || typeof value !== 'object') {
     return false;
@@ -252,7 +329,9 @@ function createManagedPath(params: {
     const currentArc = managed.arc;
     managed.runtime.tooltip?.show(event, currentArc);
     managed.runtime.highlight?.pointerEnter(currentArc, element);
-    managed.runtime.breadcrumbs?.show(currentArc);
+    if (!managed.runtime.navigation?.handlesBreadcrumbs()) {
+      managed.runtime.breadcrumbs?.show(currentArc);
+    }
     managed.options.onArcEnter?.({ arc: currentArc, path: element, event });
   };
 
@@ -267,13 +346,16 @@ function createManagedPath(params: {
     const currentArc = managed.arc;
     managed.runtime.tooltip?.hide();
     managed.runtime.highlight?.pointerLeave(currentArc, element);
-    managed.runtime.breadcrumbs?.clear();
+    if (!managed.runtime.navigation?.handlesBreadcrumbs()) {
+      managed.runtime.breadcrumbs?.clear();
+    }
     managed.options.onArcLeave?.({ arc: currentArc, path: element, event });
   };
 
   const handleClick = (event: MouseEvent) => {
     const currentArc = managed.arc;
     managed.runtime.highlight?.handleClick?.(currentArc, element, event);
+    managed.runtime.navigation?.handleArcClick(currentArc);
     managed.options.onArcClick?.({ arc: currentArc, path: element, event });
   };
 
@@ -712,33 +794,28 @@ function createAnimationDrivers(doc: Document): AnimationDrivers {
   return { raf, caf, now };
 }
 
-function createArcKey(arc: LayoutArc): string {
-  const segments: string[] = [arc.layerId, String(arc.depth)];
-  if (Array.isArray(arc.pathIndices)) {
-    segments.push(`idx=${arc.pathIndices.join('.')}`);
-  }
-  if (typeof arc.key === 'string' && arc.key.length > 0) {
-    segments.push(`key=${arc.key}`);
-  } else if (typeof arc.data?.key === 'string' && arc.data.key.length > 0) {
-    segments.push(`data=${arc.data.key}`);
-  } else {
-    const breadcrumb = arc.path.map((node) => node?.name ?? '').join('/');
-    segments.push(`path=${breadcrumb}`);
-  }
-  return segments.join('|');
-}
-
-function createRuntimeSet(doc: Document, options: RenderSvgOptions): RuntimeSet {
+function createRuntimeSet(
+  doc: Document,
+  options: RenderSvgOptions,
+  params: { baseConfig: SunburstConfig; requestRender: () => void },
+): RuntimeSet {
   const tooltip = createTooltipRuntime(doc, options.tooltip);
   const highlight = createHighlightRuntime(options.highlightByKey);
   const breadcrumbs = createBreadcrumbRuntime(doc, options.breadcrumbs);
+  const navigation = createNavigationRuntime(options.navigation, {
+    breadcrumbs,
+    requestRender: params.requestRender,
+  }, params.baseConfig);
   tooltip?.hide();
-  breadcrumbs?.clear();
-  return { tooltip, highlight, breadcrumbs };
+  if (!navigation?.handlesBreadcrumbs()) {
+    breadcrumbs?.clear();
+  }
+  return { tooltip, highlight, breadcrumbs, navigation };
 }
 
 function disposeRuntimeSet(runtime: RuntimeSet): void {
   runtime.tooltip?.dispose();
   runtime.highlight?.dispose();
   runtime.breadcrumbs?.dispose();
+  runtime.navigation?.dispose();
 }

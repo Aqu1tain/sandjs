@@ -20,6 +20,28 @@ export interface BreadcrumbOptions {
   formatter?: (arc: LayoutArc) => string;
   separator?: string;
   emptyLabel?: string;
+  interactive?: boolean;
+}
+
+export interface BreadcrumbTrailItem {
+  id: string;
+  label: string;
+  active: boolean;
+  arcIdentifier?: string;
+  onSelect?: () => void;
+}
+
+export interface NavigationFocusState {
+  layerId: string;
+  path: LayoutArc['path'];
+  pathIndices: number[];
+  arc?: LayoutArc;
+}
+
+export interface NavigationOptions {
+  layers?: string[];
+  rootLabel?: string;
+  onFocusChange?: (focus: NavigationFocusState | null) => void;
 }
 
 /**
@@ -84,6 +106,7 @@ export interface RenderSvgOptions {
   highlightByKey?: boolean | HighlightByKeyOptions;
   breadcrumbs?: boolean | BreadcrumbOptions;
   transition?: boolean | TransitionOptions;
+  navigation?: boolean | NavigationOptions;
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
   onArcLeave?: (payload: ArcPointerEventPayload) => void;

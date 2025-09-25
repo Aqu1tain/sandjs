@@ -1,5 +1,5 @@
 import type { LayoutArc } from '../../types/index.js';
-import type { BreadcrumbOptions, RenderSvgOptions } from '../types.js';
+import type { BreadcrumbOptions, BreadcrumbTrailItem, RenderSvgOptions } from '../types.js';
 import { resolveTooltipContainer } from './tooltip.js';
 import { formatArcBreadcrumb } from '../format.js';
 
@@ -9,6 +9,8 @@ export type BreadcrumbRuntime = {
   show: (arc: LayoutArc) => void;
   clear: () => void;
   dispose: () => void;
+  setTrail?: (trail: BreadcrumbTrailItem[] | null) => void;
+  handlesTrail?: boolean;
 };
 
 export function createBreadcrumbRuntime(
@@ -31,18 +33,66 @@ export function createBreadcrumbRuntime(
       ? options.formatter
       : (arc: LayoutArc) => formatArcBreadcrumb(arc, separator);
   const emptyLabel = options.emptyLabel ?? '';
+  const interactive = options.interactive ?? false;
   element.textContent = emptyLabel;
+
+  let activeTrail: BreadcrumbTrailItem[] | null = null;
 
   return {
     show(arc) {
+      if (interactive && activeTrail) {
+        return;
+      }
       element.textContent = formatter(arc);
     },
     clear() {
+      if (interactive && activeTrail) {
+        return;
+      }
       element.textContent = emptyLabel;
     },
     dispose() {
       element.textContent = emptyLabel;
+      activeTrail = null;
     },
+    setTrail: interactive
+      ? (trail) => {
+          activeTrail = trail ?? null;
+          element.innerHTML = '';
+          if (!activeTrail || activeTrail.length === 0) {
+            element.textContent = emptyLabel;
+            return;
+          }
+
+          activeTrail.forEach((item, index) => {
+            if (index > 0) {
+              const separatorNode = doc.createElement('span');
+              separatorNode.textContent = separator;
+              separatorNode.setAttribute('data-separator', 'true');
+              element.appendChild(separatorNode);
+            }
+
+            const hasHandler = typeof item.onSelect === 'function';
+            const node = hasHandler ? doc.createElement('button') : doc.createElement('span');
+            node.textContent = item.label;
+            node.setAttribute('data-breadcrumb', item.id);
+            if (hasHandler) {
+              node.setAttribute('type', 'button');
+              node.addEventListener('click', (event) => {
+                event.preventDefault();
+                item.onSelect?.();
+              });
+            }
+            if (item.active) {
+              node.setAttribute('data-active', 'true');
+            } else {
+              node.removeAttribute('data-active');
+            }
+            element.appendChild(node);
+          });
+        }
+      : undefined,
+    handlesTrail: interactive,
   };
 }
 

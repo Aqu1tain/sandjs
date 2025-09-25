@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { renderSVG } from '../src/index.js';
-import type { SunburstConfig } from '../src/index.js';
+import type { NavigationFocusState, SunburstConfig } from '../src/index.js';
 
 class StubElement {
   public attributes = new Map<string, string>();
@@ -16,6 +16,8 @@ class StubElement {
     toggle: () => {},
   };
   public dataset: Record<string, string> = {};
+  public listeners: Record<string, Array<(event: any) => void>> = {};
+  private _innerHTML = '';
 
   constructor(public tagName: string) {}
 
@@ -24,6 +26,17 @@ class StubElement {
     if (name.startsWith('data-')) {
       this.dataset[name.slice(5)] = value;
     }
+  }
+
+  set innerHTML(value: string) {
+    this._innerHTML = value;
+    this.children = [];
+    this.firstChild = null;
+    this.textContent = value;
+  }
+
+  get innerHTML(): string {
+    return this._innerHTML;
   }
 
   removeAttribute(name: string) {
@@ -50,12 +63,22 @@ class StubElement {
     return child;
   }
 
-  addEventListener(): void {
-    /* no-op for tests */
+  addEventListener(type: string, handler: (event: any) => void): void {
+    if (!this.listeners[type]) {
+      this.listeners[type] = [];
+    }
+    this.listeners[type].push(handler);
   }
 
-  removeEventListener(): void {
-    /* no-op for tests */
+  removeEventListener(type: string, handler: (event: any) => void): void {
+    const list = this.listeners[type];
+    if (!list) {
+      return;
+    }
+    const index = list.indexOf(handler);
+    if (index !== -1) {
+      list.splice(index, 1);
+    }
   }
 
   querySelector(selector: string): StubElement | null {
@@ -184,4 +207,89 @@ test('renderSVG exposes update handle that patches the existing host', () => {
   assert.equal(countByAttr('data-sandjs-breadcrumbs'), 1, 'breadcrumb element persists for reuse');
   assert.equal(chart.length, 0, 'destroy should clear handle array');
   assert.equal(hostStub.children.length, 0, 'destroy should empty host');
+});
+
+test('navigation runtime drills down into arcs and breadcrumbs remain interactive', () => {
+  const document = new StubDocument();
+  const hostStub = new StubSVGElement('svg');
+
+  const config: SunburstConfig = {
+    size: { radius: 96 },
+    layers: [
+      {
+        id: 'root',
+        radialUnits: [0, 2],
+        angleMode: 'free',
+        tree: [
+          {
+            name: 'Alpha',
+            value: 3,
+            key: 'alpha',
+            children: [
+              { name: 'Alpha-1', value: 1 },
+              { name: 'Alpha-2', value: 2 },
+            ],
+          },
+          { name: 'Beta', value: 2, key: 'beta' },
+        ],
+      },
+    ],
+  };
+
+  const focusEvents: Array<NavigationFocusState | null> = [];
+
+  const chart = renderSVG({
+    el: hostStub as unknown as SVGElement,
+    config,
+    document: document as unknown as Document,
+    navigation: {
+      onFocusChange: (focus) => {
+        focusEvents.push(focus ?? null);
+      },
+    },
+    breadcrumbs: {
+      interactive: true,
+    },
+  });
+
+  assert.deepEqual(
+    chart.map((arc) => arc.data.name),
+    ['Alpha', 'Alpha-1', 'Alpha-2', 'Beta'],
+    'expected full chart before navigation',
+  );
+
+  const firstPath = hostStub.children[0];
+  assert.ok(firstPath.listeners.click && firstPath.listeners.click.length > 0, 'expected click listener');
+  firstPath.listeners.click![0]({ preventDefault() {} } as unknown as MouseEvent);
+
+  assert.deepEqual(
+    chart.map((arc) => arc.data.name),
+    ['Alpha', 'Alpha-1', 'Alpha-2'],
+    'drill-down should focus selected branch',
+  );
+
+  const crumbContainer = document.body.querySelector('[data-sandjs-breadcrumbs]');
+  assert.ok(crumbContainer, 'expected breadcrumb container');
+  const crumbLabels = crumbContainer!.children
+    .filter((child) => child.attributes.has('data-breadcrumb'))
+    .map((child) => child.textContent);
+  assert.deepEqual(crumbLabels, ['All', 'Alpha']);
+
+  const rootCrumb = crumbContainer!.children.find(
+    (child) => child.attributes.get('data-breadcrumb') === 'root',
+  );
+  assert.ok(rootCrumb && rootCrumb.listeners.click && rootCrumb.listeners.click.length > 0);
+  rootCrumb!.listeners.click![0]({ preventDefault() {} } as unknown as MouseEvent);
+
+  assert.deepEqual(
+    chart.map((arc) => arc.data.name),
+    ['Alpha', 'Alpha-1', 'Alpha-2', 'Beta'],
+    'reset should restore full chart',
+  );
+
+  assert.ok(focusEvents.length >= 2, 'expected focus change callbacks');
+  const firstFocus = focusEvents[0];
+  const secondFocus = focusEvents[focusEvents.length - 1];
+  assert.ok(firstFocus && firstFocus.pathIndices.join('.') === '0', 'first focus should target alpha');
+  assert.equal(secondFocus, null, 'last focus should reset to null');
 });

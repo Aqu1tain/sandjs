@@ -13,6 +13,7 @@ export type {
   RenderSvgOptions,
   TooltipOptions,
   BreadcrumbOptions,
+  BreadcrumbTrailItem,
   RenderHandle,
   RenderSvgUpdateInput,
   RenderSvgUpdateOptions,
@@ -20,4 +21,6 @@ export type {
   ArcPointerEventPayload,
   ArcClickEventPayload,
   TransitionOptions,
+  NavigationOptions,
+  NavigationFocusState,
 } from './render/types.js';
