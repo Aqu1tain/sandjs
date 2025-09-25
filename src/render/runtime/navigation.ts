@@ -9,6 +9,11 @@ import type { BreadcrumbRuntime } from './breadcrumbs.js';
 import { arcIdentifierFromPath, resolveArcKey } from '../keys.js';
 import { cloneSunburstConfig } from '../config.js';
 
+type NavigationTransitionContext = {
+  transition: RenderSvgOptions['transition'];
+  morph: boolean;
+};
+
 export type NavigationRuntime = {
   setBaseConfig: (config: SunburstConfig) => void;
   getActiveConfig: () => SunburstConfig;
@@ -17,7 +22,7 @@ export type NavigationRuntime = {
   handlesBreadcrumbs: () => boolean;
   reset: () => void;
   dispose: () => void;
-  consumeTransitionOverride: () => RenderSvgOptions['transition'] | undefined;
+  consumeTransitionOverride: () => NavigationTransitionContext | undefined;
 };
 
 type FocusTarget = {
@@ -60,7 +65,7 @@ export function createNavigationRuntime(
   let nodePathMap = new WeakMap<TreeNodeInput, number[]>();
   let sourcePathMap = new WeakMap<TreeNodeInput, number[]>();
   const arcByIdentifier = new Map<string, LayoutArc>();
-  let pendingTransition: RenderSvgOptions['transition'] | undefined;
+  let pendingTransition: NavigationTransitionContext | undefined;
 
   indexBaseConfig(storedBaseConfig, nodeSourceMap, nodePathMap);
   updateBreadcrumbTrail();
@@ -102,16 +107,21 @@ export function createNavigationRuntime(
       nodeSourceMap.set(arc.data, baseNode);
       nodeSourceMap.set(baseNode, baseNode);
 
-      const basePath = sourcePathMap.get(arc.data) ?? nodePathMap.get(baseNode) ?? arc.pathIndices;
-      if (basePath) {
-        nodePathMap.set(baseNode, basePath);
-        sourcePathMap.set(arc.data, basePath);
-        const identifier = arcIdentifierFromPath(arc.layerId, basePath);
-        arcByIdentifier.set(identifier, arc);
-        if (arc.data !== baseNode) {
-          sourcePathMap.set(baseNode, basePath);
-        }
+    const basePath = sourcePathMap.get(arc.data) ?? nodePathMap.get(baseNode) ?? arc.pathIndices;
+    if (basePath) {
+      nodePathMap.set(baseNode, basePath);
+      sourcePathMap.set(arc.data, basePath);
+      const identifier = arcIdentifierFromPath(arc.layerId, basePath);
+      arcByIdentifier.set(identifier, arc);
+      if (arc.data !== baseNode) {
+        sourcePathMap.set(baseNode, basePath);
       }
+      const baseNodes = collectNodesAlongPath(storedBaseConfig, arc.layerId, basePath);
+      if (baseNodes) {
+        arc.path = baseNodes;
+      }
+      arc.pathIndices = basePath.slice();
+    }
     }
     validateFocus();
     updateBreadcrumbTrail();
@@ -128,11 +138,20 @@ export function createNavigationRuntime(
     }
 
     if (focus && isSameFocus(target, focus)) {
-      return false;
+      if (!focus.pathIndices || focus.pathIndices.length === 0) {
+        return false;
+      }
+      const parentPath = focus.pathIndices.slice(0, -1);
+      if (parentPath.length === 0) {
+        reset();
+        return true;
+      }
+      applyFocusPath(focus.layerId, parentPath);
+      return true;
     }
 
     focus = target;
-    pendingTransition = computeFocusTransition(options.focusTransition);
+    pendingTransition = createTransitionContext(options.focusTransition);
     cachedDerivedConfig = null;
     notifyFocusChange(target);
     updateBreadcrumbTrail();
@@ -150,7 +169,7 @@ export function createNavigationRuntime(
     }
     focus = null;
     cachedDerivedConfig = null;
-    pendingTransition = computeFocusTransition(options.focusTransition);
+    pendingTransition = createTransitionContext(options.focusTransition);
     notifyFocusChange(null);
     updateBreadcrumbTrail();
     requestRender();
@@ -221,6 +240,7 @@ export function createNavigationRuntime(
       return;
     }
     focus = target;
+    pendingTransition = createTransitionContext(options.focusTransition);
     cachedDerivedConfig = null;
     notifyFocusChange(target);
     updateBreadcrumbTrail();
@@ -334,6 +354,16 @@ function computeFocusTransition(
     return true;
   }
   return value;
+}
+
+function createTransitionContext(
+  value: NavigationOptions['focusTransition'],
+): NavigationTransitionContext {
+  const transition = computeFocusTransition(value);
+  return {
+    transition,
+    morph: transition !== false,
+  };
 }
 
 function isSameFocus(a: FocusTarget, b: FocusTarget): boolean {

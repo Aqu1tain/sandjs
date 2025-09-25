@@ -109,8 +109,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
       runtime.breadcrumbs?.clear();
     }
 
-    const navigationTransition = navigation?.consumeTransitionOverride?.();
-    const transitionSource = navigationTransition !== undefined ? navigationTransition : currentOptions.transition;
+    const navigationTransition = navigation?.consumeTransitionOverride();
+    const transitionSource = navigationTransition ? navigationTransition.transition : currentOptions.transition;
+    const navigationMorph = Boolean(navigationTransition?.morph);
     const transition = resolveTransition(transitionSource);
     const usedKeys = new Set<string>();
 
@@ -150,6 +151,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         drivers,
         cx,
         cy,
+        navigationMorph,
       });
 
       host.appendChild(managed.element);
@@ -164,6 +166,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           registry: pathRegistry,
           transition,
           drivers,
+          cx,
+          cy,
+          navigationMorph,
         });
       }
     }
@@ -395,9 +400,10 @@ function updateManagedPath(
     drivers: AnimationDrivers;
     cx: number;
     cy: number;
+    navigationMorph: boolean;
   },
 ): void {
-  const { arc, options, runtime, pathData, previousArc, transition, drivers, cx, cy } = params;
+  const { arc, options, runtime, pathData, previousArc, transition, drivers, cx, cy, navigationMorph } = params;
 
   managed.arc = arc;
   managed.options = options;
@@ -407,11 +413,21 @@ function updateManagedPath(
   stopFade(managed);
 
   const element = managed.element;
-  const animateArc = Boolean(transition && previousArc && hasArcGeometryChanged(previousArc, arc));
+  let animationFrom: LayoutArc | null = previousArc ? { ...previousArc } : null;
+
+  if (!animationFrom && navigationMorph && transition) {
+    animationFrom = createCollapsedArc(arc);
+    const collapsedPath = describeArcPath(animationFrom, cx, cy);
+    if (collapsedPath) {
+      applyPathData(element, collapsedPath);
+    }
+  }
+
+  const animateArc = Boolean(transition && animationFrom && hasArcGeometryChanged(animationFrom, arc));
   if (animateArc) {
     startArcAnimation({
       managed,
-      from: previousArc!,
+      from: animationFrom!,
       to: arc,
       finalPath: pathData,
       transition: transition!,
@@ -491,21 +507,25 @@ function updateManagedPath(
 
   if (!previousArc) {
     if (transition) {
-      element.style.opacity = '0';
-      managed.fade = startFade({
-        managed,
-        from: 0,
-        to: 1,
-        transition,
-        drivers,
-        resetStyleOnComplete: true,
-        onComplete: () => {
-          managed.fade = null;
-        },
-        onCancel: () => {
-          managed.fade = null;
-        },
-      });
+      if (navigationMorph) {
+        element.style.opacity = '';
+      } else {
+        element.style.opacity = '0';
+        managed.fade = startFade({
+          managed,
+          from: 0,
+          to: 1,
+          transition,
+          drivers,
+          resetStyleOnComplete: true,
+          onComplete: () => {
+            managed.fade = null;
+          },
+          onCancel: () => {
+            managed.fade = null;
+          },
+        });
+      }
     } else {
       element.style.opacity = '';
     }
@@ -700,8 +720,11 @@ function scheduleManagedRemoval(params: {
   registry: Map<string, ManagedPath>;
   transition: ResolvedTransition | null;
   drivers: AnimationDrivers;
+  cx: number;
+  cy: number;
+  navigationMorph: boolean;
 }): void {
-  const { key, managed, host, registry, transition, drivers } = params;
+  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph } = params;
   if (managed.pendingRemoval) {
     return;
   }
@@ -723,6 +746,21 @@ function scheduleManagedRemoval(params: {
   if (!transition) {
     remove();
     return;
+  }
+
+  if (navigationMorph) {
+    const collapsedArc = createCollapsedArc(managed.arc);
+    const collapsedPath = describeArcPath(collapsedArc, cx, cy) ?? '';
+    startArcAnimation({
+      managed,
+      from: managed.arc,
+      to: collapsedArc,
+      finalPath: collapsedPath,
+      transition,
+      drivers,
+      cx,
+      cy,
+    });
   }
 
   const startOpacity = getCurrentOpacity(managed.element);
@@ -826,4 +864,26 @@ function disposeRuntimeSet(runtime: RuntimeSet): void {
   runtime.highlight?.dispose();
   runtime.breadcrumbs?.dispose();
   runtime.navigation?.dispose();
+}
+
+function createCollapsedArc(source: LayoutArc): LayoutArc {
+  const span = Math.max(source.x1 - source.x0, 0);
+  const thickness = Math.max(source.y1 - source.y0, 0);
+  const shrinkSpan = Math.max(span * 0.1, 0.01);
+  const shrinkThickness = Math.max(thickness * 0.1, 0.5);
+  const midAngle = source.x0 + span * 0.5;
+  const collapsedX0 = midAngle - shrinkSpan * 0.5;
+  const collapsedX1 = midAngle + shrinkSpan * 0.5;
+  const collapsedY0 = source.y0;
+  const collapsedY1 = Math.min(source.y0 + shrinkThickness, source.y1);
+
+  return {
+    ...source,
+    x0: collapsedX0,
+    x1: collapsedX1,
+    y0: collapsedY0,
+    y1: collapsedY1,
+    percentage: 0,
+    value: 0,
+  };
 }

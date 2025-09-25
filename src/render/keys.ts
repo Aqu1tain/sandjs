@@ -1,7 +1,7 @@
 import type { LayoutArc } from '../types/index.js';
 
 export function createArcKey(arc: LayoutArc): string {
-  const segments: string[] = [arc.layerId, String(arc.depth)];
+  const segments: string[] = [arc.layerId];
   if (Array.isArray(arc.pathIndices)) {
     segments.push(`idx=${arc.pathIndices.join('.')}`);
   }

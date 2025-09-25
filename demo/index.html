@@ -417,7 +417,15 @@
     if (!colorsById.has(id)) colorsById.set(id, palette[idx++ % palette.length]);
     return colorsById.get(id);
   };
-  const colorIdForArc = (arc) => arc.path.map((node) => node.name).join(' › ');
+  const colorIdForArc = (arc) => {
+    if (typeof arc.data.key === 'string' && arc.data.key.length > 0) {
+      return arc.data.key;
+    }
+    if (Array.isArray(arc.pathIndices) && arc.pathIndices.length > 0) {
+      return `${arc.layerId}:${arc.pathIndices.join('.')}`;
+    }
+    return arc.path.map((node) => node.name).join(' › ');
+  };
 
   const state = {
     pinned: null,
@@ -653,6 +661,7 @@
           },
           navigation: {
             rootLabel: 'All',
+            focusTransition: { duration: 520 },
             onFocusChange(focus) {
               state.navigationFocus = focus ?? null;
               if (!focus) {
@@ -696,10 +705,6 @@
             }
           },
           onArcClick: ({ arc }) => {
-            if (state.navigationFocus && arc.depth === 0 && arc.y0 === 0) {
-              chart.resetNavigation?.();
-              return;
-            }
             if (state.pinned && state.pinned.arc === arc) {
               state.pinned = null;
               showPinnedInfo();

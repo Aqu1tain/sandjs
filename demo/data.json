@@ -1,36 +1,61 @@
 {
-  "size": { "radius": 300 },
+  "size": {
+    "radius": 300
+  },
   "layers": [
     {
       "id": "root-layer",
-      "radialUnits": [0, 3],
+      "radialUnits": [
+        0,
+        3
+      ],
       "angleMode": "free",
       "tree": {
         "name": "Marsellus Wallace Syndicate",
         "value": 100,
         "expandLevels": 1,
-        "key": "syndicate",
+        "key": "syndicate-L1",
         "children": [
           {
             "name": "Los Angeles Racketeering",
             "value": 50,
             "expandLevels": 1,
-            "key": "crew-la",
+            "key": "crew-la-L1",
             "collapsed": true,
             "children": [
-              { "name": "Nightclub Protection", "value": 20, "key": "crew-la" },
-              { "name": "Street Loans", "value": 15, "key": "crew-la" },
-              { "name": "Contraband Couriers", "value": 15, "key": "crew-la" }
+              {
+                "name": "Nightclub Protection",
+                "value": 20,
+                "key": "crew-la-L1"
+              },
+              {
+                "name": "Street Loans",
+                "value": 15,
+                "key": "crew-la-L1"
+              },
+              {
+                "name": "Contraband Couriers",
+                "value": 15,
+                "key": "crew-la-L1"
+              }
             ]
           },
           {
             "name": "Special Contracts Division",
             "value": 50,
             "expandLevels": 1,
-            "key": "crew-contracts",
+            "key": "crew-contracts-L1",
             "children": [
-              { "name": "Jules Winnfield Hits", "value": 25, "key": "jules" },
-              { "name": "Vincent Vega Hits", "value": 25, "key": "vincent" }
+              {
+                "name": "Jules Winnfield Hits",
+                "value": 25,
+                "key": "jules-L1"
+              },
+              {
+                "name": "Vincent Vega Hits",
+                "value": 25,
+                "key": "vincent-L1"
+              }
             ]
           }
         ]
@@ -38,29 +63,40 @@
     },
     {
       "id": "extra-layer",
-      "radialUnits": [3, 9],
+      "radialUnits": [
+        3,
+        9
+      ],
       "angleMode": "free",
       "tree": [
         {
           "name": "Jules Winnfield Intel Grid",
           "value": 10,
           "expandLevels": 3,
-          "key": "jules"
+          "key": "jules-L2"
         },
         {
           "name": "Vincent Vega Safehouses",
           "value": 10,
           "expandLevels": 1,
-          "key": "vincent",
+          "key": "vincent-L2",
           "collapsed": true,
           "children": [
             {
               "name": "Amsterdam Flat",
               "value": 10,
-              "key": "vincent",
+              "key": "vincent-L2",
               "children": [
-                { "name": "Clubhouse Locker", "value": 5, "key": "vincent" },
-                { "name": "Suitcase Drop", "value": 5, "key": "vincent" }
+                {
+                  "name": "Clubhouse Locker",
+                  "value": 5,
+                  "key": "vincent-L2"
+                },
+                {
+                  "name": "Suitcase Drop",
+                  "value": 5,
+                  "key": "vincent-L2"
+                }
               ]
             }
           ]
@@ -69,40 +105,58 @@
           "name": "Marsellus Offshore Holdings",
           "value": 10,
           "expandLevels": 2,
-          "key": "syndicate"
+          "key": "syndicate-L2"
         },
         {
           "name": "Winston Wolfe Clean-up",
           "value": 10,
           "expandLevels": 1,
-          "key": "wolf",
+          "key": "wolf-L2",
           "children": [
-            { "name": "Hotel Meeting Room", "value": 7.5, "key": "wolf" },
-            { "name": "Detailing Garage", "value": 2.5, "key": "wolf" }
+            {
+              "name": "Hotel Meeting Room",
+              "value": 7.5,
+              "key": "wolf-L2"
+            },
+            {
+              "name": "Detailing Garage",
+              "value": 2.5,
+              "key": "wolf-L2"
+            }
           ]
         },
         {
           "name": "Butch Coolidge Fixers",
           "value": 10,
           "expandLevels": 2,
-          "key": "butch"
+          "key": "butch-L2"
         },
         {
           "name": "Front Companies LA",
           "value": 10,
           "expandLevels": 1,
-          "key": "crew-la",
+          "key": "crew-la-L2",
           "children": [
-            { "name": "Jackrabbit Slim's LLC", "value": 10, "expandLevels": 2, "key": "crew-la" }
+            {
+              "name": "Jackrabbit Slim's LLC",
+              "value": 10,
+              "expandLevels": 2,
+              "key": "crew-la-L2"
+            }
           ]
         },
         {
           "name": "Honey Bunny Fences",
           "value": 10,
           "expandLevels": 1,
-          "key": "crew-contracts",
+          "key": "crew-contracts-L2",
           "children": [
-            { "name": "Pawn Shop Pipeline", "value": 10, "expandLevels": 2, "key": "crew-contracts" }
+            {
+              "name": "Pawn Shop Pipeline",
+              "value": 10,
+              "expandLevels": 2,
+              "key": "crew-contracts-L2"
+            }
           ]
         }
       ]
