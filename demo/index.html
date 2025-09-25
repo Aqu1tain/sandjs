@@ -422,6 +422,7 @@
   const state = {
     pinned: null,
     collapsedKeys: new Set(),
+    navigationFocus: null,
   };
   let hoverPath = null;
 
@@ -647,6 +648,30 @@
             container: breadcrumbsEl,
             formatter: breadcrumbLabel,
             emptyLabel: defaultBreadcrumbs,
+            interactive: true,
+          },
+          navigation: {
+            rootLabel: 'All',
+            onFocusChange(focus) {
+              state.navigationFocus = focus ?? null;
+              if (!focus) {
+                if (state.pinned) {
+                  showPinnedInfo();
+                } else {
+                  setSelection(defaultMessage);
+                  setBreadcrumbs(defaultBreadcrumbs);
+                }
+                return;
+              }
+              const arc = focus.arc;
+              if (!arc) {
+                return;
+              }
+              setSelection(
+                `Focused: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
+              );
+              setBreadcrumbs(breadcrumbLabel(arc));
+            },
           },
           onArcEnter: ({ arc, path }) => {
             applyHover(path);
@@ -669,9 +694,16 @@
               setBreadcrumbs(defaultBreadcrumbs);
             }
           },
-          onArcClick: ({ event }) => {
-            event.preventDefault();
-          }
+          onArcClick: ({ arc }) => {
+            if (state.navigationFocus && arc.depth === 0 && arc.y0 === 0) {
+              chart.resetNavigation?.();
+              return;
+            }
+            if (state.pinned && state.pinned.arc === arc) {
+              state.pinned = null;
+              showPinnedInfo();
+            }
+          },
         });
       } else {
         chart.update({ config: nextConfig });

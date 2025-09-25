@@ -122,6 +122,7 @@ export interface RenderHandle extends Array<LayoutArc> {
   update(input: RenderSvgUpdateInput): RenderHandle;
   destroy(): void;
   getOptions(): RenderSvgOptions;
+  resetNavigation?: () => void;
 }
 
 /**

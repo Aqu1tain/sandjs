@@ -238,6 +238,12 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         return { ...currentOptions };
       },
     },
+    resetNavigation: {
+      enumerable: false,
+      value() {
+        runtimes.navigation?.reset();
+      },
+    },
   });
 
   return handle;
