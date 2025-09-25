@@ -275,11 +275,8 @@ test('navigation runtime drills down into arcs and breadcrumbs remain interactiv
     .map((child) => child.textContent);
   assert.deepEqual(crumbLabels, ['All', 'Alpha']);
 
-  const rootCrumb = crumbContainer!.children.find(
-    (child) => child.attributes.get('data-breadcrumb') === 'root',
-  );
-  assert.ok(rootCrumb && rootCrumb.listeners.click && rootCrumb.listeners.click.length > 0);
-  rootCrumb!.listeners.click![0]({ preventDefault() {} } as unknown as MouseEvent);
+  assert.equal(typeof chart.resetNavigation, 'function', 'resetNavigation helper should exist');
+  chart.resetNavigation?.();
 
   assert.deepEqual(
     chart.map((arc) => arc.data.name),

@@ -109,7 +109,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
       runtime.breadcrumbs?.clear();
     }
 
-    const transition = resolveTransition(currentOptions.transition);
+    const navigationTransition = navigation?.consumeTransitionOverride?.();
+    const transitionSource = navigationTransition !== undefined ? navigationTransition : currentOptions.transition;
+    const transition = resolveTransition(transitionSource);
     const usedKeys = new Set<string>();
 
     for (let index = 0; index < arcs.length; index += 1) {

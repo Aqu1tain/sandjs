@@ -42,6 +42,7 @@ export interface NavigationOptions {
   layers?: string[];
   rootLabel?: string;
   onFocusChange?: (focus: NavigationFocusState | null) => void;
+  focusTransition?: boolean | TransitionOptions;
 }
 
 /**

@@ -17,6 +17,7 @@ export type NavigationRuntime = {
   handlesBreadcrumbs: () => boolean;
   reset: () => void;
   dispose: () => void;
+  consumeTransitionOverride: () => RenderSvgOptions['transition'] | undefined;
 };
 
 type FocusTarget = {
@@ -59,6 +60,7 @@ export function createNavigationRuntime(
   let nodePathMap = new WeakMap<TreeNodeInput, number[]>();
   let sourcePathMap = new WeakMap<TreeNodeInput, number[]>();
   const arcByIdentifier = new Map<string, LayoutArc>();
+  let pendingTransition: RenderSvgOptions['transition'] | undefined;
 
   indexBaseConfig(storedBaseConfig, nodeSourceMap, nodePathMap);
   updateBreadcrumbTrail();
@@ -67,6 +69,7 @@ export function createNavigationRuntime(
     storedBaseConfig = cloneSunburstConfig(config);
     focus = null;
     cachedDerivedConfig = null;
+    pendingTransition = undefined;
     nodeSourceMap = new WeakMap<TreeNodeInput, TreeNodeInput>();
     nodePathMap = new WeakMap<TreeNodeInput, number[]>();
     sourcePathMap = new WeakMap<TreeNodeInput, number[]>();
@@ -129,6 +132,7 @@ export function createNavigationRuntime(
     }
 
     focus = target;
+    pendingTransition = computeFocusTransition(options.focusTransition);
     cachedDerivedConfig = null;
     notifyFocusChange(target);
     updateBreadcrumbTrail();
@@ -146,6 +150,7 @@ export function createNavigationRuntime(
     }
     focus = null;
     cachedDerivedConfig = null;
+    pendingTransition = computeFocusTransition(options.focusTransition);
     notifyFocusChange(null);
     updateBreadcrumbTrail();
     requestRender();
@@ -156,6 +161,7 @@ export function createNavigationRuntime(
     cachedDerivedConfig = null;
     arcByIdentifier.clear();
     breadcrumbs?.setTrail?.(null);
+    pendingTransition = undefined;
   }
 
   function notifyFocusChange(target: FocusTarget | null): void {
@@ -307,7 +313,27 @@ export function createNavigationRuntime(
     handlesBreadcrumbs: handlesBreadcrumbsFlag,
     reset,
     dispose,
+    consumeTransitionOverride() {
+      if (pendingTransition === undefined) {
+        return undefined;
+      }
+      const result = pendingTransition;
+      pendingTransition = undefined;
+      return result;
+    },
   };
+}
+
+function computeFocusTransition(
+  value: NavigationOptions['focusTransition'],
+): RenderSvgOptions['transition'] {
+  if (value === false) {
+    return false;
+  }
+  if (value === undefined || value === true) {
+    return true;
+  }
+  return value;
 }
 
 function isSameFocus(a: FocusTarget, b: FocusTarget): boolean {

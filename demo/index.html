@@ -618,6 +618,7 @@
       const nextConfig = cloneConfig(userConfig);
       applyCollapsedState(nextConfig, state.collapsedKeys);
       state.pinned = null;
+      state.navigationFocus = null;
       clearHover();
       setSelection(defaultMessage);
       setBreadcrumbs(defaultBreadcrumbs);
