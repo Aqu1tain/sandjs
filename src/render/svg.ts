@@ -25,6 +25,10 @@ const LABEL_MIN_FONT_SIZE = 12;
 const LABEL_MAX_FONT_SIZE = 18;
 const LABEL_CHAR_WIDTH_FACTOR = 0.6;
 const LABEL_PADDING = 6;
+const COLLAPSED_ARC_SPAN_SHRINK_FACTOR = 0.1;
+const COLLAPSED_ARC_MIN_SPAN = 0.01;
+const COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR = 0.1;
+const COLLAPSED_ARC_MIN_THICKNESS = 0.5;
 
 
 /**
@@ -1205,8 +1209,11 @@ function disposeRuntimeSet(runtime: RuntimeSet): void {
 function createCollapsedArc(source: LayoutArc): LayoutArc {
   const span = Math.max(source.x1 - source.x0, 0);
   const thickness = Math.max(source.y1 - source.y0, 0);
-  const shrinkSpan = Math.max(span * 0.1, 0.01);
-  const shrinkThickness = Math.max(thickness * 0.1, 0.5);
+  const shrinkSpan = Math.max(span * COLLAPSED_ARC_SPAN_SHRINK_FACTOR, COLLAPSED_ARC_MIN_SPAN);
+  const shrinkThickness = Math.max(
+    thickness * COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR,
+    COLLAPSED_ARC_MIN_THICKNESS,
+  );
   const midAngle = source.x0 + span * 0.5;
   const collapsedX0 = midAngle - shrinkSpan * 0.5;
   const collapsedX1 = midAngle + shrinkSpan * 0.5;
