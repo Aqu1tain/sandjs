@@ -23,8 +23,9 @@ let labelIdCounter = 0;
 const LABEL_MIN_RADIAL_THICKNESS = 14;
 const LABEL_MIN_FONT_SIZE = 12;
 const LABEL_MAX_FONT_SIZE = 18;
-const LABEL_CHAR_WIDTH_FACTOR = 0.6;
-const LABEL_PADDING = 6;
+const LABEL_CHAR_WIDTH_FACTOR = 0.7;
+const LABEL_PADDING = 8;
+const LABEL_SAFETY_MARGIN = 1.15;
 const COLLAPSED_ARC_SPAN_SHRINK_FACTOR = 0.1;
 const COLLAPSED_ARC_MIN_SPAN = 0.01;
 const COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR = 0.1;
@@ -380,6 +381,7 @@ function createManagedPath(params: {
 
   textPathElement.setAttribute('startOffset', '50%');
   textPathElement.setAttribute('method', 'align');
+  textPathElement.setAttribute('spacing', 'auto');
   textPathElement.setAttribute('class', 'sand-arc-label-textpath');
   textPathElement.textContent = '';
   textPathElement.style.pointerEvents = 'none';
@@ -708,7 +710,9 @@ function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: n
   const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
   const arcLength = span * midRadius;
 
-  if (arcLength < estimatedWidth) {
+  // Apply safety margin for centered text to prevent cut-off at boundaries
+  const requiredLength = estimatedWidth * LABEL_SAFETY_MARGIN;
+  if (arcLength < requiredLength) {
     return { visible: false, reason: 'narrow-arc' };
   }
 
@@ -786,21 +790,17 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
     return;
   }
 
-  const xValue = evaluation.x.toFixed(2);
-  const yValue = evaluation.y.toFixed(2);
-
   if (textPathElement.textContent !== text) {
     textPathElement.textContent = text;
   }
   labelElement.style.display = '';
-  labelElement.setAttribute('x', xValue);
-  labelElement.setAttribute('y', yValue);
   labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
   labelElement.style.opacity = managed.element.style.opacity;
   labelElement.setAttribute('data-layer', arc.layerId);
   labelElement.setAttribute('data-depth', String(arc.depth));
   labelPathElement.setAttribute('d', evaluation.pathData);
   textPathElement.setAttribute('startOffset', '50%');
+  textPathElement.setAttribute('spacing', 'auto');
 
   labelElement.removeAttribute('transform');
   if (evaluation.inverted) {
