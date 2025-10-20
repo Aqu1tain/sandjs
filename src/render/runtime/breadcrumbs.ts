@@ -2,6 +2,11 @@ import type { LayoutArc } from '../../types/index.js';
 import type { BreadcrumbOptions, BreadcrumbTrailItem, RenderSvgOptions } from '../types.js';
 import { resolveTooltipContainer } from './tooltip.js';
 import { formatArcBreadcrumb } from '../format.js';
+import {
+  BREADCRUMB_DEFAULT_FONT_SIZE,
+  BREADCRUMB_DEFAULT_MIN_HEIGHT,
+  BREADCRUMB_DEFAULT_LETTER_SPACING,
+} from './breadcrumbConstants.js';
 
 const BREADCRUMB_ATTRIBUTE = 'data-sandjs-breadcrumbs';
 
@@ -111,8 +116,8 @@ function ensureBreadcrumbElement(doc: Document, container: HTMLElement): HTMLEle
 function applyDefaultBreadcrumbStyles(element: HTMLElement): void {
   const style = element.style;
   if (!style.display) style.display = 'block';
-  if (!style.fontSize) style.fontSize = '0.85rem';
+  if (!style.fontSize) style.fontSize = BREADCRUMB_DEFAULT_FONT_SIZE;
   if (!style.color) style.color = 'inherit';
-  if (!style.minHeight) style.minHeight = '1.2em';
-  if (!style.letterSpacing) style.letterSpacing = '0.01em';
+  if (!style.minHeight) style.minHeight = BREADCRUMB_DEFAULT_MIN_HEIGHT;
+  if (!style.letterSpacing) style.letterSpacing = BREADCRUMB_DEFAULT_LETTER_SPACING;
 }
