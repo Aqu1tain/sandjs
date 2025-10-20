@@ -28,6 +28,10 @@ class StubElement {
     }
   }
 
+  setAttributeNS(_namespace: string | null, name: string, value: string) {
+    this.setAttribute(name, value);
+  }
+
   set innerHTML(value: string) {
     this._innerHTML = value;
     this.children = [];
@@ -94,14 +98,42 @@ class StubElement {
       this.children.reduce<StubElement | null>((found, child) => found ?? child.querySelector(selector), null)
     );
   }
+
+  getAttribute(name: string): string | null {
+    return this.attributes.get(name) ?? null;
+  }
+
+  get childNodes(): StubElement[] {
+    return this.children;
+  }
+
+  insertBefore<T extends StubElement>(newChild: T, refChild: StubElement | null): T {
+    if (!refChild || !this.children.includes(refChild)) {
+      return this.appendChild(newChild);
+    }
+    const index = this.children.indexOf(refChild);
+    this.children.splice(index, 0, newChild);
+    newChild.parentNode = this;
+    this.firstChild = this.children[0] ?? null;
+    return newChild;
+  }
 }
 
 class StubSVGElement extends StubElement {}
+
+class StubSVGDefsElement extends StubSVGElement {
+  constructor() {
+    super('defs');
+  }
+}
 
 class StubDocument {
   public body = new StubElement('body');
 
   createElementNS(_ns: string, tag: string) {
+    if (tag === 'defs') {
+      return new StubSVGDefsElement();
+    }
     return new StubSVGElement(tag);
   }
 
@@ -114,8 +146,9 @@ class StubDocument {
   }
 }
 
-// Ensure global SVGElement exists for instanceof checks.
+// Ensure global SVG classes exist for instanceof checks.
 (globalThis as any).SVGElement = StubSVGElement;
+(globalThis as any).SVGDefsElement = StubSVGDefsElement;
 
 test('renderSVG exposes update handle that patches the existing host', () => {
   const document = new StubDocument();
@@ -148,9 +181,12 @@ test('renderSVG exposes update handle that patches the existing host', () => {
   assert.equal(typeof chart.update, 'function');
   assert.equal(typeof chart.destroy, 'function');
   assert.equal(chart.length, 2);
-  assert.equal(hostStub.children.length, 2);
 
-  for (const path of hostStub.children) {
+  // Filter only path elements (exclude defs and text elements)
+  const paths = hostStub.children.filter((c) => c.tagName === 'path');
+  assert.equal(paths.length, 2);
+
+  for (const path of paths) {
     assert.equal(path.attributes.get('data-depth'), '0');
     assert.equal(path.attributes.get('data-collapsed'), undefined);
     assert.equal(path.attributes.get('class'), 'sand-arc is-root');
@@ -186,15 +222,18 @@ test('renderSVG exposes update handle that patches the existing host', () => {
   const firstUpdate = chart.update(nextConfig);
   assert.strictEqual(firstUpdate, chart, 'update should return original handle');
   assert.equal(chart.length, 1, 'handle should reflect updated arc count');
-  assert.equal(hostStub.children.length, 1, 'host should contain new arc count');
-  assert.equal(hostStub.children[0].attributes.get('data-collapsed'), 'true');
-  assert.equal(hostStub.children[0].attributes.get('class'), 'sand-arc is-root is-collapsed');
+
+  const pathsAfterFirstUpdate = hostStub.children.filter((c) => c.tagName === 'path');
+  assert.equal(pathsAfterFirstUpdate.length, 1, 'host should contain new arc count');
+  assert.equal(pathsAfterFirstUpdate[0].attributes.get('data-collapsed'), 'true');
+  assert.equal(pathsAfterFirstUpdate[0].attributes.get('class'), 'sand-arc is-root is-collapsed');
 
   chart.update({ config: initialConfig });
 
   assert.equal(chart.length, 2, 'handle should reflect second update');
-  assert.equal(hostStub.children.length, 2, 'host should contain second update arcs');
-  for (const path of hostStub.children) {
+  const pathsAfterSecondUpdate = hostStub.children.filter((c) => c.tagName === 'path');
+  assert.equal(pathsAfterSecondUpdate.length, 2, 'host should contain second update arcs');
+  for (const path of pathsAfterSecondUpdate) {
     assert.equal(path.attributes.get('data-collapsed'), undefined);
     assert.equal(path.attributes.get('class'), 'sand-arc is-root');
   }
@@ -206,7 +245,10 @@ test('renderSVG exposes update handle that patches the existing host', () => {
   assert.equal(countByAttr('data-sandjs-tooltip'), 1, 'tooltip element persists for reuse');
   assert.equal(countByAttr('data-sandjs-breadcrumbs'), 1, 'breadcrumb element persists for reuse');
   assert.equal(chart.length, 0, 'destroy should clear handle array');
-  assert.equal(hostStub.children.length, 0, 'destroy should empty host');
+
+  // After destroy, only defs element may remain (empty container for label paths)
+  const pathsAfterDestroy = hostStub.children.filter((c) => c.tagName === 'path');
+  assert.equal(pathsAfterDestroy.length, 0, 'destroy should remove all path elements');
 });
 
 test('navigation runtime drills down into arcs and breadcrumbs remain interactive', () => {
@@ -258,9 +300,11 @@ test('navigation runtime drills down into arcs and breadcrumbs remain interactiv
     'expected full chart before navigation',
   );
 
-  const firstPath = hostStub.children[0];
-  assert.ok(firstPath.listeners.click && firstPath.listeners.click.length > 0, 'expected click listener');
-  firstPath.listeners.click![0]({ preventDefault() {} } as unknown as MouseEvent);
+  // Get first path element (skip defs and text elements)
+  const firstPath = hostStub.children.find((c) => c.tagName === 'path');
+  assert.ok(firstPath, 'expected at least one path element');
+  assert.ok(firstPath!.listeners.click && firstPath!.listeners.click.length > 0, 'expected click listener');
+  firstPath!.listeners.click![0]({ preventDefault() {} } as unknown as MouseEvent);
 
   assert.deepEqual(
     chart.map((arc) => arc.data.name),
