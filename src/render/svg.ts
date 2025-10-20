@@ -106,6 +106,10 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
   let isRendering = false;
   let pendingRender = false;
 
+  // Create color assigner once based on full config for consistent colors during navigation
+  const baseArcs = layout(baseConfig);
+  let getArcColor = createColorAssigner(currentOptions.colorTheme, baseArcs);
+
   const execute = (): LayoutArc[] => {
     const runtime = runtimes;
     const navigation = runtime.navigation;
@@ -122,9 +126,6 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     const diameter = activeConfig.size.radius * 2;
     const cx = activeConfig.size.radius;
     const cy = activeConfig.size.radius;
-
-    // Create color assigner based on theme configuration
-    const getArcColor = createColorAssigner(currentOptions.colorTheme, arcs);
 
     host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
     host.setAttribute('width', `${diameter}`);
@@ -246,6 +247,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           ...nextOptions,
           config: baseConfig,
         };
+        // Recreate color assigner with new base config for consistent colors
+        const newBaseArcs = layout(baseConfig);
+        getArcColor = createColorAssigner(currentOptions.colorTheme, newBaseArcs);
         disposeRuntimeSet(runtimes);
         runtimes = createRuntimeSet(doc, currentOptions, {
           baseConfig,
