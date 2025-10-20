@@ -1,4 +1,5 @@
 import { LayoutArc, LayerConfig, SunburstConfig, TreeNodeInput } from '../types/index.js';
+import { ZERO_TOLERANCE } from '../render/geometry.js';
 
 type NormalizedNode = {
   input: TreeNodeInput;
@@ -18,8 +19,6 @@ type LayerContext = {
   layerEnd: number;
   arcs: LayoutArc[];
 };
-
-const ZERO_TOLERANCE = 1e-6;
 
 /**
  * Computes the polar coordinates for every visible arc in the provided configuration.
