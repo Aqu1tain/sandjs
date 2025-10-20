@@ -6,7 +6,7 @@ import {
   RenderSvgUpdateInput,
   RenderSvgUpdateOptions,
 } from './types.js';
-import { describeArcPath } from './geometry.js';
+import { describeArcPath, polarToCartesian, TAU, ZERO_TOLERANCE } from './geometry.js';
 import { resolveTransition, interpolateArc, ResolvedTransition } from './transition.js';
 import { createTooltipRuntime, TooltipRuntime } from './runtime/tooltip.js';
 import { createBreadcrumbRuntime, BreadcrumbRuntime } from './runtime/breadcrumbs.js';
@@ -17,6 +17,14 @@ import { createNavigationRuntime, NavigationRuntime } from './runtime/navigation
 import { cloneSunburstConfig } from './config.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+let labelIdCounter = 0;
+const LABEL_MIN_RADIAL_THICKNESS = 14;
+const LABEL_MIN_FONT_SIZE = 12;
+const LABEL_MAX_FONT_SIZE = 18;
+const LABEL_CHAR_WIDTH_FACTOR = 0.6;
+const LABEL_PADDING = 6;
+
 
 /**
  * Renders the supplied `SunburstConfig` into the target SVG element.
@@ -43,12 +51,19 @@ type AnimationDrivers = {
 type ManagedPath = {
   key: string;
   element: SVGPathElement;
+  labelElement: SVGTextElement;
+  labelPathElement: SVGPathElement;
+  textPathElement: SVGTextPathElement;
+  labelPathId: string;
   arc: LayoutArc;
   options: RenderSvgOptions;
   runtime: RuntimeSet;
   animation: AnimationHandle | null;
   fade: AnimationHandle | null;
   pendingRemoval: boolean;
+  labelVisible: boolean;
+  labelHiddenReason: string | null;
+  labelPendingLogReason: string | null;
   listeners: {
     enter: (event: PointerEvent) => void;
     move: (event: PointerEvent) => void;
@@ -61,6 +76,7 @@ type ManagedPath = {
 export function renderSVG(options: RenderSvgOptions): RenderHandle {
   const doc = resolveDocument(options.document);
   const host = resolveHostElement(options.el, doc);
+  const labelDefs = ensureLabelDefs(host, doc);
 
   let currentOptions: RenderSvgOptions = {
     ...options,
@@ -137,6 +153,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           options: currentOptions,
           runtime,
           doc,
+          labelDefs,
         });
         pathRegistry.set(key, managed);
       }
@@ -155,6 +172,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
       });
 
       host.appendChild(managed.element);
+      host.appendChild(managed.labelElement);
     }
 
     for (const [key, managed] of pathRegistry) {
@@ -305,25 +323,82 @@ function isSunburstConfig(value: unknown): value is SunburstConfig {
   return 'size' in record && 'layers' in record;
 }
 
+function ensureLabelDefs(host: SVGElement, doc: Document): SVGDefsElement {
+  const children = Array.from(host.childNodes);
+  for (const child of children) {
+    if (child instanceof SVGDefsElement && child.getAttribute('data-sand-labels') === 'true') {
+      return child;
+    }
+  }
+
+  const defs = doc.createElementNS(SVG_NS, 'defs');
+  defs.setAttribute('data-sand-labels', 'true');
+  if (host.firstChild) {
+    host.insertBefore(defs, host.firstChild);
+  } else {
+    host.appendChild(defs);
+  }
+  return defs;
+}
+
 function createManagedPath(params: {
   key: string;
   arc: LayoutArc;
   options: RenderSvgOptions;
   runtime: RuntimeSet;
   doc: Document;
+  labelDefs: SVGDefsElement;
 }): ManagedPath {
-  const { key, arc, options, runtime, doc } = params;
+  const { key, arc, options, runtime, doc, labelDefs } = params;
   const element = doc.createElementNS(SVG_NS, 'path');
+
+  const labelPathElement = doc.createElementNS(SVG_NS, 'path');
+  const labelElement = doc.createElementNS(SVG_NS, 'text');
+  const textPathElement = doc.createElementNS(SVG_NS, 'textPath');
+  const labelPathId = `sand-arc-label-${labelIdCounter++}`;
+
+  labelPathElement.setAttribute('id', labelPathId);
+  labelPathElement.setAttribute('fill', 'none');
+  labelPathElement.setAttribute('stroke', 'none');
+  labelPathElement.setAttribute('class', 'sand-arc-label-path');
+  labelPathElement.setAttribute('aria-hidden', 'true');
+  labelDefs.appendChild(labelPathElement);
+
+  labelElement.setAttribute('class', 'sand-arc-label');
+  labelElement.setAttribute('fill', '#000');
+  labelElement.setAttribute('text-anchor', 'middle');
+  labelElement.setAttribute('dominant-baseline', 'middle');
+  labelElement.setAttribute('aria-hidden', 'true');
+  labelElement.style.pointerEvents = 'none';
+  labelElement.style.userSelect = 'none';
+  labelElement.style.display = 'none';
+
+  textPathElement.setAttribute('startOffset', '50%');
+  textPathElement.setAttribute('method', 'align');
+  textPathElement.setAttribute('class', 'sand-arc-label-textpath');
+  textPathElement.textContent = '';
+  textPathElement.style.pointerEvents = 'none';
+  textPathElement.setAttributeNS(XLINK_NS, 'xlink:href', `#${labelPathId}`);
+  textPathElement.setAttribute('href', `#${labelPathId}`);
+
+  labelElement.appendChild(textPathElement);
 
   const managed: ManagedPath = {
     key,
     element,
+    labelElement,
+    labelPathElement,
+    textPathElement,
+    labelPathId,
     arc,
     options,
     runtime,
     animation: null,
     fade: null,
     pendingRemoval: false,
+    labelVisible: false,
+    labelHiddenReason: null,
+    labelPendingLogReason: null,
     listeners: {} as ManagedPath['listeners'],
     dispose: () => {
       stopManagedAnimations(managed);
@@ -334,6 +409,12 @@ function createManagedPath(params: {
       element.removeEventListener('pointercancel', managed.listeners.leave);
       if (managed.listeners.click) {
         element.removeEventListener('click', managed.listeners.click);
+      }
+      if (labelElement.parentNode) {
+        labelElement.parentNode.removeChild(labelElement);
+      }
+      if (labelPathElement.parentNode) {
+        labelPathElement.parentNode.removeChild(labelPathElement);
       }
     },
   };
@@ -438,6 +519,7 @@ function updateManagedPath(
   } else {
     stopArcAnimation(managed);
     applyPathData(element, pathData);
+    updateArcLabel(managed, arc, { cx, cy, allowLogging: true });
   }
 
   element.setAttribute('fill', arc.data.color ?? 'currentColor');
@@ -505,6 +587,12 @@ function updateManagedPath(
 
   element.style.pointerEvents = '';
 
+  if (animateArc) {
+    // When animating, updates will be driven by the animation callbacks.
+    // Ensure pending log reasons are cleared so zoom recomputations can log once animation settles.
+    managed.labelPendingLogReason = null;
+  }
+
   if (!previousArc) {
     if (transition) {
       if (navigationMorph) {
@@ -546,6 +634,246 @@ function applyPathData(element: SVGPathElement, pathData: string | null | undefi
   }
 }
 
+type UpdateArcLabelOptions = {
+  cx: number;
+  cy: number;
+  allowLogging: boolean;
+};
+
+type LabelEvaluation = {
+  visible: boolean;
+  reason?: string;
+  x?: number;
+  y?: number;
+  fontSize?: number;
+  pathData?: string;
+  inverted?: boolean;
+};
+
+function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: UpdateArcLabelOptions): void {
+  const { cx, cy, allowLogging } = options;
+
+  if (managed.pendingRemoval) {
+    hideLabel(managed, 'pending-removal');
+    return;
+  }
+
+  const text = typeof arc.data.name === 'string' ? arc.data.name.trim() : '';
+  if (!text) {
+    hideLabel(managed, 'empty-label');
+    return;
+  }
+
+  const evaluation = evaluateLabelVisibility(arc, text, cx, cy);
+  if (!evaluation.visible || evaluation.x === undefined || evaluation.y === undefined || !evaluation.fontSize) {
+    const reason = evaluation.reason ?? 'insufficient-geometry';
+    const loggable = shouldLogLabelReason(reason);
+    if (!allowLogging && loggable) {
+      managed.labelPendingLogReason = reason;
+    }
+
+    const hasPendingMatch = managed.labelPendingLogReason === reason;
+    const reasonChanged = managed.labelHiddenReason !== reason;
+    const shouldLogNow = allowLogging && loggable && (reasonChanged || hasPendingMatch);
+    const payload = shouldLogNow ? createLabelLogPayload(arc, text, reason) : null;
+    hideLabel(managed, reason, payload, shouldLogNow);
+
+    if (allowLogging) {
+      managed.labelPendingLogReason = null;
+    }
+    return;
+  }
+
+  showLabel(managed, text, evaluation, arc);
+}
+
+function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: number): LabelEvaluation {
+  const span = arc.x1 - arc.x0;
+  if (!(span > 0)) {
+    return { visible: false, reason: 'no-span' };
+  }
+
+  const radialThickness = Math.max(0, arc.y1 - arc.y0);
+  if (radialThickness < LABEL_MIN_RADIAL_THICKNESS) {
+    return { visible: false, reason: 'thin-radius' };
+  }
+
+  const midRadius = arc.y0 + radialThickness * 0.5;
+  const fontSize = Math.min(Math.max(radialThickness * 0.5, LABEL_MIN_FONT_SIZE), LABEL_MAX_FONT_SIZE);
+  const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
+  const arcLength = span * midRadius;
+
+  if (arcLength < estimatedWidth) {
+    return { visible: false, reason: 'narrow-arc' };
+  }
+
+  const angle = (arc.x0 + arc.x1) * 0.5;
+  const point = polarToCartesian(cx, cy, midRadius, angle);
+  const inverted = angle > Math.PI * 0.5 && angle < Math.PI * 1.5;
+  const pathData = createLabelArcPath({
+    arc,
+    radius: midRadius,
+    inverted,
+    cx,
+    cy,
+  });
+
+  if (!pathData) {
+    return { visible: false, reason: 'path-error' };
+  }
+
+  return {
+    visible: true,
+    x: point.x,
+    y: point.y,
+    fontSize,
+    pathData,
+    inverted,
+  };
+}
+
+function createLabelArcPath(params: {
+  arc: LayoutArc;
+  radius: number;
+  inverted: boolean;
+  cx: number;
+  cy: number;
+}): string | null {
+  const { arc, radius, inverted, cx, cy } = params;
+  if (!(radius > ZERO_TOLERANCE)) {
+    return null;
+  }
+
+  const span = Math.max(arc.x1 - arc.x0, 0);
+  if (!(span > ZERO_TOLERANCE)) {
+    return null;
+  }
+
+  const sweepFlag = inverted ? 0 : 1;
+  const normalizedSpan = Math.min(span, TAU);
+
+  if (normalizedSpan >= TAU - ZERO_TOLERANCE) {
+    const startAnchor = inverted ? arc.x1 : arc.x0;
+    const firstHalf = startAnchor + Math.PI * (inverted ? -1 : 1);
+    const start = polarToCartesian(cx, cy, radius, startAnchor);
+    const mid = polarToCartesian(cx, cy, radius, firstHalf);
+
+    return [
+      `M ${start.x} ${start.y}`,
+      `A ${radius} ${radius} 0 1 ${sweepFlag} ${mid.x} ${mid.y}`,
+      `A ${radius} ${radius} 0 1 ${sweepFlag} ${start.x} ${start.y}`,
+    ].join(' ');
+  }
+
+  const startAngle = inverted ? arc.x1 : arc.x0;
+  const endAngle = inverted ? arc.x0 : arc.x1;
+  const largeArcFlag = normalizedSpan > Math.PI ? 1 : 0;
+
+  const start = polarToCartesian(cx, cy, radius, startAngle);
+  const end = polarToCartesian(cx, cy, radius, endAngle);
+
+  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`;
+}
+
+function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation, arc: LayoutArc): void {
+  const { labelElement, textPathElement, labelPathElement } = managed;
+  if (!evaluation.x || !evaluation.y || !evaluation.fontSize || !evaluation.pathData) {
+    return;
+  }
+
+  const xValue = evaluation.x.toFixed(2);
+  const yValue = evaluation.y.toFixed(2);
+
+  if (textPathElement.textContent !== text) {
+    textPathElement.textContent = text;
+  }
+  labelElement.style.display = '';
+  labelElement.setAttribute('x', xValue);
+  labelElement.setAttribute('y', yValue);
+  labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
+  labelElement.style.opacity = managed.element.style.opacity;
+  labelElement.setAttribute('data-layer', arc.layerId);
+  labelElement.setAttribute('data-depth', String(arc.depth));
+  labelPathElement.setAttribute('d', evaluation.pathData);
+  textPathElement.setAttribute('startOffset', '50%');
+
+  labelElement.removeAttribute('transform');
+  if (evaluation.inverted) {
+    labelElement.setAttribute('data-inverted', 'true');
+  } else {
+    labelElement.removeAttribute('data-inverted');
+  }
+
+  managed.labelVisible = true;
+  managed.labelHiddenReason = null;
+  managed.labelPendingLogReason = null;
+}
+
+function hideLabel(
+  managed: ManagedPath,
+  reason: string,
+  logPayload?: LabelLogPayload | null,
+  forceLog?: boolean,
+): void {
+  if (managed.labelVisible || managed.labelHiddenReason !== reason) {
+    managed.labelElement.style.display = 'none';
+    managed.labelElement.style.opacity = managed.element.style.opacity;
+    managed.labelVisible = false;
+    managed.textPathElement.textContent = '';
+    managed.labelPathElement.removeAttribute('d');
+    managed.labelElement.removeAttribute('transform');
+    managed.labelElement.removeAttribute('data-inverted');
+  } else {
+    managed.labelElement.style.display = 'none';
+  }
+
+  if (logPayload && (forceLog || managed.labelHiddenReason !== reason)) {
+    logHiddenLabel(logPayload);
+  }
+
+  managed.labelHiddenReason = reason;
+}
+
+type LabelLogPayload = {
+  layerId: string;
+  name: string;
+  reason: string;
+  arc: LayoutArc;
+};
+
+function createLabelLogPayload(arc: LayoutArc, text: string, reason: string): LabelLogPayload {
+  return {
+    layerId: arc.layerId,
+    name: text,
+    reason,
+    arc,
+  };
+}
+
+function shouldLogLabelReason(reason: string): boolean {
+  return reason === 'thin-radius' || reason === 'narrow-arc' || reason === 'no-span' || reason === 'path-error';
+}
+
+function logHiddenLabel(payload: LabelLogPayload): void {
+  if (typeof console === 'undefined' || typeof console.info !== 'function') {
+    return;
+  }
+
+  let friendlyReason = 'node is too small to display a label safely';
+  if (payload.reason === 'thin-radius') {
+    friendlyReason = 'radial thickness is too small for a readable label';
+  } else if (payload.reason === 'narrow-arc') {
+    friendlyReason = 'arc span is too narrow for the label text';
+  } else if (payload.reason === 'no-span') {
+    friendlyReason = 'the arc span is effectively zero';
+  } else if (payload.reason === 'path-error') {
+    friendlyReason = 'the label path could not be established for this arc';
+  }
+
+  console.info(
+    `[Sand.js] Hiding label "${payload.name}" on layer "${payload.layerId}" because ${friendlyReason}.`,
+  );
+}
 function startArcAnimation(params: {
   managed: ManagedPath;
   from: LayoutArc;
@@ -569,13 +897,16 @@ function startArcAnimation(params: {
       const frameArc = interpolateArc(from, to, progress);
       const framePath = describeArcPath(frameArc, cx, cy) ?? finalPath;
       applyPathData(element, framePath);
+      updateArcLabel(managed, frameArc, { cx, cy, allowLogging: false });
     },
     onComplete: () => {
       applyPathData(element, finalPath);
+      updateArcLabel(managed, to, { cx, cy, allowLogging: true });
       managed.animation = null;
     },
     onCancel: () => {
       applyPathData(element, finalPath);
+      updateArcLabel(managed, to, { cx, cy, allowLogging: true });
       managed.animation = null;
     },
   });
@@ -604,10 +935,13 @@ type FadeParams = {
 function startFade(params: FadeParams): AnimationHandle {
   const { managed, from, to, transition, drivers, resetStyleOnComplete, onComplete, onCancel } = params;
   const element = managed.element;
+  const label = managed.labelElement;
   const start = clamp01Local(from);
   const end = clamp01Local(to);
 
-  element.style.opacity = start.toString();
+  const startString = start.toString();
+  element.style.opacity = startString;
+  label.style.opacity = startString;
 
   return runAnimation({
     drivers,
@@ -616,14 +950,18 @@ function startFade(params: FadeParams): AnimationHandle {
     easing: transition.easing,
     onUpdate: (progress) => {
       const value = start + (end - start) * progress;
-      element.style.opacity = value.toString();
+      const valueString = value.toString();
+      element.style.opacity = valueString;
+      label.style.opacity = valueString;
     },
     onComplete: () => {
       finalizeOpacity(element, end, resetStyleOnComplete);
+      finalizeOpacity(label, end, resetStyleOnComplete);
       onComplete?.();
     },
     onCancel: () => {
       finalizeOpacity(element, end, resetStyleOnComplete);
+      finalizeOpacity(label, end, resetStyleOnComplete);
       onCancel?.();
     },
   });
@@ -733,11 +1071,18 @@ function scheduleManagedRemoval(params: {
   stopArcAnimation(managed);
   stopFade(managed);
   managed.element.style.pointerEvents = 'none';
+  hideLabel(managed, 'pending-removal');
 
   const remove = () => {
     stopManagedAnimations(managed);
     if (managed.element.parentNode === host) {
       host.removeChild(managed.element);
+    }
+    if (managed.labelElement.parentNode === host) {
+      host.removeChild(managed.labelElement);
+    }
+    if (managed.labelPathElement.parentNode) {
+      managed.labelPathElement.parentNode.removeChild(managed.labelPathElement);
     }
     registry.delete(key);
     managed.dispose();
@@ -784,7 +1129,7 @@ function scheduleManagedRemoval(params: {
   });
 }
 
-function getCurrentOpacity(element: SVGPathElement): number {
+function getCurrentOpacity(element: SVGElement): number {
   const value = element.style.opacity;
   if (!value) {
     return 1;
@@ -796,7 +1141,7 @@ function getCurrentOpacity(element: SVGPathElement): number {
   return clamp01Local(parsed);
 }
 
-function finalizeOpacity(element: SVGPathElement, opacity: number, resetStyle?: boolean): void {
+function finalizeOpacity(element: SVGElement, opacity: number, resetStyle?: boolean): void {
   if (resetStyle && opacity === 1) {
     element.style.opacity = '';
   } else {
