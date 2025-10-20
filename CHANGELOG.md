@@ -2,35 +2,6 @@
 
 ## [Unreleased]
 
-## [0.3.0] - 2025-10-20
-
-### Added
-- **Navigation/Drilldown System**: Interactive drill-down navigation with click-to-focus on any arc, smooth morphing transitions, breadcrumb trail support, and programmatic reset capability via `resetNavigation()`.
-- **Color Theme System**: Comprehensive automatic coloring with 14 built-in palettes across three theme types:
-  - **Qualitative palettes** (6): `default`, `pastel`, `vibrant`, `earth`, `ocean`, `sunset` for categorical data
-  - **Sequential palettes** (4): `blues`, `greens`, `purples`, `oranges` for ordered data
-  - **Diverging palettes** (3): `redBlue`, `orangePurple`, `greenRed` for data with meaningful midpoints
-- **Color Assignment Strategies**: Four ways to map colors to arcs - by key (consistent), depth (hierarchical), index (sequential), or value (magnitude-based).
-- **New Exports**: `QUALITATIVE_PALETTES`, `SEQUENTIAL_PALETTES`, `DIVERGING_PALETTES` constants and `ColorThemeOptions`, `NavigationOptions`, `TransitionOptions` types.
-- **Navigation Options**: Configure drilldown behavior with `layers` (which layers support navigation), `rootLabel` (breadcrumb root text), `onFocusChange` callback, and `focusTransition` (animation settings).
-- **Breadcrumb Interactivity**: Optional `interactive` flag for breadcrumbs to enable navigation via trail clicks.
-
-### Changed
-- Refactored color assignment logic to maintain consistent colors during navigation - each key now maps to the same color regardless of zoom level or drilldown state.
-- Improved label positioning with increased safety margins (15%), better width estimation (0.7 factor), and enhanced padding (8px) to prevent text cutoff on partial arcs.
-- Fixed text inversion boundaries so labels at vertical positions (90°/270°) render with correct orientation for readability.
-- Normalized angle calculations for text rotation to handle full-circle and partial arc cases correctly.
-- Extracted magic numbers into dedicated constant files (`tooltipConstants.ts`, `breadcrumbConstants.ts`) for easier customization.
-- Consolidated duplicate utility functions (`clamp01`, `ZERO_TOLERANCE`) into shared modules for maintainability.
-- Simplified demo to showcase color theme system with interactive controls for theme type, palette selection, and assignment strategy.
-
-### Fixed
-- Fixed `labelPendingLogReason` self-assignment bug that prevented proper label state clearing during arc animations.
-- Fixed collapsed children disappearing unexpectedly during navigation transitions.
-- Fixed text labels appearing upside-down due to incorrect angle normalization.
-- Fixed color assignments shifting during drilldown navigation by caching the color assigner based on full configuration.
-- Fixed demo radial space allocation error by adjusting layer configuration to properly accommodate node hierarchy.
-
 ## [0.1.0] - 2025-09-16
 
 ### Added
@@ -92,3 +63,33 @@
 - Simplified the demo styling to better showcase built-in arc metadata and reduce custom decoration.
 - Updated the README CDN snippet to reference `@akitain/sandjs@0.2.3`.
 - Skipped redundant asset copies during dev watch runs to quiet Rollup while keeping publish builds intact.
+
+## [0.3.0] - 2025-10-20
+
+### Added
+- **Navigation/Drilldown System**: Interactive drill-down navigation with click-to-focus on any arc, smooth morphing transitions, breadcrumb trail support, and programmatic reset capability via `resetNavigation()`.
+- **Color Theme System**: Comprehensive automatic coloring with 14 built-in palettes across three theme types:
+  - **Qualitative palettes** (6): `default`, `pastel`, `vibrant`, `earth`, `ocean`, `sunset` for categorical data
+  - **Sequential palettes** (4): `blues`, `greens`, `purples`, `oranges` for ordered data
+  - **Diverging palettes** (3): `redBlue`, `orangePurple`, `greenRed` for data with meaningful midpoints
+- **Color Assignment Strategies**: Four ways to map colors to arcs - by key (consistent), depth (hierarchical), index (sequential), or value (magnitude-based).
+- **New Exports**: `QUALITATIVE_PALETTES`, `SEQUENTIAL_PALETTES`, `DIVERGING_PALETTES` constants and `ColorThemeOptions`, `NavigationOptions`, `TransitionOptions` types.
+- **Navigation Options**: Configure drilldown behavior with `layers` (which layers support navigation), `rootLabel` (breadcrumb root text), `onFocusChange` callback, and `focusTransition` (animation settings).
+- **Breadcrumb Interactivity**: Optional `interactive` flag for breadcrumbs to enable navigation via trail clicks.
+
+### Changed
+- Refactored color assignment logic to maintain consistent colors during navigation - each key now maps to the same color regardless of zoom level or drilldown state.
+- Improved label positioning with increased safety margins (15%), better width estimation (0.7 factor), and enhanced padding (8px) to prevent text cutoff on partial arcs.
+- Fixed text inversion boundaries so labels at vertical positions (90°/270°) render with correct orientation for readability.
+- Normalized angle calculations for text rotation to handle full-circle and partial arc cases correctly.
+- Extracted magic numbers into dedicated constant files (`tooltipConstants.ts`, `breadcrumbConstants.ts`) for easier customization.
+- Consolidated duplicate utility functions (`clamp01`, `ZERO_TOLERANCE`) into shared modules for maintainability.
+- Simplified demo to showcase color theme system with interactive controls for theme type, palette selection, and assignment strategy.
+
+### Fixed
+- Fixed `labelPendingLogReason` self-assignment bug that prevented proper label state clearing during arc animations.
+- Fixed collapsed children disappearing unexpectedly during navigation transitions.
+- Fixed text labels appearing upside-down due to incorrect angle normalization.
+- Fixed color assignments shifting during drilldown navigation by caching the color assigner based on full configuration.
+- Fixed demo radial space allocation error by adjusting layer configuration to properly accommodate node hierarchy.
+
