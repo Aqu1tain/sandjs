@@ -1,4 +1,10 @@
 import type { LayoutArc, SunburstConfig } from '../types/index.js';
+import type {
+  QualitativePaletteName,
+  SequentialPaletteName,
+  DivergingPaletteName,
+  ColorPalette,
+} from './colorThemes.js';
 
 /**
  * Configures tooltip behaviour for `renderSVG`.
@@ -57,6 +63,45 @@ export interface TransitionOptions {
 }
 
 /**
+ * Color theme configuration for automatic arc coloring.
+ *
+ * Supports three theme types:
+ * - Qualitative: For categorical data (assigns colors by key/depth)
+ * - Sequential: For ordered data (light to dark progression)
+ * - Diverging: For data with a meaningful midpoint
+ *
+ * @public
+ */
+export interface ColorThemeOptions {
+  /**
+   * Theme type to use for color assignment
+   */
+  type: 'qualitative' | 'sequential' | 'diverging';
+
+  /**
+   * Palette name or custom color array.
+   * If a string, must match a built-in palette name for the chosen type.
+   * If an array, provides custom colors.
+   */
+  palette: QualitativePaletteName | SequentialPaletteName | DivergingPaletteName | ColorPalette;
+
+  /**
+   * How to assign colors from the palette.
+   * - 'depth': Assign colors based on arc depth (default for sequential/diverging)
+   * - 'key': Assign colors based on arc key (default for qualitative)
+   * - 'index': Assign colors based on arc index in layer
+   * - 'value': Assign colors based on arc value (normalized)
+   */
+  assignBy?: 'depth' | 'key' | 'index' | 'value';
+
+  /**
+   * Custom function to derive a color key from an arc.
+   * Overrides assignBy when provided.
+   */
+  deriveKey?: (arc: LayoutArc) => string | number;
+}
+
+/**
  * Enables automatic highlighting for arcs that share the same key.
  *
  * @public
@@ -101,6 +146,7 @@ export interface RenderSvgOptions {
   el: SVGElement | string;
   config: SunburstConfig;
   document?: Document;
+  colorTheme?: ColorThemeOptions;
   classForArc?: (arc: LayoutArc) => string | string[] | undefined;
   decoratePath?: (path: SVGPathElement, arc: LayoutArc) => void;
   tooltip?: boolean | TooltipOptions;

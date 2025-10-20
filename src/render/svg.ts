@@ -16,6 +16,7 @@ import { resolveDocument, resolveHostElement } from './runtime/document.js';
 import { createArcKey } from './keys.js';
 import { createNavigationRuntime, NavigationRuntime } from './runtime/navigation.js';
 import { cloneSunburstConfig } from './config.js';
+import { createColorAssigner } from './colorAssignment.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -122,6 +123,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     const cx = activeConfig.size.radius;
     const cy = activeConfig.size.radius;
 
+    // Create color assigner based on theme configuration
+    const getArcColor = createColorAssigner(currentOptions.colorTheme, arcs);
+
     host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
     host.setAttribute('width', `${diameter}`);
     host.setAttribute('height', `${diameter}`);
@@ -175,6 +179,8 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         cx,
         cy,
         navigationMorph,
+        index,
+        getArcColor,
       });
 
       host.appendChild(managed.element);
@@ -489,9 +495,12 @@ function updateManagedPath(
     cx: number;
     cy: number;
     navigationMorph: boolean;
+    index: number;
+    getArcColor: (arc: LayoutArc, index: number) => string | null;
   },
 ): void {
-  const { arc, options, runtime, pathData, previousArc, transition, drivers, cx, cy, navigationMorph } = params;
+  const { arc, options, runtime, pathData, previousArc, transition, drivers, cx, cy, navigationMorph, index, getArcColor } =
+    params;
 
   managed.arc = arc;
   managed.options = options;
@@ -529,7 +538,10 @@ function updateManagedPath(
     updateArcLabel(managed, arc, { cx, cy, allowLogging: true });
   }
 
-  element.setAttribute('fill', arc.data.color ?? 'currentColor');
+  // Apply color from theme or node.color override
+  const themeColor = getArcColor(arc, index);
+  const fillColor = arc.data.color ?? themeColor ?? 'currentColor';
+  element.setAttribute('fill', fillColor);
   element.setAttribute('data-layer', arc.layerId);
   element.setAttribute('data-name', arc.data.name);
   element.setAttribute('data-depth', String(arc.depth));
