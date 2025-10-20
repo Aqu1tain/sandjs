@@ -1,5 +1,6 @@
 import type { LayoutArc } from '../types/index.js';
 import type { RenderSvgOptions, TransitionOptions } from './types.js';
+import { clamp01 } from './math.js';
 
 export type TransitionEasing = (t: number) => number;
 
@@ -52,12 +53,6 @@ export function interpolateArc(fromArc: LayoutArc, toArc: LayoutArc, progress: n
 
 function lerp(start: number, end: number, t: number): number {
   return start + (end - start) * t;
-}
-
-function clamp01(value: number): number {
-  if (value <= 0) return 0;
-  if (value >= 1) return 1;
-  return value;
 }
 
 function normalizePositiveNumber(value: unknown, fallback: number): number {

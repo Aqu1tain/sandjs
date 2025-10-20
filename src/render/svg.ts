@@ -8,6 +8,7 @@ import {
 } from './types.js';
 import { describeArcPath, polarToCartesian, TAU, ZERO_TOLERANCE } from './geometry.js';
 import { resolveTransition, interpolateArc, ResolvedTransition } from './transition.js';
+import { clamp01 } from './math.js';
 import { createTooltipRuntime, TooltipRuntime } from './runtime/tooltip.js';
 import { createBreadcrumbRuntime, BreadcrumbRuntime } from './runtime/breadcrumbs.js';
 import { createHighlightRuntime, HighlightRuntime } from './runtime/highlight.js';
@@ -936,8 +937,8 @@ function startFade(params: FadeParams): AnimationHandle {
   const { managed, from, to, transition, drivers, resetStyleOnComplete, onComplete, onCancel } = params;
   const element = managed.element;
   const label = managed.labelElement;
-  const start = clamp01Local(from);
-  const end = clamp01Local(to);
+  const start = clamp01(from);
+  const end = clamp01(to);
 
   const startString = start.toString();
   element.style.opacity = startString;
@@ -1138,7 +1139,7 @@ function getCurrentOpacity(element: SVGElement): number {
   if (!Number.isFinite(parsed)) {
     return 1;
   }
-  return clamp01Local(parsed);
+  return clamp01(parsed);
 }
 
 function finalizeOpacity(element: SVGElement, opacity: number, resetStyle?: boolean): void {
@@ -1147,16 +1148,6 @@ function finalizeOpacity(element: SVGElement, opacity: number, resetStyle?: bool
   } else {
     element.style.opacity = opacity.toString();
   }
-}
-
-function clamp01Local(value: number): number {
-  if (value <= 0) {
-    return 0;
-  }
-  if (value >= 1) {
-    return 1;
-  }
-  return value;
 }
 
 function createAnimationDrivers(doc: Document): AnimationDrivers {
