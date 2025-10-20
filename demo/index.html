@@ -360,6 +360,16 @@
     const arcCountEl = document.getElementById('arc-count');
     const colorCountEl = document.getElementById('color-count');
 
+    // Simple HTML escape function
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function updatePaletteOptions() {
       const type = themeTypeEl.value;
       const palettes = type === 'qualitative' ? QUALITATIVE_PALETTES :
@@ -384,8 +394,8 @@
       const description = paletteDescriptions[paletteName] || '';
 
       paletteInfoEl.innerHTML = `
-        <strong>${paletteName}</strong>
-        <div>${description}</div>
+        <strong>${escapeHTML(paletteName)}</strong>
+        <div>${escapeHTML(description)}</div>
         <div class="color-preview">
           ${colors.map(color => `<div class="color-swatch" style="background-color: ${color}"></div>`).join('')}
         </div>
