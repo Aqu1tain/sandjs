@@ -4,8 +4,6 @@
 
 ## renderSVG() function
 
-Renders the supplied `SunburstConfig` into the target SVG element.
-
 **Signature:**
 
 ```typescript

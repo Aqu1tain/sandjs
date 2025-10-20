@@ -1,5 +1,19 @@
 import type { LayoutArc } from '../../types/index.js';
 import type { RenderSvgOptions, TooltipOptions } from '../types.js';
+import {
+  TOOLTIP_OFFSET_X,
+  TOOLTIP_OFFSET_Y,
+  TOOLTIP_DEFAULT_BACKGROUND,
+  TOOLTIP_DEFAULT_COLOR,
+  TOOLTIP_DEFAULT_PADDING,
+  TOOLTIP_DEFAULT_BORDER_RADIUS,
+  TOOLTIP_DEFAULT_FONT_SIZE,
+  TOOLTIP_DEFAULT_BOX_SHADOW,
+  TOOLTIP_DEFAULT_BORDER,
+  TOOLTIP_DEFAULT_TRANSITION,
+  TOOLTIP_DEFAULT_TRANSFORM,
+  TOOLTIP_DEFAULT_Z_INDEX,
+} from './tooltipConstants.js';
 
 const TOOLTIP_ATTRIBUTE = 'data-sandjs-tooltip';
 
@@ -39,10 +53,8 @@ export function createTooltipRuntime(
         };
 
   const position = (event: PointerEvent) => {
-    const offsetY = 8;
-    const offsetX = 8;
-    const x = event.clientX + offsetX;
-    const y = event.clientY - offsetY;
+    const x = event.clientX + TOOLTIP_OFFSET_X;
+    const y = event.clientY - TOOLTIP_OFFSET_Y;
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
   };
@@ -112,14 +124,14 @@ function applyDefaultTooltipStyles(element: HTMLElement): void {
   if (!style.pointerEvents) style.pointerEvents = 'none';
   if (!style.opacity) style.opacity = '0';
   if (!style.visibility) style.visibility = 'hidden';
-  if (!style.background) style.background = 'rgba(15, 23, 42, 0.92)';
-  if (!style.color) style.color = '#f8fafc';
-  if (!style.padding) style.padding = '0.4rem 0.6rem';
-  if (!style.borderRadius) style.borderRadius = '0.5rem';
-  if (!style.fontSize) style.fontSize = '0.8rem';
-  if (!style.boxShadow) style.boxShadow = '0 10px 30px rgba(15, 23, 42, 0.45)';
-  if (!style.border) style.border = '1px solid rgba(148, 163, 184, 0.25)';
-  if (!style.transition) style.transition = 'opacity 120ms ease';
-  if (!style.transform) style.transform = 'translate(-50%, -120%)';
-  if (!style.zIndex) style.zIndex = '9999';
+  if (!style.background) style.background = TOOLTIP_DEFAULT_BACKGROUND;
+  if (!style.color) style.color = TOOLTIP_DEFAULT_COLOR;
+  if (!style.padding) style.padding = TOOLTIP_DEFAULT_PADDING;
+  if (!style.borderRadius) style.borderRadius = TOOLTIP_DEFAULT_BORDER_RADIUS;
+  if (!style.fontSize) style.fontSize = TOOLTIP_DEFAULT_FONT_SIZE;
+  if (!style.boxShadow) style.boxShadow = TOOLTIP_DEFAULT_BOX_SHADOW;
+  if (!style.border) style.border = TOOLTIP_DEFAULT_BORDER;
+  if (!style.transition) style.transition = TOOLTIP_DEFAULT_TRANSITION;
+  if (!style.transform) style.transform = TOOLTIP_DEFAULT_TRANSFORM;
+  if (!style.zIndex) style.zIndex = TOOLTIP_DEFAULT_Z_INDEX;
 }

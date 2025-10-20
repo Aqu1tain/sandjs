@@ -2,729 +2,461 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Sand.js Demo</title>
+  <title>Sand.js - Color Theme Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     :root {
       color-scheme: dark;
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0a0e1a;
       color: #e2e8f0;
     }
 
     body {
       margin: 0;
+      padding: 2rem;
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      padding: clamp(1.5rem, 4vw, 3rem);
+      align-items: center;
     }
 
-    .app {
-      width: min(1080px, 100%);
+    .container {
+      width: min(1200px, 100%);
       display: flex;
       flex-direction: column;
-      gap: clamp(1.25rem, 2vw, 2rem);
-      background: #111c2f;
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      border-radius: 1.25rem;
-      padding: clamp(1.5rem, 3vw, 2.5rem);
+      gap: 2rem;
     }
 
-    .app__header {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+    header {
+      text-align: center;
     }
 
-    .app__title {
+    h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .tagline {
       margin: 0;
-      font-size: clamp(1.8rem, 3.4vw, 2.6rem);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #f8fafc;
+      font-size: 1.1rem;
+      color: #94a3b8;
     }
 
-    .app__tagline {
-      margin: 0;
-      font-size: clamp(0.95rem, 1.6vw, 1.05rem);
-      color: rgba(226, 232, 240, 0.85);
-    }
-
-    .app__meta {
-      margin: 0;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-      color: rgba(148, 163, 184, 0.8);
-    }
-
-    .app__layout {
+    .demo-grid {
       display: grid;
-      gap: clamp(1.25rem, 2vw, 2rem);
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: 1fr;
+      gap: 2rem;
     }
 
-    @media (min-width: 960px) {
-      .app__layout {
-        grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+    @media (min-width: 900px) {
+      .demo-grid {
+        grid-template-columns: 2fr 1fr;
       }
     }
 
-    .panel {
-      background: #0f172a;
-      border: 1px solid rgba(51, 65, 85, 0.45);
+    .chart-panel {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
       border-radius: 1rem;
+      padding: 2rem;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-    }
-
-    .panel__header {
-      padding: 1.2rem 1.4rem 0.6rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .panel__header h2 {
-      margin: 0;
-      font-size: 1rem;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-      color: #cbd5f5;
-    }
-
-    .panel__subtitle {
-      font-size: 0.78rem;
-      color: rgba(148, 163, 184, 0.8);
-    }
-
-    .panel__body {
-      padding: 0 1.4rem 1.4rem;
-      display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 1.5rem;
     }
 
-    .panel__body--stacked {
+    #sunburst {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .info {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+
+    .controls-panel {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 1rem;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .control-group label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #cbd5e1;
+    }
+
+    .control-group select {
+      background: #0a0e1a;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      color: #e2e8f0;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .control-group select:hover {
+      border-color: #4b5563;
+    }
+
+    .control-group select:focus {
+      outline: none;
+      border-color: #60a5fa;
+    }
+
+    .palette-info {
+      background: #0a0e1a;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-size: 0.875rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+
+    .palette-info strong {
+      color: #e2e8f0;
+    }
+
+    .color-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .color-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 0.25rem;
+      border: 1px solid #374151;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 1rem;
     }
 
-    .canvas {
-      margin: 0;
-      background: #0b1324;
-      border-radius: 0.9rem;
-      padding: clamp(1rem, 2vw, 1.4rem);
-      border: 1px solid rgba(59, 130, 246, 0.18);
-    }
-
-    svg {
-      width: 100%;
-      max-width: min(440px, 100%);
-      aspect-ratio: 1 / 1;
-      display: block;
-      margin: 0 auto;
-    }
-
-    figcaption {
-      margin-top: 1rem;
-      font-size: 0.78rem;
+    .stat {
+      background: #0a0e1a;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 1rem;
       text-align: center;
-      color: rgba(148, 163, 184, 0.85);
     }
 
-    .insights {
-      display: grid;
-      gap: 0.6rem;
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 0.25rem;
     }
 
-    .selection {
-      font-size: 0.95rem;
-      color: #e0f2fe;
-      min-height: 1.4rem;
-      margin: 0;
-    }
-
-    .breadcrumbs {
-      font-size: 0.82rem;
-      color: rgba(203, 213, 225, 0.9);
-      min-height: 1.2rem;
-      margin: 0;
-      letter-spacing: 0.01em;
-    }
-
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 0.65rem;
-      padding: 0.9rem 1rem;
-      border-radius: 0.85rem;
-      background: #0b1324;
-      border: 1px solid rgba(71, 85, 105, 0.4);
-      font-size: 0.78rem;
-    }
-
-    .controls strong {
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: rgba(226, 232, 240, 0.85);
-    }
-
-    .controls__label {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      padding: 0.5rem 0.6rem;
-      border-radius: 0.65rem;
-      background: transparent;
-      border: 1px solid rgba(51, 65, 85, 0.35);
-      transition: background 120ms ease, border-color 120ms ease;
-      cursor: pointer;
-    }
-
-    .controls__label:hover {
-      background: rgba(30, 41, 59, 0.6);
-      border-color: rgba(148, 163, 184, 0.4);
-    }
-
-    .controls__toggle {
-      accent-color: #38bdf8;
-    }
-
-    .editor {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .editor__heading {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-    }
-
-    .editor__heading strong {
-      font-size: 0.88rem;
-      color: rgba(248, 250, 252, 0.9);
-    }
-
-    .editor__badge {
-      padding: 0.15rem 0.55rem;
-      border-radius: 999px;
-      font-size: 0.62rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      background: rgba(34, 211, 238, 0.12);
-      color: #22d3ee;
-      border: 1px solid rgba(34, 211, 238, 0.3);
-    }
-
-    .editor__hint {
+    .stat-label {
       font-size: 0.75rem;
-      color: rgba(148, 163, 184, 0.85);
-      margin: 0;
-    }
-
-    .editor__textarea {
-      width: 100%;
-      min-height: clamp(200px, 35vh, 260px);
-      background: #0b1324;
-      border: 1px solid rgba(71, 85, 105, 0.55);
-      border-radius: 0.75rem;
-      padding: 0.9rem;
-      color: inherit;
-      font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.78rem;
-      line-height: 1.45;
-      resize: vertical;
-      transition: border-color 120ms ease, box-shadow 120ms ease;
-    }
-
-    .editor__textarea:focus {
-      outline: none;
-      border-color: rgba(51, 153, 255, 0.7);
-      box-shadow: 0 0 0 1px rgba(51, 153, 255, 0.35);
-    }
-
-    .editor__actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-    }
-
-    .editor__button {
-      background: #38bdf8;
-      color: #0f172a;
-      border: none;
-      border-radius: 0.65rem;
-      padding: 0.5rem 1.2rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 120ms ease, transform 120ms ease;
-    }
-
-    .editor__button:hover {
-      background: #22d3ee;
-      transform: translateY(-1px);
-    }
-
-    .editor__button:active {
-      transform: none;
-    }
-
-    .editor__button--ghost {
-      background: transparent;
-      color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.45);
-    }
-
-    .editor__status {
-      min-height: 1.2rem;
-      font-size: 0.75rem;
-      letter-spacing: 0.01em;
-    }
-
-    .editor__status--muted {
-      color: rgba(148, 163, 184, 0.85);
-    }
-
-    .editor__status--success {
-      color: #bef264;
-    }
-
-    .editor__status--error {
-      color: #fecaca;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
     }
 
     .sand-arc {
-      stroke: rgba(15, 23, 42, 0.85);
-      stroke-width: 1;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      transition: opacity 130ms ease-in-out, stroke-width 130ms ease-in-out, stroke 130ms ease-in-out;
+      stroke: #1a1f2e;
+      stroke-width: 2;
+      transition: opacity 0.2s;
       cursor: pointer;
     }
 
-    .sand-arc.is-hover {
-      opacity: 0.78;
-      stroke-width: 1.5;
-      stroke: #f8fafc;
-    }
-
-    .sand-arc.is-related {
-      opacity: 0.62;
-      stroke-width: 1.4;
-      stroke: rgba(148, 163, 184, 0.55);
-    }
-
-    .sand-arc.is-pinned {
-      opacity: 1;
-      stroke-width: 2.4;
-      stroke: #f1f5f9;
-    }
-
-    .sand-arc.is-collapsed {
-      stroke-dasharray: 4 2;
+    .sand-arc:hover {
       opacity: 0.85;
     }
 
-    .error {
-      color: #fecaca;
+    .sand-arc-label {
+      font-size: 14px;
+      font-weight: 500;
+      fill: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <main class="app">
-    <header class="app__header">
-      <h1 class="app__title">Sand.js Studio</h1>
-      <p class="app__tagline">Tinker with sunburst anatomy, inspect arcs, and iterate on layouts in real time.</p>
-      <p class="app__meta">Tip : `npm run build` then serve <code>./</code> (ex. <code>npx http-server .</code>).</p>
+  <div class="container">
+    <header>
+      <h1>🏝️ Sand.js</h1>
+      <p class="tagline">Color Theme Showcase</p>
     </header>
 
-    <section class="app__layout">
-      <section class="panel panel--visual" aria-labelledby="panel-visual-title">
-        <div class="panel__header">
-          <h2 id="panel-visual-title">Visualisation</h2>
-          <span class="panel__subtitle">Arc metadata, tooltips & interactions</span>
+    <div class="demo-grid">
+      <div class="chart-panel">
+        <svg id="sunburst"></svg>
+        <p class="info">Hover to see details • Click to navigate</p>
+      </div>
+
+      <div class="controls-panel">
+        <div class="control-group">
+          <label for="theme-type">Theme Type</label>
+          <select id="theme-type">
+            <option value="qualitative">Qualitative (Categorical)</option>
+            <option value="sequential">Sequential (Ordered)</option>
+            <option value="diverging">Diverging (Midpoint)</option>
+          </select>
         </div>
-        <div class="panel__body">
-          <figure class="canvas">
-            <svg id="sunburst" role="img" aria-label="Sand.js demo sunburst"></svg>
-            <figcaption>Les arcs utilisent les attributs `data-depth` et `data-collapsed` générés par Sand.js.</figcaption>
-          </figure>
-          <div class="insights">
-            <p id="selection" class="selection">Loading data…</p>
-            <p id="breadcrumbs" class="breadcrumbs">Path: —</p>
+
+        <div class="control-group">
+          <label for="palette">Palette</label>
+          <select id="palette">
+            <!-- Options populated dynamically -->
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="assign-by">Color Assignment</label>
+          <select id="assign-by">
+            <option value="key">By Key (Consistent)</option>
+            <option value="depth">By Depth (Hierarchical)</option>
+            <option value="index">By Index (Sequential)</option>
+            <option value="value">By Value (Magnitude)</option>
+          </select>
+        </div>
+
+        <div class="palette-info" id="palette-info">
+          <!-- Palette description -->
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-value" id="arc-count">0</div>
+            <div class="stat-label">Total Arcs</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="color-count">0</div>
+            <div class="stat-label">Colors Used</div>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <aside class="panel panel--sidebar" aria-labelledby="panel-config-title">
-        <div class="panel__header">
-          <h2 id="panel-config-title">Configuration</h2>
-          <span class="panel__subtitle">Collapse toggles & JSON editor</span>
-        </div>
-        <div class="panel__body panel__body--stacked">
-          <div id="controls" class="controls" aria-live="polite"></div>
-          <section class="editor" aria-labelledby="config-editor-title">
-            <div class="editor__heading">
-              <strong id="config-editor-title">Configuration JSON</strong>
-              <span class="editor__badge">Live</span>
-            </div>
-            <p class="editor__hint">Modifiez <code>demo/data.json</code> directement, appliquez ou réinitialisez les changements à la volée.</p>
-            <textarea id="config-editor" class="editor__textarea" spellcheck="false" aria-describedby="config-editor-title"></textarea>
-            <div class="editor__actions">
-              <button type="button" id="apply-config" class="editor__button">Apply changes</button>
-              <button type="button" id="reset-config" class="editor__button editor__button--ghost">Reset to data.json</button>
-              <span id="editor-status" class="editor__status editor__status--muted" aria-live="polite"></span>
-            </div>
-          </section>
-        </div>
-      </aside>
-    </section>
-  </main>
+    <footer>
+      <p>
+        Built with <strong>Sand.js</strong> •
+        <a href="https://github.com/Aqu1tain/sandjs" target="_blank">GitHub</a> •
+        <a href="https://www.npmjs.com/package/@akitain/sandjs" target="_blank">npm</a>
+      </p>
+    </footer>
+  </div>
 
-<script type="module">
-  import { renderSVG, formatArcBreadcrumb } from '../dist/sandjs.mjs';
+  <script type="module">
+    import {
+      renderSVG,
+      QUALITATIVE_PALETTES,
+      SEQUENTIAL_PALETTES,
+      DIVERGING_PALETTES,
+    } from '../dist/sandjs.mjs';
 
-  const selectionEl = document.getElementById('selection');
-  const breadcrumbsEl = document.getElementById('breadcrumbs');
-  const defaultMessage = 'Hover an arc to preview details, click to pin. Dashed arcs are collapsed branches.';
-  const defaultBreadcrumbs = 'Path: —';
-  const formatValue = (value) => (Number.isFinite(value) ? value.toLocaleString() : '—');
-  const breadcrumbPath = (arc) => formatArcBreadcrumb(arc);
-  const breadcrumbLabel = (arc) => `Path: ${breadcrumbPath(arc)}`;
-
-  const setSelection = (msg, cls='') => {
-    selectionEl.className = `selection ${cls}`.trim();
-    selectionEl.textContent = msg;
-  };
-
-  const setBreadcrumbs = (msg) => {
-    breadcrumbsEl.textContent = msg;
-  };
-
-  // simple categorical palette (fallback if node.color not provided)
-  const palette = ['#f97316','#facc15','#22d3ee','#a855f7','#4ade80','#fb7185'];
-  const colorsById = new Map();
-  let idx = 0;
-  const assignColor = (id) => {
-    if (!colorsById.has(id)) colorsById.set(id, palette[idx++ % palette.length]);
-    return colorsById.get(id);
-  };
-  const colorIdForArc = (arc) => arc.path.map((node) => node.name).join(' › ');
-
-  const state = {
-    pinned: null,
-    collapsedKeys: new Set(),
-  };
-  let hoverPath = null;
-
-  const clearHover = (path) => {
-    if (hoverPath && (!path || hoverPath === path)) {
-      hoverPath.classList.remove('is-hover');
-      hoverPath = null;
-    }
-  };
-
-  const applyHover = (path) => {
-    if (state.pinned?.path === path) {
-      clearHover(path);
-      return;
-    }
-    if (hoverPath && hoverPath !== path) {
-      hoverPath.classList.remove('is-hover');
-    }
-    path.classList.add('is-hover');
-    hoverPath = path;
-  };
-
-  const showPinnedInfo = () => {
-    if (!state.pinned) {
-      setSelection(defaultMessage);
-      setBreadcrumbs(defaultBreadcrumbs);
-      return;
-    }
-    const { arc } = state.pinned;
-    setSelection(
-      `Pinned: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-    );
-    setBreadcrumbs(breadcrumbLabel(arc));
-  };
-
-  const handlePinChange = ({ arc, path, pinned }) => {
-    clearHover();
-    if (pinned) {
-      if (path.parentNode) {
-        path.parentNode.appendChild(path);
-      }
-      state.pinned = { arc, path };
-      showPinnedInfo();
-      return;
-    }
-    if (state.pinned?.path === path) {
-      state.pinned = null;
-    }
-    showPinnedInfo();
-  };
-
-  // load and render
-  try {
-    // IMPORTANT: this path is relative to demo/index.html
-    const config = await fetch('./data.json').then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
-    });
-
-    const controlsEl = document.getElementById('controls');
-    const editorEl = document.getElementById('config-editor');
-    const applyConfigButton = document.getElementById('apply-config');
-    const resetConfigButton = document.getElementById('reset-config');
-    const editorStatus = document.getElementById('editor-status');
-
-    const KEY_SEPARATOR = '\u241F';
-    const encodePath = (parts) => parts.join(KEY_SEPARATOR);
-
-    const cloneConfig = (input) =>
-      (typeof structuredClone === 'function' ? structuredClone(input) : JSON.parse(JSON.stringify(input)));
-
-    const setEditorStatus = (message, tone = 'muted') => {
-      editorStatus.textContent = message;
-      editorStatus.className = `editor__status editor__status--${tone}`;
-    };
-
-    const collectCollapsedNodes = (sunburstConfig) => {
-      const entries = [];
-      for (const layer of sunburstConfig.layers) {
-        const roots = Array.isArray(layer.tree) ? layer.tree : [layer.tree];
-        for (const root of roots) {
-          walkNode(root, []);
-        }
-      }
-
-      function walkNode(node, ancestry) {
-        if (!node) return;
-        const nextPath = ancestry.concat(node.name ?? '');
-        if (node.collapsed) {
-          entries.push({
-            key: encodePath(nextPath),
-            label: node.name ?? 'Unnamed node',
-            breadcrumb: nextPath.join(' › '),
-          });
-        }
-        if (Array.isArray(node.children)) {
-          node.children.forEach((child) => walkNode(child, nextPath));
-        }
-      }
-
-      return entries;
-    };
-
-    const applyCollapsedState = (sunburstConfig, collapsedSet) => {
-      for (const layer of sunburstConfig.layers) {
-        const roots = Array.isArray(layer.tree) ? layer.tree : [layer.tree];
-        const updated = roots.map((root) => updateNode(root, []));
-        layer.tree = Array.isArray(layer.tree) ? updated : updated[0];
-      }
-
-      function updateNode(node, ancestry) {
-        if (!node) {
-          return node;
-        }
-        const clone = { ...node };
-        const nextPath = ancestry.concat(clone.name ?? '');
-        const pathKey = encodePath(nextPath);
-        if (collapsedSet.has(pathKey)) {
-          clone.collapsed = true;
-        } else if (clone.collapsed) {
-          delete clone.collapsed;
-        }
-        if (Array.isArray(clone.children)) {
-          clone.children = clone.children.map((child) => updateNode(child, nextPath));
-        }
-        return clone;
-      }
-    };
-
-    let userConfig = cloneConfig(config);
-
-    const seedCollapsedKeys = () => {
-      const entries = collectCollapsedNodes(userConfig);
-      state.collapsedKeys = new Set(entries.map((entry) => entry.key));
-    };
-
-    const syncEditor = () => {
-      editorEl.value = JSON.stringify(userConfig, null, 2);
-    };
-
-    seedCollapsedKeys();
-    syncEditor();
-
-    const renderControls = () => {
-      const collapsedEntries = collectCollapsedNodes(userConfig);
-      controlsEl.innerHTML = '';
-      if (collapsedEntries.length === 0) {
-        controlsEl.textContent = 'No collapsible branches in this dataset.';
-        return;
-      }
-
-      const heading = document.createElement('strong');
-      heading.textContent = 'Collapsed branches';
-      controlsEl.appendChild(heading);
-
-      collapsedEntries.forEach((entry) => {
-        const wrapper = document.createElement('label');
-        wrapper.className = 'controls__label';
-
-        const toggle = document.createElement('input');
-        toggle.type = 'checkbox';
-        toggle.className = 'controls__toggle';
-        toggle.setAttribute('aria-label', `Toggle children for ${entry.breadcrumb}`);
-
-        const text = document.createElement('span');
-
-        const syncToggleUi = () => {
-          const isCollapsed = state.collapsedKeys.has(entry.key);
-          toggle.checked = !isCollapsed;
-          text.textContent = isCollapsed ? `Collapsed: ${entry.label}` : `Expanded: ${entry.label}`;
-        };
-
-        toggle.addEventListener('change', () => {
-          if (toggle.checked) {
-            state.collapsedKeys.delete(entry.key);
-          } else {
-            state.collapsedKeys.add(entry.key);
-          }
-          syncToggleUi();
-          renderChart();
-        });
-
-        syncToggleUi();
-        wrapper.appendChild(toggle);
-        wrapper.appendChild(text);
-        controlsEl.appendChild(wrapper);
-      });
-    };
-
-    let chart = null;
-
-    const renderChart = () => {
-      const nextConfig = cloneConfig(userConfig);
-      applyCollapsedState(nextConfig, state.collapsedKeys);
-      state.pinned = null;
-      clearHover();
-      setSelection(defaultMessage);
-      setBreadcrumbs(defaultBreadcrumbs);
-
-      if (!chart) {
-        chart = renderSVG({
-          el: '#sunburst',
-          config: nextConfig,
-          classForArc: (arc) => (arc.depth === 0 ? 'is-root' : undefined),
-          decoratePath(path, arc) {
-            const labelValue = formatValue(arc.value);
-            path.setAttribute(
-              'aria-label',
-              `${breadcrumbPath(arc)}: ${labelValue} (${(arc.percentage * 100).toFixed(1)}%)`,
-            );
-            const explicit = arc.data.color;
-            const fill = explicit || assignColor(colorIdForArc(arc));
-            path.setAttribute('fill', fill);
-          },
-          tooltip: true,
-          highlightByKey: {
-            className: 'is-related',
-            pinOnClick: true,
-            pinClassName: 'is-pinned',
-            onPinChange: handlePinChange,
-          },
-          breadcrumbs: {
-            container: breadcrumbsEl,
-            formatter: breadcrumbLabel,
-            emptyLabel: defaultBreadcrumbs,
-          },
-          onArcEnter: ({ arc, path }) => {
-            applyHover(path);
-            setSelection(
-              `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-            );
-          },
-          onArcMove: ({ arc, path }) => {
-            applyHover(path);
-            setSelection(
-              `Preview: ${arc.data.name} · ${formatValue(arc.value)} · ${(arc.percentage * 100).toFixed(1)}%`,
-            );
-          },
-          onArcLeave: ({ path }) => {
-            clearHover(path);
-            if (state.pinned) {
-              showPinnedInfo();
-            } else {
-              setSelection(defaultMessage);
-              setBreadcrumbs(defaultBreadcrumbs);
+    // Sample data
+    const config = {
+      size: { radius: 280 },
+      layers: [
+        {
+          id: 'main',
+          radialUnits: [0, 3],
+          angleMode: 'free',
+          tree: [
+            {
+              name: 'Data',
+              key: 'data',
+              value: 30,
+              expandLevels: 1,
+              children: [
+                { name: 'Analytics', key: 'analytics', value: 15 },
+                { name: 'Storage', key: 'storage', value: 15 }
+              ]
+            },
+            {
+              name: 'Design',
+              key: 'design',
+              value: 25,
+              expandLevels: 1,
+              children: [
+                { name: 'UI/UX', key: 'uiux', value: 15 },
+                { name: 'Brand', key: 'brand', value: 10 }
+              ]
+            },
+            {
+              name: 'Development',
+              key: 'dev',
+              value: 45,
+              expandLevels: 1,
+              children: [
+                { name: 'Frontend', key: 'frontend', value: 20 },
+                { name: 'Backend', key: 'backend', value: 25 }
+              ]
             }
-          },
-          onArcClick: ({ event }) => {
-            event.preventDefault();
-          }
-        });
-      } else {
-        chart.update({ config: nextConfig });
-      }
-
-      window.chart = chart;
+          ]
+        }
+      ]
     };
 
-    renderControls();
-    renderChart();
+    const paletteDescriptions = {
+      default: 'Vibrant colors for clear visual distinction',
+      pastel: 'Soft, gentle colors for a calmer appearance',
+      vibrant: 'Bold, saturated colors for maximum impact',
+      earth: 'Natural, earthy tones inspired by nature',
+      ocean: 'Cool blues and teals evoking water',
+      sunset: 'Warm oranges and reds like a sunset',
+      blues: 'Light to dark blue progression',
+      greens: 'Light to dark green progression',
+      purples: 'Light to dark purple progression',
+      oranges: 'Light to dark orange progression',
+      redBlue: 'Red to blue through neutral center',
+      orangePurple: 'Orange to purple through neutral center',
+      greenRed: 'Green to red through neutral center'
+    };
 
-    setSelection(defaultMessage);
-    setBreadcrumbs(defaultBreadcrumbs);
-    setEditorStatus('Loaded data.json', 'muted');
+    let chart;
+    const themeTypeEl = document.getElementById('theme-type');
+    const paletteEl = document.getElementById('palette');
+    const assignByEl = document.getElementById('assign-by');
+    const paletteInfoEl = document.getElementById('palette-info');
+    const arcCountEl = document.getElementById('arc-count');
+    const colorCountEl = document.getElementById('color-count');
 
-    applyConfigButton.addEventListener('click', () => {
-      try {
-        const parsed = JSON.parse(editorEl.value);
-        if (!parsed || typeof parsed !== 'object') {
-          throw new Error('Expected a JSON object.');
-        }
-        if (!parsed.size || typeof parsed.size !== 'object') {
-          throw new Error('Missing "size" definition.');
-        }
-        if (!Array.isArray(parsed.layers)) {
-          throw new Error('"layers" must be an array.');
-        }
+    // Simple HTML escape function
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-        userConfig = parsed;
-        seedCollapsedKeys();
-        syncEditor();
-        renderControls();
-        renderChart();
-        setEditorStatus('Configuration applied', 'success');
-      } catch (err) {
-        console.error(err);
-        setEditorStatus(`Invalid configuration: ${err.message}`, 'error');
+    function updatePaletteOptions() {
+      const type = themeTypeEl.value;
+      const palettes = type === 'qualitative' ? QUALITATIVE_PALETTES :
+                      type === 'sequential' ? SEQUENTIAL_PALETTES :
+                      DIVERGING_PALETTES;
+
+      paletteEl.innerHTML = Object.keys(palettes).map(name =>
+        `<option value="${name}">${name}</option>`
+      ).join('');
+
+      updatePaletteInfo();
+    }
+
+    function updatePaletteInfo() {
+      const type = themeTypeEl.value;
+      const paletteName = paletteEl.value;
+      const palettes = type === 'qualitative' ? QUALITATIVE_PALETTES :
+                      type === 'sequential' ? SEQUENTIAL_PALETTES :
+                      DIVERGING_PALETTES;
+
+      const colors = palettes[paletteName];
+      const description = paletteDescriptions[paletteName] || '';
+
+      paletteInfoEl.innerHTML = `
+        <strong>${escapeHTML(paletteName)}</strong>
+        <div>${escapeHTML(description)}</div>
+        <div class="color-preview">
+          ${colors.map(color => `<div class="color-swatch" style="background-color: ${color}"></div>`).join('')}
+        </div>
+      `;
+    }
+
+    function render() {
+      const type = themeTypeEl.value;
+      const palette = paletteEl.value;
+      const assignBy = assignByEl.value;
+
+      // Set default assignBy based on type if not explicitly changed
+      const defaultAssignBy = type === 'qualitative' ? 'key' : 'depth';
+
+      if (chart) {
+        chart.destroy();
       }
+
+      chart = renderSVG({
+        el: '#sunburst',
+        config,
+        colorTheme: {
+          type,
+          palette,
+          assignBy: assignBy || defaultAssignBy
+        },
+        tooltip: true,
+        navigation: true,
+        transition: true
+      });
+
+      // Update stats
+      arcCountEl.textContent = chart.length;
+
+      // Count unique colors
+      const colors = new Set();
+      chart.forEach(arc => {
+        const pathEl = document.querySelector(`[data-layer="${arc.layerId}"][data-name="${arc.data.name}"]`);
+        if (pathEl) {
+          colors.add(pathEl.getAttribute('fill'));
+        }
+      });
+      colorCountEl.textContent = colors.size;
+    }
+
+    // Initialize
+    updatePaletteOptions();
+    render();
+
+    // Event listeners
+    themeTypeEl.addEventListener('change', () => {
+      updatePaletteOptions();
+      render();
     });
 
-    resetConfigButton.addEventListener('click', () => {
-      userConfig = cloneConfig(config);
-      seedCollapsedKeys();
-      syncEditor();
-      renderControls();
-      renderChart();
-      setEditorStatus('Reset to data.json', 'muted');
+    paletteEl.addEventListener('change', () => {
+      updatePaletteInfo();
+      render();
     });
-  } catch (err) {
-    console.error(err);
-    setSelection(`Failed to load demo/data.json: ${err.message}`, 'error');
-    setBreadcrumbs(defaultBreadcrumbs);
-  }
-</script>
+
+    assignByEl.addEventListener('change', render);
+  </script>
 </body>
 </html>

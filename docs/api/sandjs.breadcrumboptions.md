@@ -94,6 +94,25 @@ _(Optional)_
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.breadcrumboptions.interactive.html">interactive?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+boolean
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.breadcrumboptions.separator.html">separator?</a>
 
 

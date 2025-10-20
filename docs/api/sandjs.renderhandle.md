@@ -13,6 +13,50 @@ export interface RenderHandle extends Array<LayoutArc>
 ```
 **Extends:** Array&lt;<a href="./sandjs.layoutarc.html">LayoutArc</a><!-- -->&gt;
 
+## Properties
+
+<table><thead><tr><th>
+
+Property
+
+
+</th><th>
+
+Modifiers
+
+
+</th><th>
+
+Type
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+<a href="./sandjs.renderhandle.resetnavigation.html">resetNavigation?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+() =&gt; void
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+</tbody></table>
+
 ## Methods
 
 <table><thead><tr><th>

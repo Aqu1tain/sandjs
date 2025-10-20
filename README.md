@@ -144,7 +144,134 @@ Render a sunburst in the browser:
 </script>
 ```
 
-The demo under `demo/` shows relative/absolute offsets, tooltips, and selection callbacks. Run `npm run build` and serve the folder (for example `npx http-server .`) to experiment.
+The demo under `demo/` shows relative/absolute offsets, tooltips, and selection callbacks. Run `npm run dev` to start the development server at `http://localhost:4173` to experiment.
+
+---
+
+## 🎨 Color Themes
+
+Sand.js includes a comprehensive color theme system with 14 built-in palettes and flexible assignment strategies.
+
+### Theme Types
+
+**Qualitative** (for categorical data):
+```javascript
+import { renderSVG, QUALITATIVE_PALETTES } from '@akitain/sandjs';
+
+renderSVG({
+  el: '#chart',
+  config,
+  colorTheme: {
+    type: 'qualitative',
+    palette: 'ocean', // 'default' | 'pastel' | 'vibrant' | 'earth' | 'ocean' | 'sunset'
+    assignBy: 'key'   // assigns consistent colors based on arc keys
+  }
+});
+```
+
+**Sequential** (for ordered data):
+```javascript
+colorTheme: {
+  type: 'sequential',
+  palette: 'blues', // 'blues' | 'greens' | 'purples' | 'oranges'
+  assignBy: 'depth' // light to dark by depth level
+}
+```
+
+**Diverging** (for data with meaningful midpoint):
+```javascript
+colorTheme: {
+  type: 'diverging',
+  palette: 'redBlue', // 'redBlue' | 'orangePurple' | 'greenRed'
+  assignBy: 'value'   // color by normalized value
+}
+```
+
+### Color Assignment Strategies
+
+- **`key`**: Consistent colors for arcs with the same key (default for qualitative)
+- **`depth`**: Colors by hierarchical depth (default for sequential/diverging)
+- **`index`**: Sequential colors by arc index in layer
+- **`value`**: Colors mapped to normalized arc values
+
+### Custom Palettes
+
+```javascript
+colorTheme: {
+  type: 'qualitative',
+  palette: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f7dc6f'], // custom colors
+  assignBy: 'key'
+}
+```
+
+### Custom Color Keys
+
+```javascript
+colorTheme: {
+  type: 'qualitative',
+  palette: 'default',
+  deriveKey: (arc) => arc.data.category // use any arc property for color grouping
+}
+```
+
+**Note**: Individual node colors set via `node.color` always take precedence over theme colors.
+
+---
+
+## 🧭 Navigation & Drilldown
+
+Enable interactive drill-down navigation with smooth transitions:
+
+```javascript
+const chart = renderSVG({
+  el: '#chart',
+  config,
+  navigation: true, // enables click-to-zoom with defaults
+  transition: true  // smooth animations
+});
+```
+
+### Advanced Navigation Options
+
+```javascript
+navigation: {
+  layers: ['main', 'details'], // which layers support navigation
+  rootLabel: 'Home',           // breadcrumb root text
+  focusTransition: {           // custom zoom animation
+    duration: 600,
+    easing: (t) => t * t       // quadratic ease-in
+  },
+  onFocusChange: (focus) => {
+    if (focus) {
+      console.log('Focused on:', focus.arc.data.name);
+    } else {
+      console.log('Returned to root');
+    }
+  }
+}
+```
+
+### Programmatic Navigation
+
+```javascript
+// Reset to root view
+if (chart.resetNavigation) {
+  chart.resetNavigation();
+}
+```
+
+### Interactive Breadcrumbs
+
+```javascript
+breadcrumbs: {
+  container: '#breadcrumb-trail',
+  interactive: true,  // enable click-to-navigate on breadcrumb items
+  separator: ' › ',
+  rootLabel: 'Overview'
+}
+```
+
+---
 
 ### Configuration essentials
 
@@ -168,7 +295,7 @@ npm run build   # rollup (ESM + minified IIFE bundles)
 npm run verify  # convenience: runs tests and build
 ```
 
-`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/@akitain/sandjs@0.2.3/dist/sandjs.iife.min.js`).
+`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/@akitain/sandjs@0.3.0/dist/sandjs.iife.min.js`).
 
 ## ✅ Release Checklist
 
@@ -201,13 +328,14 @@ npm run verify  # convenience: runs tests and build
 - API `update(newConfig)` (no animation yet)
 - Unit tests for invariants (angles, radial order)
 
-### Phase 0.3 – Animation & Polish
-- Animated transitions (update with interpolation by key)
-- Zoom/drill-down
-- Basic radial labels
-- Export: `exportSVG()`, `exportPNG()`
-- Color themes (qualitative, sequential, diverging)
-- Accessibility (aria-labels, keyboard nav)
+### Phase 0.3 – Animation & Polish ✅
+- ✅ Animated transitions (morphing arcs with key-based interpolation)
+- ✅ Zoom/drill-down (interactive navigation with breadcrumbs)
+- ✅ Radial labels (auto-positioned text on curved paths)
+- ✅ Color themes (14 palettes: qualitative, sequential, diverging)
+- ✅ Transition options (duration, easing, delay)
+- Export: `exportSVG()`, `exportPNG()` → planned for 0.4
+- Accessibility (aria-labels, keyboard nav) → planned for 0.4
 
 ### Phase 0.4 – Extensions & Performance
 - Canvas renderer (performance for >5k arcs)

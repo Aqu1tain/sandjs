@@ -124,6 +124,23 @@ string
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.layoutarc.pathindices.html">pathIndices</a>
+
+
+</td><td>
+
+
+</td><td>
+
+number\[\]
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.layoutarc.percentage.html">percentage</a>
 
 

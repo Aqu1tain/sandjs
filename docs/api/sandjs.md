@@ -44,8 +44,6 @@ Computes the polar coordinates for every visible arc in the provided configurati
 
 </td><td>
 
-Renders the supplied `SunburstConfig` into the target SVG element.
-
 
 </td></tr>
 </tbody></table>
@@ -98,6 +96,28 @@ Configures breadcrumb behaviour for `renderSVG`<!-- -->.
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.breadcrumbtrailitem.html">BreadcrumbTrailItem</a>
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.colorthemeoptions.html">ColorThemeOptions</a>
+
+
+</td><td>
+
+Color theme configuration for automatic arc coloring.
+
+Supports three theme types: - Qualitative: For categorical data (assigns colors by key/depth) - Sequential: For ordered data (light to dark progression) - Diverging: For data with a meaningful midpoint
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.highlightbykeyoptions.html">HighlightByKeyOptions</a>
 
 
@@ -126,6 +146,24 @@ Configuration for a radial layer in the sunburst.
 </td><td>
 
 Fully resolved arc emitted by the layout processor.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.navigationfocusstate.html">NavigationFocusState</a>
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.navigationoptions.html">NavigationOptions</a>
+
+
+</td><td>
 
 
 </td></tr>
@@ -197,12 +235,71 @@ Configures tooltip behaviour for `renderSVG`<!-- -->.
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.transitionoptions.html">TransitionOptions</a>
+
+
+</td><td>
+
+Controls animated transitions when updating an existing render.
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.treenodeinput.html">TreeNodeInput</a>
 
 
 </td><td>
 
 Immutable tree node definition accepted by the layout.
+
+
+</td></tr>
+</tbody></table>
+
+## Variables
+
+<table><thead><tr><th>
+
+Variable
+
+
+</th><th>
+
+Description
+
+
+</th></tr></thead>
+<tbody><tr><td>
+
+<a href="./sandjs.diverging_palettes.html">DIVERGING\_PALETTES</a>
+
+
+</td><td>
+
+Diverging color palettes for data with a meaningful midpoint. Colors diverge from a neutral center to two extremes.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.qualitative_palettes.html">QUALITATIVE\_PALETTES</a>
+
+
+</td><td>
+
+Qualitative color palettes for categorical data. Each palette contains colors that are visually distinct for different categories.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.sequential_palettes.html">SEQUENTIAL\_PALETTES</a>
+
+
+</td><td>
+
+Sequential color palettes for ordered data (light to dark). Useful for showing progression or magnitude.
 
 
 </td></tr>
@@ -234,12 +331,48 @@ Controls how angles are distributed across a layer.
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.colorpalette.html">ColorPalette</a>
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.divergingpalettename.html">DivergingPaletteName</a>
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.qualitativepalettename.html">QualitativePaletteName</a>
+
+
+</td><td>
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.rendersvgupdateinput.html">RenderSvgUpdateInput</a>
 
 
 </td><td>
 
 Accepted input when updating an existing SVG render.
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.sequentialpalettename.html">SequentialPaletteName</a>
+
+
+</td><td>
 
 
 </td></tr>

@@ -75,6 +75,25 @@ _(Optional)_
 </td></tr>
 <tr><td>
 
+<a href="./sandjs.rendersvgoptions.colortheme.html">colorTheme?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+<a href="./sandjs.colorthemeoptions.html">ColorThemeOptions</a>
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+<tr><td>
+
 <a href="./sandjs.rendersvgoptions.config.html">config</a>
 
 
@@ -156,6 +175,25 @@ SVGElement \| string
 </td><td>
 
 boolean \| <a href="./sandjs.highlightbykeyoptions.html">HighlightByKeyOptions</a>
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.rendersvgoptions.navigation.html">navigation?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+boolean \| <a href="./sandjs.navigationoptions.html">NavigationOptions</a>
 
 
 </td><td>
@@ -251,6 +289,25 @@ _(Optional)_
 </td><td>
 
 boolean \| <a href="./sandjs.tooltipoptions.html">TooltipOptions</a>
+
+
+</td><td>
+
+_(Optional)_
+
+
+</td></tr>
+<tr><td>
+
+<a href="./sandjs.rendersvgoptions.transition.html">transition?</a>
+
+
+</td><td>
+
+
+</td><td>
+
+boolean \| <a href="./sandjs.transitionoptions.html">TransitionOptions</a>
 
 
 </td><td>
