@@ -297,83 +297,38 @@
       size: { radius: 280 },
       layers: [
         {
-          id: 'center',
-          radialUnits: [0, 1],
-          angleMode: 'free',
-          tree: {
-            name: 'Root',
-            key: 'root',
-            value: 100,
-            children: [
-              { name: 'Data', key: 'data', value: 30 },
-              { name: 'Design', key: 'design', value: 25 },
-              { name: 'Development', key: 'dev', value: 45 }
-            ]
-          }
-        },
-        {
-          id: 'outer',
-          radialUnits: [1, 3],
+          id: 'main',
+          radialUnits: [0, 3],
           angleMode: 'free',
           tree: [
             {
-              name: 'Analytics',
-              key: 'analytics',
-              value: 15,
+              name: 'Data',
+              key: 'data',
+              value: 30,
               expandLevels: 1,
               children: [
-                { name: 'Metrics', key: 'metrics', value: 8 },
-                { name: 'Reports', key: 'reports', value: 7 }
+                { name: 'Analytics', key: 'analytics', value: 15 },
+                { name: 'Storage', key: 'storage', value: 15 }
               ]
             },
             {
-              name: 'Storage',
-              key: 'storage',
-              value: 15,
-              expandLevels: 1,
-              children: [
-                { name: 'Database', key: 'db', value: 10 },
-                { name: 'Cache', key: 'cache', value: 5 }
-              ]
-            },
-            {
-              name: 'UI/UX',
-              key: 'uiux',
-              value: 15,
-              expandLevels: 1,
-              children: [
-                { name: 'Components', key: 'components', value: 9 },
-                { name: 'Prototypes', key: 'prototypes', value: 6 }
-              ]
-            },
-            {
-              name: 'Brand',
-              key: 'brand',
-              value: 10,
-              expandLevels: 1,
-              children: [
-                { name: 'Logo', key: 'logo', value: 5 },
-                { name: 'Colors', key: 'colors', value: 5 }
-              ]
-            },
-            {
-              name: 'Frontend',
-              key: 'frontend',
-              value: 20,
-              expandLevels: 1,
-              children: [
-                { name: 'React', key: 'react', value: 12 },
-                { name: 'CSS', key: 'css', value: 8 }
-              ]
-            },
-            {
-              name: 'Backend',
-              key: 'backend',
+              name: 'Design',
+              key: 'design',
               value: 25,
               expandLevels: 1,
               children: [
-                { name: 'API', key: 'api', value: 15 },
-                { name: 'Auth', key: 'auth', value: 10 }
+                { name: 'UI/UX', key: 'uiux', value: 15 },
+                { name: 'Brand', key: 'brand', value: 10 }
+              ]
+            },
+            {
+              name: 'Development',
+              key: 'dev',
+              value: 45,
+              expandLevels: 1,
+              children: [
+                { name: 'Frontend', key: 'frontend', value: 20 },
+                { name: 'Backend', key: 'backend', value: 25 }
               ]
             }
           ]
