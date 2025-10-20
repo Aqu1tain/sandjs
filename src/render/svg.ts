@@ -720,9 +720,9 @@ function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: n
   const point = polarToCartesian(cx, cy, midRadius, angle);
   // Normalize angle to [0, TAU) range
   const normalizedAngle = ((angle % TAU) + TAU) % TAU;
-  // Invert text on the left half of the circle (roughly 90° to 270° in SVG coordinates)
-  // to keep it readable. Using π/2 to 3π/2 boundaries.
-  const inverted = normalizedAngle > Math.PI / 2 && normalizedAngle < (Math.PI * 3) / 2;
+  // Invert text on the left half of the circle to keep it readable
+  // Include bottom boundary (π/2) but not top boundary (3π/2)
+  const inverted = normalizedAngle >= Math.PI / 2 && normalizedAngle < (Math.PI * 3) / 2;
   const pathData = createLabelArcPath({
     arc,
     radius: midRadius,
