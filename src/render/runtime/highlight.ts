@@ -71,10 +71,12 @@ export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']
       if (!key) {
         return;
       }
-      if (!groups.has(key)) {
-        groups.set(key, new Set());
+      let group = groups.get(key);
+      if (!group) {
+        group = new Set();
+        groups.set(key, group);
       }
-      groups.get(key)!.add(path);
+      group.add(path);
       if (!path.hasAttribute('data-key')) {
         path.setAttribute('data-key', key);
       }
