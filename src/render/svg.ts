@@ -141,6 +141,13 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     const transition = resolveTransition(transitionSource);
     const usedKeys = new Set<string>();
 
+    // Batch DOM operations to reduce reflows
+    // Use fragments if available (browser), fallback to direct append for test environments
+    const supportsFragment = typeof doc.createDocumentFragment === 'function';
+    const fragment = supportsFragment ? doc.createDocumentFragment() : null;
+    const labelFragment = supportsFragment ? doc.createDocumentFragment() : null;
+    const newElements: ManagedPath[] = [];
+
     for (let index = 0; index < arcs.length; index += 1) {
       const arc = arcs[index];
       const d = describeArcPath(arc, cx, cy);
@@ -153,6 +160,8 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
 
       let managed = pathRegistry.get(key);
       let previousArc: LayoutArc | null = null;
+      const isNewElement = !managed;
+
       if (managed) {
         previousArc = { ...managed.arc };
         cancelPendingRemoval(managed);
@@ -166,6 +175,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           labelDefs,
         });
         pathRegistry.set(key, managed);
+        newElements.push(managed);
       }
 
       updateManagedPath(managed, {
@@ -183,8 +193,23 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         getArcColor,
       });
 
-      host.appendChild(managed.element);
-      host.appendChild(managed.labelElement);
+      // Only append new elements to fragments; existing elements stay in DOM
+      if (isNewElement) {
+        if (supportsFragment && fragment && labelFragment) {
+          fragment.appendChild(managed.element);
+          labelFragment.appendChild(managed.labelElement);
+        } else {
+          // Fallback for test environments without createDocumentFragment
+          host.appendChild(managed.element);
+          host.appendChild(managed.labelElement);
+        }
+      }
+    }
+
+    // Batch append all new elements at once to minimize reflows
+    if (newElements.length > 0 && supportsFragment && fragment && labelFragment) {
+      host.appendChild(fragment);
+      host.appendChild(labelFragment);
     }
 
     for (const [key, managed] of pathRegistry) {
