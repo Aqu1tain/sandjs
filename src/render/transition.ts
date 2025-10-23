@@ -12,6 +12,11 @@ export interface ResolvedTransition {
 
 const DEFAULT_DURATION = 320;
 const DEFAULT_DELAY = 0;
+/**
+ * Cubic ease-in-out easing function
+ * Provides smooth acceleration at the start and deceleration at the end
+ * @see https://easings.net/#easeInOutCubic
+ */
 const DEFAULT_EASING: TransitionEasing = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 

@@ -1,5 +1,6 @@
 import type { LayoutArc } from '../../types/index.js';
 import type { HighlightByKeyOptions, RenderSvgOptions } from '../types.js';
+import { resolveArcKey } from '../keys.js';
 
 export type HighlightRuntime = {
   register: (arc: LayoutArc, path: SVGPathElement) => void;
@@ -21,7 +22,7 @@ export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']
   const className = options.className?.trim() ?? 'is-related';
   const includeSource = options.includeSource ?? false;
   const deriveKey =
-    typeof options.deriveKey === 'function' ? options.deriveKey : defaultHighlightKey;
+    typeof options.deriveKey === 'function' ? options.deriveKey : resolveArcKey;
   const pinOnClick = options.pinOnClick ?? false;
   const pinClassName = options.pinClassName?.trim() ?? 'is-pinned';
 
@@ -154,15 +155,4 @@ export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']
   };
 
   return runtime;
-}
-
-function defaultHighlightKey(arc: LayoutArc): string | null {
-  if (typeof arc.key === 'string' && arc.key.length > 0) {
-    return arc.key;
-  }
-  const dataKey = arc.data?.key;
-  if (typeof dataKey === 'string' && dataKey.length > 0) {
-    return dataKey;
-  }
-  return null;
 }
