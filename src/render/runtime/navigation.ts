@@ -1,18 +1,21 @@
 import type { LayoutArc, SunburstConfig, TreeNodeInput } from '../../types/index.js';
 import type {
   BreadcrumbTrailItem,
-  NavigationFocusState,
   NavigationOptions,
   RenderSvgOptions,
 } from '../types.js';
 import type { BreadcrumbRuntime } from './breadcrumbs.js';
-import { arcIdentifierFromPath, resolveArcKey, resolveNodeKey } from '../keys.js';
+import { arcIdentifierFromPath } from '../keys.js';
 import { cloneSunburstConfig } from '../config.js';
-
-type NavigationTransitionContext = {
-  transition: RenderSvgOptions['transition'];
-  morph: boolean;
-};
+import type { FocusTarget, NavigationTransitionContext } from './navigation/types.js';
+import { indexBaseConfig, getNodeAtPath, collectNodesAlongPath } from './navigation/tree-utils.js';
+import { deriveConfig } from './navigation/config-derivation.js';
+import {
+  createFocusTargetFromArc,
+  createFocusTargetFromPath,
+  createTransitionContext,
+  isSameFocus,
+} from './navigation/focus-helpers.js';
 
 export type NavigationRuntime = {
   setBaseConfig: (config: SunburstConfig) => void;
@@ -23,16 +26,6 @@ export type NavigationRuntime = {
   reset: () => void;
   dispose: () => void;
   consumeTransitionOverride: () => NavigationTransitionContext | undefined;
-};
-
-type FocusTarget = {
-  layerId: string;
-  pathIndices: number[];
-  node: TreeNodeInput;
-  pathNodes: TreeNodeInput[];
-  key: string | null;
-  identifier: string;
-  arc?: LayoutArc;
 };
 
 type NavigationDeps = {
@@ -132,7 +125,7 @@ export function createNavigationRuntime(
       return false;
     }
 
-    const target = createFocusTargetFromArc(arc);
+    const target = createFocusTargetFromArcWrapper(arc);
     if (!target) {
       return false;
     }
@@ -235,7 +228,7 @@ export function createNavigationRuntime(
   }
 
   function applyFocusPath(layerId: string, pathIndices: number[]): void {
-    const target = createFocusTargetFromPath(layerId, pathIndices);
+    const target = createFocusTargetFromPathWrapper(layerId, pathIndices);
     if (!target) {
       return;
     }
@@ -260,69 +253,12 @@ export function createNavigationRuntime(
     }
   }
 
-  function createFocusTargetFromArc(arc: LayoutArc): FocusTarget | null {
-    const baseNodeInfo = getBaseNodeInfo(arc);
-    if (!baseNodeInfo) {
-      return null;
-    }
-    const layerId = arc.layerId;
-    const pathNodes = collectNodesAlongPath(storedBaseConfig, layerId, baseNodeInfo.pathIndices);
-    if (!pathNodes) {
-      return null;
-    }
-    const identifier = arcIdentifierFromPath(layerId, baseNodeInfo.pathIndices);
-    return {
-      layerId,
-      pathIndices: baseNodeInfo.pathIndices,
-      node: baseNodeInfo.node,
-      pathNodes,
-      key: baseNodeInfo.key,
-      identifier,
-      arc,
-    };
+  function createFocusTargetFromArcWrapper(arc: LayoutArc): FocusTarget | null {
+    return createFocusTargetFromArc(arc, nodeSourceMap, nodePathMap, sourcePathMap, storedBaseConfig);
   }
 
-  function createFocusTargetFromPath(layerId: string, pathIndices: number[]): FocusTarget | null {
-    const node = getNodeAtPath(storedBaseConfig, layerId, pathIndices);
-    if (!node) {
-      return null;
-    }
-    const pathNodes = collectNodesAlongPath(storedBaseConfig, layerId, pathIndices);
-    if (!pathNodes) {
-      return null;
-    }
-    const identifier = arcIdentifierFromPath(layerId, pathIndices);
-    const key = resolveNodeKey(node);
-    const arc = arcByIdentifier.get(identifier);
-    return {
-      layerId,
-      pathIndices,
-      node,
-      pathNodes,
-      key,
-      identifier,
-      arc,
-    };
-  }
-
-  function getBaseNodeInfo(arc: LayoutArc): {
-    node: TreeNodeInput;
-    pathIndices: number[];
-    key: string | null;
-  } | null {
-    const sourceNode = nodeSourceMap.get(arc.data) ?? arc.data;
-    const path = sourcePathMap.get(arc.data) ?? nodePathMap.get(sourceNode) ?? arc.pathIndices;
-    if (!path) {
-      return null;
-    }
-    const key = resolveArcKey(arc);
-    nodeSourceMap.set(sourceNode, sourceNode);
-    nodePathMap.set(sourceNode, path);
-    return {
-      node: sourceNode,
-      pathIndices: path,
-      key,
-    };
+  function createFocusTargetFromPathWrapper(layerId: string, pathIndices: number[]): FocusTarget | null {
+    return createFocusTargetFromPath(layerId, pathIndices, storedBaseConfig, nodePathMap, arcByIdentifier, getNodeAtPath);
   }
 
   return {
@@ -344,190 +280,3 @@ export function createNavigationRuntime(
   };
 }
 
-function computeFocusTransition(
-  value: NavigationOptions['focusTransition'],
-): RenderSvgOptions['transition'] {
-  if (value === false) {
-    return false;
-  }
-  if (value === undefined || value === true) {
-    return true;
-  }
-  return value;
-}
-
-function createTransitionContext(
-  value: NavigationOptions['focusTransition'],
-): NavigationTransitionContext {
-  const transition = computeFocusTransition(value);
-  return {
-    transition,
-    morph: transition !== false,
-  };
-}
-
-function isSameFocus(a: FocusTarget, b: FocusTarget): boolean {
-  if (a.layerId !== b.layerId) {
-    return false;
-  }
-  if (a.pathIndices.length !== b.pathIndices.length) {
-    return false;
-  }
-  return a.pathIndices.every((value, index) => value === b.pathIndices[index]);
-}
-
-function indexBaseConfig(
-  config: SunburstConfig,
-  sourceMap: WeakMap<TreeNodeInput, TreeNodeInput>,
-  pathMap: WeakMap<TreeNodeInput, number[]>,
-): void {
-  for (const layer of config.layers) {
-    indexLayerTree(layer.tree, [], sourceMap, pathMap);
-  }
-}
-
-function indexLayerTree(
-  tree: TreeNodeInput | TreeNodeInput[],
-  prefix: number[],
-  sourceMap: WeakMap<TreeNodeInput, TreeNodeInput>,
-  pathMap: WeakMap<TreeNodeInput, number[]>,
-): void {
-  const nodes = Array.isArray(tree) ? tree : [tree];
-  nodes.forEach((node, index) => {
-    const path = prefix.concat(index);
-    sourceMap.set(node, node);
-    pathMap.set(node, path);
-    if (Array.isArray(node.children)) {
-      indexLayerTree(node.children, path, sourceMap, pathMap);
-    }
-  });
-}
-
-function deriveConfig(
-  base: SunburstConfig,
-  focus: FocusTarget,
-  sourceMap: WeakMap<TreeNodeInput, TreeNodeInput>,
-  pathMap: WeakMap<TreeNodeInput, number[]>,
-  pathStore: WeakMap<TreeNodeInput, number[]>,
-): SunburstConfig {
-  return {
-    ...base,
-    layers: base.layers.map((layer) => {
-      const nextTree = deriveLayerTree(layer.tree, layer.id, focus, sourceMap, pathMap, pathStore);
-      if (nextTree === layer.tree) {
-        return layer;
-      }
-      return {
-        ...layer,
-        tree: nextTree,
-      };
-    }),
-  };
-}
-
-function deriveLayerTree(
-  tree: TreeNodeInput | TreeNodeInput[],
-  layerId: string,
-  focus: FocusTarget,
-  sourceMap: WeakMap<TreeNodeInput, TreeNodeInput>,
-  pathMap: WeakMap<TreeNodeInput, number[]>,
-  pathStore: WeakMap<TreeNodeInput, number[]>,
-): TreeNodeInput | TreeNodeInput[] {
-  if (layerId === focus.layerId) {
-    return cloneFocusedNode(focus.node, focus.pathIndices, sourceMap, pathMap, pathStore);
-  }
-  if (!focus.key) {
-    return tree;
-  }
-  const match = findNodeByKey(tree, focus.key, []);
-  if (!match) {
-    return tree;
-  }
-  return cloneFocusedNode(match.node, match.path, sourceMap, pathMap, pathStore);
-}
-
-function cloneFocusedNode(
-  node: TreeNodeInput,
-  path: number[],
-  sourceMap: WeakMap<TreeNodeInput, TreeNodeInput>,
-  pathMap: WeakMap<TreeNodeInput, number[]>,
-  pathStore: WeakMap<TreeNodeInput, number[]>,
-): TreeNodeInput {
-  const clone: TreeNodeInput = { ...node };
-  sourceMap.set(clone, node);
-  pathMap.set(clone, path);
-  pathStore.set(clone, path);
-  if (Array.isArray(node.children)) {
-    clone.children = node.children.map((child, index) =>
-      cloneFocusedNode(child, path.concat(index), sourceMap, pathMap, pathStore),
-    );
-  }
-  return clone;
-}
-
-function findNodeByKey(
-  tree: TreeNodeInput | TreeNodeInput[],
-  key: string,
-  prefix: number[],
-): { node: TreeNodeInput; path: number[] } | null {
-  const nodes = Array.isArray(tree) ? tree : [tree];
-  for (let index = 0; index < nodes.length; index += 1) {
-    const node = nodes[index];
-    const path = prefix.concat(index);
-    if (node && node.key === key) {
-      return { node, path };
-    }
-    if (Array.isArray(node?.children)) {
-      const match = findNodeByKey(node.children, key, path);
-      if (match) {
-        return match;
-      }
-    }
-  }
-  return null;
-}
-
-function getNodeAtPath(
-  config: SunburstConfig,
-  layerId: string,
-  pathIndices: number[],
-): TreeNodeInput | null {
-  const layer = config.layers.find((candidate) => candidate.id === layerId);
-  if (!layer) {
-    return null;
-  }
-  const nodes = Array.isArray(layer.tree) ? layer.tree : [layer.tree];
-  let current: TreeNodeInput | null = null;
-  let siblings = nodes;
-  for (const index of pathIndices) {
-    current = siblings[index] ?? null;
-    if (!current) {
-      return null;
-    }
-    siblings = Array.isArray(current.children) ? current.children : [];
-  }
-  return current;
-}
-
-function collectNodesAlongPath(
-  config: SunburstConfig,
-  layerId: string,
-  pathIndices: number[],
-): TreeNodeInput[] | null {
-  const layer = config.layers.find((candidate) => candidate.id === layerId);
-  if (!layer) {
-    return null;
-  }
-  const result: TreeNodeInput[] = [];
-  const nodes = Array.isArray(layer.tree) ? layer.tree : [layer.tree];
-  let siblings = nodes;
-  for (const index of pathIndices) {
-    const node = siblings[index];
-    if (!node) {
-      return null;
-    }
-    result.push(node);
-    siblings = Array.isArray(node.children) ? node.children : [];
-  }
-  return result;
-}
