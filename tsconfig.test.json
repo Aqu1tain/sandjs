@@ -11,6 +11,8 @@
   "include": ["tests/**/*.ts", "src/**/*.ts"],
   "files": [
     "tests/layout.spec.ts",
-    "tests/render.spec.ts"
+    "tests/render.spec.ts",
+    "tests/colorAssignment.spec.ts",
+    "tests/geometry.spec.ts"
   ]
 }

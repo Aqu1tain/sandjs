@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2025-10-23
+
+### Refactoring
+- **Split layout/index.ts into modular files** (#10): Extracted layout logic into separate, focused modules for improved maintainability and code organization. Created `normalization.ts` for tree normalization and utility functions, `shared.ts` for common types and arc creation, `free.ts` for free layout mode (value-based angular distribution), and `aligned.ts` for aligned layout mode (key-based alignment). Reduced index.ts from 467 lines to 98 lines.
+
+- **Split navigation.ts into modular files** (#9): Extracted navigation logic into separate modules for better organization. Created `navigation/types.ts` for core types (FocusTarget, NavigationTransitionContext), `navigation/tree-utils.ts` for tree traversal utilities (findNodeByKey, getNodeAtPath, collectNodesAlongPath, indexBaseConfig), `navigation/config-derivation.ts` for config derivation logic, and `navigation/focus-helpers.ts` for focus management helpers. Reduced navigation.ts from 534 lines to 282 lines.
+
+- **Extract constants and utilities from svg.ts** (#8): Extracted commonly used constants, types, and utility functions from svg.ts into separate modules. Created `svg/constants.ts` for SVG namespaces, label thresholds, and collapsed arc constants, `svg/types.ts` for RuntimeSet, AnimationHandle, AnimationDrivers, and ManagedPath types, `svg/runtime-creation.ts` for runtime set creation and disposal, and `svg/utils.ts` for utility functions (isSunburstConfig, ensureLabelDefs, extractConfigFromUpdate). Reduced svg.ts from 1,298 lines to 1,186 lines (112 lines saved).
+
+### Performance
+- **Batch DOM manipulations** (#16): Added DocumentFragment batching for DOM operations to improve rendering performance by reducing reflows and repaints. Includes fallback for test environments that don't support createDocumentFragment.
+
+### Enhancement
+- **Encapsulate render state** (#17): Created RenderState class to centralize all mutable render state (currentOptions, baseConfig, pathRegistry, runtimes, getArcColor, isRendering, pendingRender) for better lifecycle management and easier testing.
+
+### Testing
+- **Add comprehensive test coverage** (#18): Created 25 new tests across 2 new test files. Added `colorAssignment.spec.ts` with 11 tests covering key-based, value-based, depth-based, and index-based assignment, custom palettes, and node color overrides. Added `geometry.spec.ts` with 14 tests covering arc path generation, polar to cartesian conversion, full circles, wedges, and edge cases. Increased total test coverage from 15 to 38 tests (153% increase). All tests pass successfully.
+
 ## [0.3.1] - 2025-10-23
 
 ### Performance

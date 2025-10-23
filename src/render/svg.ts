@@ -9,112 +9,104 @@ import {
 import { describeArcPath, polarToCartesian, TAU, ZERO_TOLERANCE } from './geometry.js';
 import { resolveTransition, interpolateArc, ResolvedTransition } from './transition.js';
 import { clamp01 } from './math.js';
-import { createTooltipRuntime, TooltipRuntime } from './runtime/tooltip.js';
-import { createBreadcrumbRuntime, BreadcrumbRuntime } from './runtime/breadcrumbs.js';
-import { createHighlightRuntime, HighlightRuntime } from './runtime/highlight.js';
 import { resolveDocument, resolveHostElement } from './runtime/document.js';
 import { createArcKey } from './keys.js';
-import { createNavigationRuntime, NavigationRuntime } from './runtime/navigation.js';
 import { cloneSunburstConfig } from './config.js';
 import { createColorAssigner } from './colorAssignment.js';
+import {
+  SVG_NS,
+  XLINK_NS,
+  LABEL_MIN_RADIAL_THICKNESS,
+  LABEL_MIN_FONT_SIZE,
+  LABEL_MAX_FONT_SIZE,
+  LABEL_CHAR_WIDTH_FACTOR,
+  LABEL_PADDING,
+  LABEL_SAFETY_MARGIN,
+  COLLAPSED_ARC_SPAN_SHRINK_FACTOR,
+  COLLAPSED_ARC_MIN_SPAN,
+  COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR,
+  COLLAPSED_ARC_MIN_THICKNESS,
+} from './svg/constants.js';
+import type { RuntimeSet, AnimationHandle, AnimationDrivers, ManagedPath } from './svg/types.js';
+import { createRuntimeSet, disposeRuntimeSet } from './svg/runtime-creation.js';
+import { isSunburstConfig, ensureLabelDefs, extractConfigFromUpdate } from './svg/utils.js';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const XLINK_NS = 'http://www.w3.org/1999/xlink';
 let labelIdCounter = 0;
 
-// Label rendering thresholds (in pixels)
-const LABEL_MIN_RADIAL_THICKNESS = 14; // Minimum arc thickness to show labels
-const LABEL_MIN_FONT_SIZE = 12; // Minimum readable font size
-const LABEL_MAX_FONT_SIZE = 18; // Maximum font size for labels
-const LABEL_CHAR_WIDTH_FACTOR = 0.7; // Average character width as fraction of font size
-const LABEL_PADDING = 8; // Padding around label text (pixels)
-const LABEL_SAFETY_MARGIN = 1.15; // 15% safety margin for label fitting calculations
-
-// Collapsed arc visual indicators
-const COLLAPSED_ARC_SPAN_SHRINK_FACTOR = 0.1; // Shrink span to 10% of original
-const COLLAPSED_ARC_MIN_SPAN = 0.01; // Minimum span in radians for collapsed arcs
-const COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR = 0.1; // Shrink thickness to 10% of original
-const COLLAPSED_ARC_MIN_THICKNESS = 0.5; // Minimum thickness in pixels for collapsed arcs
-
-
 /**
- * Renders the supplied `SunburstConfig` into the target SVG element.
- *
- * @public
+ * Encapsulates all mutable render state for better lifecycle management
  */
-type RuntimeSet = {
-  tooltip: TooltipRuntime | null;
-  highlight: HighlightRuntime | null;
-  breadcrumbs: BreadcrumbRuntime | null;
-  navigation: NavigationRuntime | null;
-};
+class RenderState {
+  currentOptions: RenderSvgOptions;
+  baseConfig: SunburstConfig;
+  pathRegistry: Map<string, ManagedPath>;
+  runtimes: RuntimeSet;
+  getArcColor: (arc: LayoutArc, index: number) => string | null;
+  isRendering: boolean = false;
+  pendingRender: boolean = false;
 
-type AnimationHandle = {
-  cancel(): void;
-};
+  constructor(
+    options: RenderSvgOptions,
+    runtimes: RuntimeSet,
+  ) {
+    this.currentOptions = options;
+    this.baseConfig = cloneSunburstConfig(options.config);
+    this.pathRegistry = new Map();
+    this.runtimes = runtimes;
 
-type AnimationDrivers = {
-  raf: (callback: FrameRequestCallback) => number;
-  caf: (handle: number) => void;
-  now: () => number;
-};
+    // Create color assigner once based on full config for consistent colors during navigation
+    const baseArcs = layout(this.baseConfig);
+    this.getArcColor = createColorAssigner(this.currentOptions.colorTheme, baseArcs);
+  }
 
-type ManagedPath = {
-  key: string;
-  element: SVGPathElement;
-  labelElement: SVGTextElement;
-  labelPathElement: SVGPathElement;
-  textPathElement: SVGTextPathElement;
-  labelPathId: string;
-  arc: LayoutArc;
-  options: RenderSvgOptions;
-  runtime: RuntimeSet;
-  animation: AnimationHandle | null;
-  fade: AnimationHandle | null;
-  pendingRemoval: boolean;
-  labelVisible: boolean;
-  labelHiddenReason: string | null;
-  labelPendingLogReason: string | null;
-  abortController: AbortController;
-  dispose: () => void;
-};
+  updateConfig(nextOptions: RenderSvgOptions, nextConfig: SunburstConfig): void {
+    this.baseConfig = cloneSunburstConfig(nextConfig);
+    this.currentOptions = {
+      ...nextOptions,
+      config: this.baseConfig,
+    };
+    // Recreate color assigner with new base config for consistent colors
+    const newBaseArcs = layout(this.baseConfig);
+    this.getArcColor = createColorAssigner(this.currentOptions.colorTheme, newBaseArcs);
+  }
+
+  dispose(host: SVGElement): void {
+    disposeRuntimeSet(this.runtimes);
+    for (const managed of this.pathRegistry.values()) {
+      managed.dispose();
+      if (managed.element.parentNode === host) {
+        host.removeChild(managed.element);
+      }
+    }
+    this.pathRegistry.clear();
+  }
+}
 
 export function renderSVG(options: RenderSvgOptions): RenderHandle {
   const doc = resolveDocument(options.document);
   const host = resolveHostElement(options.el, doc);
   const labelDefs = ensureLabelDefs(host, doc);
 
-  let currentOptions: RenderSvgOptions = {
+  const normalizedOptions: RenderSvgOptions = {
     ...options,
     el: host,
     document: doc,
+    config: cloneSunburstConfig(options.config),
   };
 
-  let baseConfig = cloneSunburstConfig(currentOptions.config);
-  currentOptions = {
-    ...currentOptions,
-    config: baseConfig,
-  };
-
-  const pathRegistry = new Map<string, ManagedPath>();
   const drivers = createAnimationDrivers(doc);
   const handleArray: LayoutArc[] = [];
   const handle = handleArray as unknown as RenderHandle;
 
-  let runtimes: RuntimeSet;
-  let isRendering = false;
-  let pendingRender = false;
-
-  // Create color assigner once based on full config for consistent colors during navigation
-  const baseArcs = layout(baseConfig);
-  let getArcColor = createColorAssigner(currentOptions.colorTheme, baseArcs);
+  // Create render state - will be initialized after runtime creation
+  let state: RenderState;
 
   const execute = (): LayoutArc[] => {
-    const runtime = runtimes;
+    const runtime = state.runtimes;
     const navigation = runtime.navigation;
-    const activeConfig = navigation ? navigation.getActiveConfig() : currentOptions.config;
-    currentOptions = {
-      ...currentOptions,
+    const activeConfig = navigation ? navigation.getActiveConfig() : state.currentOptions.config;
+    state.currentOptions = {
+      ...state.currentOptions,
       config: activeConfig,
     };
 
@@ -136,10 +128,17 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     }
 
     const navigationTransition = navigation?.consumeTransitionOverride();
-    const transitionSource = navigationTransition ? navigationTransition.transition : currentOptions.transition;
+    const transitionSource = navigationTransition ? navigationTransition.transition : state.currentOptions.transition;
     const navigationMorph = Boolean(navigationTransition?.morph);
     const transition = resolveTransition(transitionSource);
     const usedKeys = new Set<string>();
+
+    // Batch DOM operations to reduce reflows
+    // Use fragments if available (browser), fallback to direct append for test environments
+    const supportsFragment = typeof doc.createDocumentFragment === 'function';
+    const fragment = supportsFragment ? doc.createDocumentFragment() : null;
+    const labelFragment = supportsFragment ? doc.createDocumentFragment() : null;
+    const newElements: ManagedPath[] = [];
 
     for (let index = 0; index < arcs.length; index += 1) {
       const arc = arcs[index];
@@ -151,8 +150,10 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
       const key = createArcKey(arc);
       usedKeys.add(key);
 
-      let managed = pathRegistry.get(key);
+      let managed = state.pathRegistry.get(key);
       let previousArc: LayoutArc | null = null;
+      const isNewElement = !managed;
+
       if (managed) {
         previousArc = { ...managed.arc };
         cancelPendingRemoval(managed);
@@ -160,17 +161,18 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         managed = createManagedPath({
           key,
           arc,
-          options: currentOptions,
+          options: state.currentOptions,
           runtime,
           doc,
           labelDefs,
         });
-        pathRegistry.set(key, managed);
+        state.pathRegistry.set(key, managed);
+        newElements.push(managed);
       }
 
       updateManagedPath(managed, {
         arc,
-        options: currentOptions,
+        options: state.currentOptions,
         runtime,
         pathData: d,
         previousArc,
@@ -180,20 +182,35 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         cy,
         navigationMorph,
         index,
-        getArcColor,
+        getArcColor: state.getArcColor,
       });
 
-      host.appendChild(managed.element);
-      host.appendChild(managed.labelElement);
+      // Only append new elements to fragments; existing elements stay in DOM
+      if (isNewElement) {
+        if (supportsFragment && fragment && labelFragment) {
+          fragment.appendChild(managed.element);
+          labelFragment.appendChild(managed.labelElement);
+        } else {
+          // Fallback for test environments without createDocumentFragment
+          host.appendChild(managed.element);
+          host.appendChild(managed.labelElement);
+        }
+      }
     }
 
-    for (const [key, managed] of pathRegistry) {
+    // Batch append all new elements at once to minimize reflows
+    if (newElements.length > 0 && supportsFragment && fragment && labelFragment) {
+      host.appendChild(fragment);
+      host.appendChild(labelFragment);
+    }
+
+    for (const [key, managed] of state.pathRegistry) {
       if (!usedKeys.has(key)) {
         scheduleManagedRemoval({
           key,
           managed,
           host,
-          registry: pathRegistry,
+          registry: state.pathRegistry,
           transition,
           drivers,
           cx,
@@ -207,31 +224,34 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
   };
 
   const renderLoop = () => {
-    if (isRendering) {
-      pendingRender = true;
+    if (state.isRendering) {
+      state.pendingRender = true;
       return;
     }
-    isRendering = true;
+    state.isRendering = true;
     do {
-      pendingRender = false;
+      state.pendingRender = false;
       const arcs = execute();
       handle.length = 0;
       handle.push(...arcs);
-    } while (pendingRender);
-    isRendering = false;
+    } while (state.pendingRender);
+    state.isRendering = false;
   };
 
   const requestRender = () => {
-    pendingRender = true;
-    if (!isRendering) {
+    state.pendingRender = true;
+    if (!state.isRendering) {
       renderLoop();
     }
   };
 
-  runtimes = createRuntimeSet(doc, currentOptions, {
-    baseConfig,
+  const runtimes = createRuntimeSet(doc, normalizedOptions, {
+    baseConfig: normalizedOptions.config,
     requestRender,
   });
+
+  // Initialize state with runtimes
+  state = new RenderState(normalizedOptions, runtimes);
 
   requestRender();
 
@@ -239,19 +259,17 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     update: {
       enumerable: false,
       value(input: RenderSvgUpdateInput) {
-        const nextOptions = normalizeUpdateOptions(currentOptions, input, host, doc);
-        const nextConfigInput = extractConfigFromUpdate(input, baseConfig);
-        baseConfig = cloneSunburstConfig(nextConfigInput);
-        currentOptions = {
+        const nextOptions = normalizeUpdateOptions(state.currentOptions, input, host, doc);
+        const nextConfigInput = extractConfigFromUpdate(input, state.baseConfig);
+        const nextConfig = cloneSunburstConfig(nextConfigInput);
+        const finalOptions = {
           ...nextOptions,
-          config: baseConfig,
+          config: nextConfig,
         };
-        // Recreate color assigner with new base config for consistent colors
-        const newBaseArcs = layout(baseConfig);
-        getArcColor = createColorAssigner(currentOptions.colorTheme, newBaseArcs);
-        disposeRuntimeSet(runtimes);
-        runtimes = createRuntimeSet(doc, currentOptions, {
-          baseConfig,
+        state.updateConfig(finalOptions, nextConfig);
+        disposeRuntimeSet(state.runtimes);
+        state.runtimes = createRuntimeSet(doc, finalOptions, {
+          baseConfig: nextConfig,
           requestRender,
         });
         requestRender();
@@ -261,27 +279,20 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     destroy: {
       enumerable: false,
       value() {
-        disposeRuntimeSet(runtimes);
-        for (const managed of pathRegistry.values()) {
-          managed.dispose();
-          if (managed.element.parentNode === host) {
-            host.removeChild(managed.element);
-          }
-        }
-        pathRegistry.clear();
+        state.dispose(host);
         handle.length = 0;
       },
     },
     getOptions: {
       enumerable: false,
       value() {
-        return { ...currentOptions };
+        return { ...state.currentOptions };
       },
     },
     resetNavigation: {
       enumerable: false,
       value() {
-        runtimes.navigation?.reset();
+        state.runtimes.navigation?.reset();
       },
     },
   });
@@ -314,47 +325,6 @@ function normalizeUpdateOptions(
   };
 }
 
-function extractConfigFromUpdate(
-  input: RenderSvgUpdateInput,
-  fallback: SunburstConfig,
-): SunburstConfig {
-  if (isSunburstConfig(input)) {
-    return input;
-  }
-  if (input && typeof input === 'object') {
-    const candidate = (input as RenderSvgUpdateOptions).config;
-    if (candidate) {
-      return candidate;
-    }
-  }
-  return fallback;
-}
-
-function isSunburstConfig(value: unknown): value is SunburstConfig {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  const record = value as Record<string, unknown>;
-  return 'size' in record && 'layers' in record;
-}
-
-function ensureLabelDefs(host: SVGElement, doc: Document): SVGDefsElement {
-  const children = Array.from(host.childNodes);
-  for (const child of children) {
-    if (child instanceof SVGDefsElement && child.getAttribute('data-sand-labels') === 'true') {
-      return child;
-    }
-  }
-
-  const defs = doc.createElementNS(SVG_NS, 'defs');
-  defs.setAttribute('data-sand-labels', 'true');
-  if (host.firstChild) {
-    host.insertBefore(defs, host.firstChild);
-  } else {
-    host.appendChild(defs);
-  }
-  return defs;
-}
 
 function createManagedPath(params: {
   key: string;
@@ -1189,31 +1159,6 @@ function createAnimationDrivers(doc: Document): AnimationDrivers {
   return { raf, caf, now };
 }
 
-function createRuntimeSet(
-  doc: Document,
-  options: RenderSvgOptions,
-  params: { baseConfig: SunburstConfig; requestRender: () => void },
-): RuntimeSet {
-  const tooltip = createTooltipRuntime(doc, options.tooltip);
-  const highlight = createHighlightRuntime(options.highlightByKey);
-  const breadcrumbs = createBreadcrumbRuntime(doc, options.breadcrumbs);
-  const navigation = createNavigationRuntime(options.navigation, {
-    breadcrumbs,
-    requestRender: params.requestRender,
-  }, params.baseConfig);
-  tooltip?.hide();
-  if (!navigation?.handlesBreadcrumbs()) {
-    breadcrumbs?.clear();
-  }
-  return { tooltip, highlight, breadcrumbs, navigation };
-}
-
-function disposeRuntimeSet(runtime: RuntimeSet): void {
-  runtime.tooltip?.dispose();
-  runtime.highlight?.dispose();
-  runtime.breadcrumbs?.dispose();
-  runtime.navigation?.dispose();
-}
 
 function createCollapsedArc(source: LayoutArc): LayoutArc {
   const span = Math.max(source.x1 - source.x0, 0);
