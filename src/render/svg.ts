@@ -9,75 +9,29 @@ import {
 import { describeArcPath, polarToCartesian, TAU, ZERO_TOLERANCE } from './geometry.js';
 import { resolveTransition, interpolateArc, ResolvedTransition } from './transition.js';
 import { clamp01 } from './math.js';
-import { createTooltipRuntime, TooltipRuntime } from './runtime/tooltip.js';
-import { createBreadcrumbRuntime, BreadcrumbRuntime } from './runtime/breadcrumbs.js';
-import { createHighlightRuntime, HighlightRuntime } from './runtime/highlight.js';
 import { resolveDocument, resolveHostElement } from './runtime/document.js';
 import { createArcKey } from './keys.js';
-import { createNavigationRuntime, NavigationRuntime } from './runtime/navigation.js';
 import { cloneSunburstConfig } from './config.js';
 import { createColorAssigner } from './colorAssignment.js';
+import {
+  SVG_NS,
+  XLINK_NS,
+  LABEL_MIN_RADIAL_THICKNESS,
+  LABEL_MIN_FONT_SIZE,
+  LABEL_MAX_FONT_SIZE,
+  LABEL_CHAR_WIDTH_FACTOR,
+  LABEL_PADDING,
+  LABEL_SAFETY_MARGIN,
+  COLLAPSED_ARC_SPAN_SHRINK_FACTOR,
+  COLLAPSED_ARC_MIN_SPAN,
+  COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR,
+  COLLAPSED_ARC_MIN_THICKNESS,
+} from './svg/constants.js';
+import type { RuntimeSet, AnimationHandle, AnimationDrivers, ManagedPath } from './svg/types.js';
+import { createRuntimeSet, disposeRuntimeSet } from './svg/runtime-creation.js';
+import { isSunburstConfig, ensureLabelDefs, extractConfigFromUpdate } from './svg/utils.js';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const XLINK_NS = 'http://www.w3.org/1999/xlink';
 let labelIdCounter = 0;
-
-// Label rendering thresholds (in pixels)
-const LABEL_MIN_RADIAL_THICKNESS = 14; // Minimum arc thickness to show labels
-const LABEL_MIN_FONT_SIZE = 12; // Minimum readable font size
-const LABEL_MAX_FONT_SIZE = 18; // Maximum font size for labels
-const LABEL_CHAR_WIDTH_FACTOR = 0.7; // Average character width as fraction of font size
-const LABEL_PADDING = 8; // Padding around label text (pixels)
-const LABEL_SAFETY_MARGIN = 1.15; // 15% safety margin for label fitting calculations
-
-// Collapsed arc visual indicators
-const COLLAPSED_ARC_SPAN_SHRINK_FACTOR = 0.1; // Shrink span to 10% of original
-const COLLAPSED_ARC_MIN_SPAN = 0.01; // Minimum span in radians for collapsed arcs
-const COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR = 0.1; // Shrink thickness to 10% of original
-const COLLAPSED_ARC_MIN_THICKNESS = 0.5; // Minimum thickness in pixels for collapsed arcs
-
-
-/**
- * Renders the supplied `SunburstConfig` into the target SVG element.
- *
- * @public
- */
-type RuntimeSet = {
-  tooltip: TooltipRuntime | null;
-  highlight: HighlightRuntime | null;
-  breadcrumbs: BreadcrumbRuntime | null;
-  navigation: NavigationRuntime | null;
-};
-
-type AnimationHandle = {
-  cancel(): void;
-};
-
-type AnimationDrivers = {
-  raf: (callback: FrameRequestCallback) => number;
-  caf: (handle: number) => void;
-  now: () => number;
-};
-
-type ManagedPath = {
-  key: string;
-  element: SVGPathElement;
-  labelElement: SVGTextElement;
-  labelPathElement: SVGPathElement;
-  textPathElement: SVGTextPathElement;
-  labelPathId: string;
-  arc: LayoutArc;
-  options: RenderSvgOptions;
-  runtime: RuntimeSet;
-  animation: AnimationHandle | null;
-  fade: AnimationHandle | null;
-  pendingRemoval: boolean;
-  labelVisible: boolean;
-  labelHiddenReason: string | null;
-  labelPendingLogReason: string | null;
-  abortController: AbortController;
-  dispose: () => void;
-};
 
 /**
  * Encapsulates all mutable render state for better lifecycle management
@@ -371,47 +325,6 @@ function normalizeUpdateOptions(
   };
 }
 
-function extractConfigFromUpdate(
-  input: RenderSvgUpdateInput,
-  fallback: SunburstConfig,
-): SunburstConfig {
-  if (isSunburstConfig(input)) {
-    return input;
-  }
-  if (input && typeof input === 'object') {
-    const candidate = (input as RenderSvgUpdateOptions).config;
-    if (candidate) {
-      return candidate;
-    }
-  }
-  return fallback;
-}
-
-function isSunburstConfig(value: unknown): value is SunburstConfig {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  const record = value as Record<string, unknown>;
-  return 'size' in record && 'layers' in record;
-}
-
-function ensureLabelDefs(host: SVGElement, doc: Document): SVGDefsElement {
-  const children = Array.from(host.childNodes);
-  for (const child of children) {
-    if (child instanceof SVGDefsElement && child.getAttribute('data-sand-labels') === 'true') {
-      return child;
-    }
-  }
-
-  const defs = doc.createElementNS(SVG_NS, 'defs');
-  defs.setAttribute('data-sand-labels', 'true');
-  if (host.firstChild) {
-    host.insertBefore(defs, host.firstChild);
-  } else {
-    host.appendChild(defs);
-  }
-  return defs;
-}
 
 function createManagedPath(params: {
   key: string;
@@ -1246,31 +1159,6 @@ function createAnimationDrivers(doc: Document): AnimationDrivers {
   return { raf, caf, now };
 }
 
-function createRuntimeSet(
-  doc: Document,
-  options: RenderSvgOptions,
-  params: { baseConfig: SunburstConfig; requestRender: () => void },
-): RuntimeSet {
-  const tooltip = createTooltipRuntime(doc, options.tooltip);
-  const highlight = createHighlightRuntime(options.highlightByKey);
-  const breadcrumbs = createBreadcrumbRuntime(doc, options.breadcrumbs);
-  const navigation = createNavigationRuntime(options.navigation, {
-    breadcrumbs,
-    requestRender: params.requestRender,
-  }, params.baseConfig);
-  tooltip?.hide();
-  if (!navigation?.handlesBreadcrumbs()) {
-    breadcrumbs?.clear();
-  }
-  return { tooltip, highlight, breadcrumbs, navigation };
-}
-
-function disposeRuntimeSet(runtime: RuntimeSet): void {
-  runtime.tooltip?.dispose();
-  runtime.highlight?.dispose();
-  runtime.breadcrumbs?.dispose();
-  runtime.navigation?.dispose();
-}
 
 function createCollapsedArc(source: LayoutArc): LayoutArc {
   const span = Math.max(source.x1 - source.x0, 0);
