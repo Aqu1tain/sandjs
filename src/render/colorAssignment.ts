@@ -23,6 +23,15 @@ export function createColorAssigner(
   const assignBy = themeOptions.assignBy ?? getDefaultAssignBy(themeOptions.type);
   const deriveKey = themeOptions.deriveKey;
 
+  // Pre-compute value range for O(n) performance
+  let valueRange: { min: number; max: number; range: number } | null = null;
+  if (assignBy === 'value') {
+    const values = allArcs.map(a => a.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    valueRange = { min, max, range: max - min };
+  }
+
   // Build key->color mapping for consistent colors
   const keyColorMap = new Map<string | number, string>();
   const usedKeys = new Set<string | number>();
@@ -30,7 +39,7 @@ export function createColorAssigner(
   // Pre-process arcs to build consistent mappings
   if (deriveKey || assignBy === 'key') {
     allArcs.forEach((arc, idx) => {
-      const key = deriveKey ? deriveKey(arc) : getAssignmentKey(arc, idx, assignBy, allArcs);
+      const key = deriveKey ? deriveKey(arc) : getAssignmentKey(arc, idx, assignBy, allArcs, valueRange);
       if (key != null && !usedKeys.has(key)) {
         usedKeys.add(key);
         const colorIndex = usedKeys.size - 1;
@@ -45,7 +54,7 @@ export function createColorAssigner(
       return null; // Let the renderer use arc.data.color
     }
 
-    const key = deriveKey ? deriveKey(arc) : getAssignmentKey(arc, index, assignBy, allArcs);
+    const key = deriveKey ? deriveKey(arc) : getAssignmentKey(arc, index, assignBy, allArcs, valueRange);
 
     if (key == null) {
       return palette[0]; // Fallback to first color
@@ -103,6 +112,7 @@ function getAssignmentKey(
   index: number,
   assignBy: 'depth' | 'key' | 'index' | 'value',
   allArcs: LayoutArc[],
+  valueRange: { min: number; max: number; range: number } | null,
 ): string | number {
   switch (assignBy) {
     case 'depth':
@@ -115,14 +125,11 @@ function getAssignmentKey(
       return index;
 
     case 'value': {
-      // Normalize value to [0, paletteLength-1]
-      const maxValue = Math.max(...allArcs.map((a) => a.value));
-      const minValue = Math.min(...allArcs.map((a) => a.value));
-      const range = maxValue - minValue;
-      if (range === 0) {
+      // Use pre-computed value range for O(n) performance
+      if (!valueRange || valueRange.range === 0) {
         return 0;
       }
-      const normalized = (arc.value - minValue) / range;
+      const normalized = (arc.value - valueRange.min) / valueRange.range;
       return normalized; // Return 0-1 value, will be mapped to palette later
     }
 

@@ -13,6 +13,7 @@ export function describeArcPath(arc: LayoutArc, cx: number, cy: number): string 
 
   const outerStart = polarToCartesian(cx, cy, arc.y1, arc.x0);
   const outerEnd = polarToCartesian(cx, cy, arc.y1, arc.x1);
+  // SVG arc large-arc flag: 1 if arc spans more than half a circle (π radians), 0 otherwise
   const largeArc = span > Math.PI ? 1 : 0;
 
   if (fullCircle && arc.y0 <= ZERO_TOLERANCE) {

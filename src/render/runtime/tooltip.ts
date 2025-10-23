@@ -53,8 +53,8 @@ export function createTooltipRuntime(
         };
 
   const position = (event: PointerEvent) => {
-    const x = event.clientX + TOOLTIP_OFFSET_X;
-    const y = event.clientY - TOOLTIP_OFFSET_Y;
+    const x = event.clientX + TOOLTIP_OFFSET_X; // Offset to the right of cursor
+    const y = event.clientY - TOOLTIP_OFFSET_Y; // Offset above cursor to avoid obscuring content
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
   };

@@ -21,16 +21,20 @@ import { createColorAssigner } from './colorAssignment.js';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 let labelIdCounter = 0;
-const LABEL_MIN_RADIAL_THICKNESS = 14;
-const LABEL_MIN_FONT_SIZE = 12;
-const LABEL_MAX_FONT_SIZE = 18;
-const LABEL_CHAR_WIDTH_FACTOR = 0.7;
-const LABEL_PADDING = 8;
-const LABEL_SAFETY_MARGIN = 1.15;
-const COLLAPSED_ARC_SPAN_SHRINK_FACTOR = 0.1;
-const COLLAPSED_ARC_MIN_SPAN = 0.01;
-const COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR = 0.1;
-const COLLAPSED_ARC_MIN_THICKNESS = 0.5;
+
+// Label rendering thresholds (in pixels)
+const LABEL_MIN_RADIAL_THICKNESS = 14; // Minimum arc thickness to show labels
+const LABEL_MIN_FONT_SIZE = 12; // Minimum readable font size
+const LABEL_MAX_FONT_SIZE = 18; // Maximum font size for labels
+const LABEL_CHAR_WIDTH_FACTOR = 0.7; // Average character width as fraction of font size
+const LABEL_PADDING = 8; // Padding around label text (pixels)
+const LABEL_SAFETY_MARGIN = 1.15; // 15% safety margin for label fitting calculations
+
+// Collapsed arc visual indicators
+const COLLAPSED_ARC_SPAN_SHRINK_FACTOR = 0.1; // Shrink span to 10% of original
+const COLLAPSED_ARC_MIN_SPAN = 0.01; // Minimum span in radians for collapsed arcs
+const COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR = 0.1; // Shrink thickness to 10% of original
+const COLLAPSED_ARC_MIN_THICKNESS = 0.5; // Minimum thickness in pixels for collapsed arcs
 
 
 /**
@@ -71,12 +75,7 @@ type ManagedPath = {
   labelVisible: boolean;
   labelHiddenReason: string | null;
   labelPendingLogReason: string | null;
-  listeners: {
-    enter: (event: PointerEvent) => void;
-    move: (event: PointerEvent) => void;
-    leave: (event: PointerEvent) => void;
-    click?: (event: MouseEvent) => void;
-  };
+  abortController: AbortController;
   dispose: () => void;
 };
 
@@ -400,6 +399,8 @@ function createManagedPath(params: {
 
   labelElement.appendChild(textPathElement);
 
+  const abortController = new AbortController();
+
   const managed: ManagedPath = {
     key,
     element,
@@ -416,17 +417,11 @@ function createManagedPath(params: {
     labelVisible: false,
     labelHiddenReason: null,
     labelPendingLogReason: null,
-    listeners: {} as ManagedPath['listeners'],
+    abortController,
     dispose: () => {
       stopManagedAnimations(managed);
       managed.pendingRemoval = false;
-      element.removeEventListener('pointerenter', managed.listeners.enter);
-      element.removeEventListener('pointermove', managed.listeners.move);
-      element.removeEventListener('pointerleave', managed.listeners.leave);
-      element.removeEventListener('pointercancel', managed.listeners.leave);
-      if (managed.listeners.click) {
-        element.removeEventListener('click', managed.listeners.click);
-      }
+      managed.abortController.abort();
       if (labelElement.parentNode) {
         labelElement.parentNode.removeChild(labelElement);
       }
@@ -470,18 +465,12 @@ function createManagedPath(params: {
     managed.options.onArcClick?.({ arc: currentArc, path: element, event });
   };
 
-  element.addEventListener('pointerenter', handleEnter);
-  element.addEventListener('pointermove', handleMove);
-  element.addEventListener('pointerleave', handleLeave);
-  element.addEventListener('pointercancel', handleLeave);
-  element.addEventListener('click', handleClick);
-
-  managed.listeners = {
-    enter: handleEnter,
-    move: handleMove,
-    leave: handleLeave,
-    click: handleClick,
-  };
+  const { signal } = abortController;
+  element.addEventListener('pointerenter', handleEnter, { signal });
+  element.addEventListener('pointermove', handleMove, { signal });
+  element.addEventListener('pointerleave', handleLeave, { signal });
+  element.addEventListener('pointercancel', handleLeave, { signal });
+  element.addEventListener('click', handleClick, { signal });
 
   return managed;
 }

@@ -6,7 +6,7 @@ import type {
   RenderSvgOptions,
 } from '../types.js';
 import type { BreadcrumbRuntime } from './breadcrumbs.js';
-import { arcIdentifierFromPath, resolveArcKey } from '../keys.js';
+import { arcIdentifierFromPath, resolveArcKey, resolveNodeKey } from '../keys.js';
 import { cloneSunburstConfig } from '../config.js';
 
 type NavigationTransitionContext = {
@@ -530,11 +530,4 @@ function collectNodesAlongPath(
     siblings = Array.isArray(node.children) ? node.children : [];
   }
   return result;
-}
-
-function resolveNodeKey(node: TreeNodeInput): string | null {
-  if (typeof node.key === 'string' && node.key.length > 0) {
-    return node.key;
-  }
-  return null;
 }
