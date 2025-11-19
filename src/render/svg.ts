@@ -216,6 +216,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           cx,
           cy,
           navigationMorph,
+          debug: state.currentOptions.debug ?? false,
         });
       }
     }
@@ -494,11 +495,12 @@ function updateManagedPath(
       drivers,
       cx,
       cy,
+      debug: options.debug ?? false,
     });
   } else {
     stopArcAnimation(managed);
     applyPathData(element, pathData);
-    updateArcLabel(managed, arc, { cx, cy, allowLogging: true });
+    updateArcLabel(managed, arc, { cx, cy, allowLogging: options.debug ?? false });
   }
 
   // Apply color from theme or node.color override
@@ -867,8 +869,9 @@ function startArcAnimation(params: {
   drivers: AnimationDrivers;
   cx: number;
   cy: number;
+  debug: boolean;
 }): void {
-  const { managed, from, to, finalPath, transition, drivers, cx, cy } = params;
+  const { managed, from, to, finalPath, transition, drivers, cx, cy, debug } = params;
   stopArcAnimation(managed);
 
   const element = managed.element;
@@ -885,12 +888,12 @@ function startArcAnimation(params: {
     },
     onComplete: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: true });
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug });
       managed.animation = null;
     },
     onCancel: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: true });
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug });
       managed.animation = null;
     },
   });
@@ -1045,8 +1048,9 @@ function scheduleManagedRemoval(params: {
   cx: number;
   cy: number;
   navigationMorph: boolean;
+  debug: boolean;
 }): void {
-  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph } = params;
+  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph, debug } = params;
   if (managed.pendingRemoval) {
     return;
   }
@@ -1089,6 +1093,7 @@ function scheduleManagedRemoval(params: {
       drivers,
       cx,
       cy,
+      debug,
     });
   }
 
