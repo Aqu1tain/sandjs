@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Label positioning and orientation**: Fixed two critical label rendering bugs:
+  - Labels are now properly centered on arcs instead of appearing offset to the bottom-left. Added `text-anchor: middle` attribute to `<textPath>` elements for correct SVG text alignment.
+  - Label inversion now uses tangent direction instead of midpoint angle, ensuring labels are always readable regardless of arc configuration. Labels at 0° and 180° now have correct orientation in all cases.
+
 ### Changed
 - **Console logging is now opt-in via `debug` option**: Label visibility warnings (e.g., "Hiding label because arc span is too narrow") no longer appear by default. Pass `debug: true` to `renderSVG()` to enable diagnostic logging for debugging layout issues.
 

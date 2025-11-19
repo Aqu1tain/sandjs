@@ -362,6 +362,7 @@ function createManagedPath(params: {
   textPathElement.setAttribute('startOffset', '50%');
   textPathElement.setAttribute('method', 'align');
   textPathElement.setAttribute('spacing', 'auto');
+  textPathElement.setAttribute('text-anchor', 'middle');
   textPathElement.setAttribute('class', 'sand-arc-label-textpath');
   textPathElement.textContent = '';
   textPathElement.style.pointerEvents = 'none';
@@ -695,11 +696,27 @@ function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: n
 
   const angle = (arc.x0 + arc.x1) * 0.5;
   const point = polarToCartesian(cx, cy, midRadius, angle);
-  // Normalize angle to [0, TAU) range
-  const normalizedAngle = ((angle % TAU) + TAU) % TAU;
-  // Invert text on the left half of the circle to keep it readable
-  // Include bottom boundary (π/2) but not top boundary (3π/2)
-  const inverted = normalizedAngle >= Math.PI / 2 && normalizedAngle < (Math.PI * 3) / 2;
+
+  // Compute a small delta angle for local sampling (keeps delta proportional to arc span)
+  const smallDelta = Math.min(Math.max(span * 0.01, 1e-4), 0.1);
+
+  // Sample points just before and after midpoint
+  const aBefore = angle - smallDelta;
+  const aAfter = angle + smallDelta;
+  const pBefore = polarToCartesian(cx, cy, midRadius, aBefore);
+  const pAfter = polarToCartesian(cx, cy, midRadius, aAfter);
+
+  // Tangent vector in screen coordinates
+  const tx = pAfter.x - pBefore.x;
+  const ty = pAfter.y - pBefore.y;
+
+  // Tangent angle in [-π, π]
+  const tangentAngle = Math.atan2(ty, tx);
+  // Normalize to [0, TAU)
+  const normalizedTangent = ((tangentAngle % TAU) + TAU) % TAU;
+
+  // Invert when tangent points leftwards (between 90° and 270°)
+  const inverted = normalizedTangent >= Math.PI / 2 && normalizedTangent < (3 * Math.PI) / 2;
   const pathData = createLabelArcPath({
     arc,
     radius: midRadius,
