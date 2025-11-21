@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2025-11-21
+
 ### Fixed
 - **Label positioning and orientation**: Fixed two critical label rendering bugs:
   - Labels are now properly centered on arcs instead of appearing offset to the bottom-left. Added `text-anchor: middle` attribute to `<textPath>` elements for correct SVG text alignment.
