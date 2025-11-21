@@ -154,6 +154,7 @@ export interface RenderSvgOptions {
   breadcrumbs?: boolean | BreadcrumbOptions;
   transition?: boolean | TransitionOptions;
   navigation?: boolean | NavigationOptions;
+  debug?: boolean;
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
   onArcLeave?: (payload: ArcPointerEventPayload) => void;
