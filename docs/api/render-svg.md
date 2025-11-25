@@ -1,0 +1,235 @@
+# renderSVG()
+
+[← Back to Documentation](../README.md)
+
+The main function to create and render a sunburst chart.
+
+## Signature
+
+```typescript
+function renderSVG(options: RenderSvgOptions): RenderHandle
+```
+
+## Parameters
+
+### RenderSvgOptions
+
+```typescript
+interface RenderSvgOptions {
+  // Required
+  el: string | SVGElement;
+  config: SunburstConfig;
+
+  // Features
+  tooltip?: boolean | TooltipOptions;
+  breadcrumbs?: boolean | BreadcrumbOptions;
+  highlightByKey?: boolean | HighlightByKeyOptions;
+  navigation?: boolean | NavigationOptions;
+  transition?: boolean | TransitionOptions;
+  labels?: boolean | LabelOptions;
+  colorTheme?: ColorThemeOptions;
+
+  // Event callbacks
+  onArcEnter?: (payload: ArcPointerEventPayload) => void;
+  onArcMove?: (payload: ArcPointerEventPayload) => void;
+  onArcLeave?: (payload: ArcPointerEventPayload) => void;
+  onArcClick?: (payload: ArcClickEventPayload) => void;
+
+  // Other
+  debug?: boolean;
+}
+```
+
+See [Configuration Reference](./configuration.md) for detailed option descriptions.
+
+## Return Value
+
+### RenderHandle
+
+```typescript
+interface RenderHandle {
+  update: (updateInput: RenderSvgUpdateInput) => void;
+  dispose: () => void;
+  resetNavigation?: () => void;
+}
+```
+
+#### update(updateInput)
+
+Updates the chart with new configuration or options.
+
+```typescript
+interface RenderSvgUpdateInput {
+  config?: SunburstConfig;
+  transition?: boolean | TransitionOptions;
+}
+```
+
+**Example:**
+```javascript
+const chart = renderSVG({ el: '#chart', config });
+
+// Update configuration
+chart.update({
+  config: newConfig,
+  transition: { duration: 600 }
+});
+
+// Update only certain options
+chart.update({
+  config: {
+    ...chart.config,
+    size: { radius: 300 }
+  }
+});
+```
+
+#### dispose()
+
+Cleans up the chart, removing all event listeners and DOM elements.
+
+```javascript
+const chart = renderSVG({ el: '#chart', config });
+
+// Later, clean up
+chart.destroy();
+```
+
+**When to use:**
+- Component unmounting (React, Vue, etc.)
+- Page navigation
+- Dynamic chart replacement
+- Memory cleanup
+
+#### resetNavigation()
+
+Resets navigation to root view (only available when `navigation` is enabled).
+
+```javascript
+const chart = renderSVG({
+  el: '#chart',
+  config,
+  navigation: true
+});
+
+// Reset to root
+if (chart.resetNavigation) {
+  chart.resetNavigation();
+}
+```
+
+## Examples
+
+### Basic Usage
+
+```javascript
+import { renderSVG } from '@akitain/sandjs';
+
+const chart = renderSVG({
+  el: '#my-chart',
+  config: {
+    size: { radius: 200 },
+    layers: [{
+      id: 'main',
+      radialUnits: [0, 2],
+      angleMode: 'free',
+      tree: [
+        { name: 'A', value: 50 },
+        { name: 'B', value: 50 }
+      ]
+    }]
+  }
+});
+```
+
+### With All Features
+
+```javascript
+const chart = renderSVG({
+  el: document.getElementById('chart'),
+  config: myConfig,
+
+  // Enable features
+  tooltip: true,
+  breadcrumbs: true,
+  highlightByKey: true,
+  navigation: true,
+  transition: true,
+  labels: true,
+
+  // Color theme
+  colorTheme: {
+    type: 'qualitative',
+    palette: 'ocean',
+    assignBy: 'key'
+  },
+
+  // Event handlers
+  onArcClick: ({ arc }) => {
+    console.log('Clicked:', arc.data.name);
+  },
+
+  // Debug mode
+  debug: true
+});
+```
+
+### Custom Options
+
+```javascript
+const chart = renderSVG({
+  el: '#chart',
+  config,
+
+  tooltip: {
+    formatter: (arc) => `${arc.data.name}: ${arc.percentage.toFixed(1)}%`
+  },
+
+  breadcrumbs: {
+    container: '#breadcrumbs',
+    separator: ' / ',
+    interactive: true
+  },
+
+  navigation: {
+    rootLabel: 'Home',
+    focusTransition: {
+      duration: 700
+    }
+  },
+
+  transition: {
+    duration: 500,
+    easing: (t) => t * t
+  }
+});
+```
+
+### Dynamic Updates
+
+```javascript
+const chart = renderSVG({ el: '#chart', config: initialConfig });
+
+// Update on button click
+document.getElementById('update-btn').addEventListener('click', () => {
+  chart.update({
+    config: generateNewConfig(),
+    transition: true
+  });
+});
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  chart.destroy();
+});
+```
+
+## Related
+
+- [Configuration Reference](./configuration.md)
+- [RenderHandle](./render-handle.md)
+- [layout()](./layout.md)
+
+---
+
+[← Back to Documentation](../README.md)

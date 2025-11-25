@@ -1,160 +1,226 @@
-<div align="center">
+# Sand.js
 
-# 🏝️ Sand.js
 **Sunburst Advanced Node Data**
+
+A lightweight, framework-agnostic JavaScript library for building interactive sunburst charts using SVG. Sand.js is fully data-driven: describe your chart in JSON, and it handles both layout computation and rendering.
 
 [![npm version](https://img.shields.io/npm/v/@akitain/sandjs.svg)](https://www.npmjs.com/package/@akitain/sandjs)
 [![GitHub stars](https://img.shields.io/github/stars/aqu1tain/sandjs.svg?style=social&label=Star)](https://github.com/aQu1tain/sandjs)
 
-</div>
+## Documentation
+
+**[View Complete Documentation →](./docs/README.md)**
+
+For detailed guides, API reference, and examples, visit the [full documentation](./docs/README.md).
 
 ---
 
-## ✨ What is Sand.js?
+## Table of Contents
 
-**Sand.js** is a lightweight, framework-agnostic JavaScript library for building **sunburst charts** using **SVG**.  
-It is fully **data-driven**: you describe your chart in **JSON**, and Sand.js takes care of both **layout computation** and **rendering**.  
-
-Sand.js is designed to be:
-- **Lightweight**: no heavy dependencies.
-- **Agnostic**: works with plain HTML, or in any framework.
-- **JSON-driven**: describe your sunburst once, render anywhere.
-- **Accessible**: interactive charts with sensible defaults.
-
----
-
-## 📖 Key Concepts
-
-| Term        | Description |
-|-------------|-------------|
-| **Sunburst** | The entire chart, composed of one or more layers. |
-| **Layer**    | A logical group of rings, defined by a dataset and a mode (`free` or `align`). |
-| **Ring**     | A radial band, automatically computed from nodes and their `expandLevels`. |
-| **Node**     | A declared unit of data in JSON. May have children (tree mode) or not (flat mode). |
-| **Leaf**     | A node without children. |
-| **Key-group** | A logical grouping of nodes sharing the same `key`, used for alignment and interactions. |
-| **Arc**      | A computed geometric entity ready to be rendered (`x0, x1, y0, y1`). |
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Core Concepts](#core-concepts)
+- [Configuration Reference](#configuration-reference)
+- [Features](#features)
+  - [Color Themes](#color-themes)
+  - [Navigation & Drilldown](#navigation--drilldown)
+  - [Tooltips](#tooltips)
+  - [Breadcrumbs](#breadcrumbs)
+  - [Highlighting](#highlighting)
+  - [Transitions](#transitions)
+  - [Labels](#labels)
+- [API Reference](#api-reference)
+- [Build & Development](#build--development)
+- [CDN Usage](#cdn-usage)
+- [License](#license)
 
 ---
 
-## 🧩 Entities
+## Introduction
 
-### Sunburst
-| Property      | Type       | Description |
-|---------------|------------|-------------|
-| `size.radius` | `number`   | Final radius in pixels. |
-| `size.angle?` | `number`   | Total angle (default `2π` = full circle). |
-| `layers`      | `Layer[]`  | List of layers from inside out. |
+Sand.js is designed for developers who need to visualize hierarchical data as sunburst charts with minimal setup. Built with modern web standards, it offers:
 
----
-
-### Layer
-| Property      | Type       | Description |
-|---------------|------------|-------------|
-| `id`          | `string`   | Unique identifier. |
-| `radialUnits` | `[n,n]`    | Radial interval in unit rings. |
-| `angleMode`   | `"free" \| "align"` | Angular partition mode. |
-| `alignWith?`  | `string`   | Reference layer ID (if `align`). |
-| `padAngle?`   | `number`   | Angular spacing between arcs. |
-| `baseOffset?` | `number`   | Global rotation (radians). |
-| `arcOffsetMode?` | `"relative" \| "absolute"` | How offsets are applied. |
-| `tree`        | `Node \| Node[]` | Data for the layer. Supports tree or flat structure. |
+- **Zero dependencies**: Lightweight and fast
+- **Framework agnostic**: Works with vanilla JavaScript or any framework
+- **JSON-driven**: Declarative configuration
+- **Interactive**: Built-in tooltips, navigation, and event callbacks
+- **Customizable**: Extensive theming and styling options
+- **TypeScript ready**: Full type definitions included
 
 ---
 
-### Node
-| Property     | Type       | Description |
-|--------------|------------|-------------|
-| `name`       | `string`   | Display name. |
-| `value`      | `number`   | Size of the arc (summed if children exist). |
-| `key?`       | `string`   | Stable identifier for alignment, animation, and coloring. |
-| `expandLevels?` | `number` | Radial thickness in rings (default = 1). |
-| `offset?`    | `number`   | Local offset. |
-| `color?`     | `string`   | Custom arc color (overrides palette). |
-| `children?`  | `Node[]`   | Child nodes (tree mode only). |
-| `tooltip?`   | `string`   | Custom tooltip text. |
-| `collapsed?` | `boolean`  | Keep descendants hidden from layout while their values contribute to the parent arc. |
-| `hidden?`    | `boolean`  | Hides the node completely. |
-
----
-
-### Arc (computed by layout)
-| Property   | Type     | Description |
-|------------|----------|-------------|
-| `layerId`  | string   | Origin layer ID. |
-| `data`     | Node     | Reference to original node. |
-| `x0, x1`   | number   | Angular start and end (radians). |
-| `y0, y1`   | number   | Inner/outer radius (pixels). |
-| `depth`    | number   | Logical depth in its layer. |
-| `key?`     | string   | Copy of node key. |
-| `percentage` | number | Relative percentage in its parent. |
-
----
-
-## 🚀 Getting Started
+## Installation
 
 ```bash
 npm install @akitain/sandjs
 ```
 
-Render a sunburst in the browser:
+For Yarn users:
 
-```html
-<svg id="chart"></svg>
-<script type="module">
-  import { renderSVG } from 'sandjs';
-
-  const config = {
-    size: { radius: 160 },
-    layers: [
-      {
-        id: 'root',
-        radialUnits: [0, 2],
-        angleMode: 'free',
-        tree: [
-          { name: 'Data', value: 6, key: 'data' },
-          {
-            name: 'Design',
-            key: 'design',
-            value: 4,
-            children: [
-              { name: 'UI', value: 2 },
-              { name: 'Brand', value: 2 }
-            ]
-          }
-        ]
-      }
-    ]
-  };
-
-  const chart = renderSVG({
-    el: '#chart',
-    config,
-    tooltip: true,
-    onArcClick: ({ arc }) => console.log('Pinned', arc.data.name)
-  });
-
-  // Update the chart later without re-attaching listeners
-  chart.update({
-    config: {
-      ...config,
-      size: { radius: 180 },
-    }
-  });
-</script>
+```bash
+yarn add @akitain/sandjs
 ```
-
-The demo under `demo/` shows relative/absolute offsets, tooltips, and selection callbacks. Run `npm run dev` to start the development server at `http://localhost:4173` to experiment.
 
 ---
 
-## 🎨 Color Themes
+## Quick Start
 
-Sand.js includes a comprehensive color theme system with 14 built-in palettes and flexible assignment strategies.
+Create a basic sunburst chart in three steps:
 
-### Theme Types
+1. **Add an SVG element to your HTML:**
 
-**Qualitative** (for categorical data):
+```html
+<svg id="chart"></svg>
+```
+
+2. **Define your data configuration:**
+
+```javascript
+import { renderSVG } from '@akitain/sandjs';
+
+const config = {
+  size: { radius: 200 },
+  layers: [
+    {
+      id: 'main',
+      radialUnits: [0, 2],
+      angleMode: 'free',
+      tree: [
+        { name: 'Engineering', value: 45, key: 'eng' },
+        {
+          name: 'Design',
+          value: 30,
+          key: 'design',
+          children: [
+            { name: 'UI', value: 15 },
+            { name: 'UX', value: 15 }
+          ]
+        },
+        { name: 'Marketing', value: 25, key: 'marketing' }
+      ]
+    }
+  ]
+};
+```
+
+3. **Render the chart:**
+
+```javascript
+const chart = renderSVG({
+  el: '#chart',
+  config,
+  tooltip: true
+});
+```
+
+That's it! You now have a fully interactive sunburst chart.
+
+---
+
+## Core Concepts
+
+Understanding these fundamental concepts will help you build complex charts:
+
+### Sunburst
+
+The complete chart containing one or more layers. Defined by overall size (radius and optional angle).
+
+### Layer
+
+A logical grouping of rings with a shared dataset. Layers can operate independently (`free` mode) or align with other layers (`align` mode).
+
+**Properties:**
+- `id` (string): Unique identifier
+- `radialUnits` ([number, number]): Inner and outer radial positions
+- `angleMode` ('free' | 'align'): How angular space is distributed
+- `tree` (Node | Node[]): Data structure for the layer
+
+### Node
+
+A unit of data representing a segment in your chart. Nodes can have children for hierarchical data.
+
+**Key properties:**
+- `name` (string): Display label
+- `value` (number): Size of the segment
+- `key` (string, optional): Stable identifier for animations and alignment
+- `children` (Node[], optional): Child nodes for hierarchical structure
+
+### Arc
+
+A computed geometric entity created by the layout engine, ready for rendering with coordinates and metadata.
+
+### Ring
+
+A radial band in the chart, automatically calculated based on nodes and their `expandLevels` property.
+
+### Key-group
+
+Nodes sharing the same `key` value, used for alignment across layers and coordinated interactions.
+
+---
+
+## Configuration Reference
+
+### SunburstConfig
+
+The root configuration object for your chart.
+
+```typescript
+{
+  size: {
+    radius: number;      // Final radius in pixels
+    angle?: number;      // Total angle in radians (default: 2π)
+  },
+  layers: LayerConfig[]  // Array of layer definitions
+}
+```
+
+### LayerConfig
+
+```typescript
+{
+  id: string;                          // Unique layer identifier
+  radialUnits: [number, number];       // [inner, outer] radial positions
+  angleMode: 'free' | 'align';         // Angular distribution mode
+  alignWith?: string;                  // Reference layer ID (for 'align' mode)
+  padAngle?: number;                   // Gap between arcs (radians)
+  baseOffset?: number;                 // Global rotation offset (radians)
+  arcOffsetMode?: 'relative' | 'absolute'; // Offset calculation mode
+  defaultArcOffset?: number;           // Default offset for all arcs
+  tree: TreeNodeInput | TreeNodeInput[]; // Data structure
+}
+```
+
+### TreeNodeInput
+
+```typescript
+{
+  name: string;              // Display name
+  value: number;             // Arc size (auto-summed if children exist)
+  key?: string;              // Stable identifier
+  expandLevels?: number;     // Radial thickness in rings (default: 1)
+  offset?: number;           // Local angular offset
+  color?: string;            // Custom color (CSS format)
+  children?: TreeNodeInput[]; // Child nodes
+  tooltip?: string;          // Custom tooltip content
+  collapsed?: boolean;       // Hide children while preserving value
+  hidden?: boolean;          // Hide node completely
+}
+```
+
+---
+
+## Features
+
+### Color Themes
+
+Sand.js includes 14 built-in color palettes across three theme types.
+
+#### Qualitative Themes
+
+Best for categorical data with no inherent order:
+
 ```javascript
 import { renderSVG, QUALITATIVE_PALETTES } from '@akitain/sandjs';
 
@@ -163,197 +229,426 @@ renderSVG({
   config,
   colorTheme: {
     type: 'qualitative',
-    palette: 'ocean', // 'default' | 'pastel' | 'vibrant' | 'earth' | 'ocean' | 'sunset'
-    assignBy: 'key'   // assigns consistent colors based on arc keys
+    palette: 'ocean',  // 'default' | 'pastel' | 'vibrant' | 'earth' | 'ocean' | 'sunset'
+    assignBy: 'key'    // Color assignment strategy
   }
 });
 ```
 
-**Sequential** (for ordered data):
+#### Sequential Themes
+
+Best for ordered data with progression from low to high:
+
 ```javascript
 colorTheme: {
   type: 'sequential',
-  palette: 'blues', // 'blues' | 'greens' | 'purples' | 'oranges'
-  assignBy: 'depth' // light to dark by depth level
+  palette: 'blues',  // 'blues' | 'greens' | 'purples' | 'oranges'
+  assignBy: 'depth'
 }
 ```
 
-**Diverging** (for data with meaningful midpoint):
+#### Diverging Themes
+
+Best for data with a meaningful midpoint (e.g., positive/negative values):
+
 ```javascript
 colorTheme: {
   type: 'diverging',
-  palette: 'redBlue', // 'redBlue' | 'orangePurple' | 'greenRed'
-  assignBy: 'value'   // color by normalized value
+  palette: 'redBlue',  // 'redBlue' | 'orangePurple' | 'greenRed'
+  assignBy: 'value'
 }
 ```
 
-### Color Assignment Strategies
+#### Color Assignment Strategies
 
-- **`key`**: Consistent colors for arcs with the same key (default for qualitative)
-- **`depth`**: Colors by hierarchical depth (default for sequential/diverging)
-- **`index`**: Sequential colors by arc index in layer
-- **`value`**: Colors mapped to normalized arc values
+- **key**: Consistent colors based on arc keys (default for qualitative)
+- **depth**: Colors vary by hierarchical depth (default for sequential/diverging)
+- **index**: Sequential assignment by arc position
+- **value**: Colors mapped to normalized values
 
-### Custom Palettes
+#### Custom Palettes
 
 ```javascript
 colorTheme: {
   type: 'qualitative',
-  palette: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f7dc6f'], // custom colors
+  palette: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f7dc6f'],
   assignBy: 'key'
 }
 ```
 
-### Custom Color Keys
+#### Custom Color Keys
 
 ```javascript
 colorTheme: {
   type: 'qualitative',
   palette: 'default',
-  deriveKey: (arc) => arc.data.category // use any arc property for color grouping
+  deriveKey: (arc) => arc.data.category  // Use any arc property
 }
 ```
 
-**Note**: Individual node colors set via `node.color` always take precedence over theme colors.
+Note: Individual `node.color` values always override theme colors.
 
 ---
 
-## 🧭 Navigation & Drilldown
+### Navigation & Drilldown
 
 Enable interactive drill-down navigation with smooth transitions:
+
+#### Basic Usage
 
 ```javascript
 const chart = renderSVG({
   el: '#chart',
   config,
-  navigation: true, // enables click-to-zoom with defaults
-  transition: true  // smooth animations
+  navigation: true,  // Enable with defaults
+  transition: true   // Enable smooth animations
 });
 ```
 
-### Advanced Navigation Options
+#### Advanced Options
 
 ```javascript
 navigation: {
-  layers: ['main', 'details'], // which layers support navigation
-  rootLabel: 'Home',           // breadcrumb root text
-  focusTransition: {           // custom zoom animation
-    duration: 600,
-    easing: (t) => t * t       // quadratic ease-in
+  layers: ['main', 'details'],  // Specify navigable layers
+  rootLabel: 'Home',            // Breadcrumb root text
+  focusTransition: {
+    duration: 600,               // Animation duration (ms)
+    easing: (t) => t * t        // Custom easing function
   },
   onFocusChange: (focus) => {
     if (focus) {
-      console.log('Focused on:', focus.arc.data.name);
+      console.log('Focused:', focus.arc.data.name);
     } else {
-      console.log('Returned to root');
+      console.log('Reset to root');
     }
   }
 }
 ```
 
-### Programmatic Navigation
+#### Programmatic Control
 
 ```javascript
 // Reset to root view
-if (chart.resetNavigation) {
-  chart.resetNavigation();
+chart.resetNavigation?.();
+```
+
+---
+
+### Tooltips
+
+Display contextual information on hover.
+
+#### Basic Tooltips
+
+```javascript
+renderSVG({
+  el: '#chart',
+  config,
+  tooltip: true  // Enable default tooltips
+});
+```
+
+#### Custom Tooltips
+
+```javascript
+tooltip: {
+  formatter: (arc) => {
+    return `
+      <strong>${arc.data.name}</strong><br>
+      Value: ${arc.data.value}<br>
+      Percentage: ${arc.percentage.toFixed(1)}%
+    `;
+  },
+  container: '#tooltip-container'  // Custom container selector
 }
 ```
 
-### Interactive Breadcrumbs
+#### Per-Node Tooltips
+
+```javascript
+tree: [
+  {
+    name: 'Engineering',
+    value: 45,
+    tooltip: 'Custom tooltip for Engineering department'
+  }
+]
+```
+
+---
+
+### Breadcrumbs
+
+Visualize the current navigation path.
+
+#### Basic Breadcrumbs
+
+```javascript
+renderSVG({
+  el: '#chart',
+  config,
+  breadcrumbs: true  // Enable with defaults
+});
+```
+
+#### Advanced Configuration
 
 ```javascript
 breadcrumbs: {
-  container: '#breadcrumb-trail',
-  interactive: true,  // enable click-to-navigate on breadcrumb items
-  separator: ' › ',
-  rootLabel: 'Overview'
+  container: '#breadcrumb-trail',  // Custom container
+  interactive: true,               // Enable click navigation
+  separator: ' › ',                // Custom separator
+  rootLabel: 'Overview',           // Root element label
+  formatter: (arc) => arc.data.name.toUpperCase()  // Custom formatting
 }
 ```
 
 ---
 
-### Configuration essentials
+### Highlighting
 
-- **Layers** (`free` or `align`): `free` splits siblings by value; `align` reuses the angular span of a keyed arc in another layer.
-- **Offsets**: `defaultArcOffset` and per-node `offset` shift arcs. In `relative` mode the offset is a fraction of the available span; in `absolute` mode it is applied in radians.
-- **Padding**: Use `padAngle` on a layer or node to reserve gap space between siblings.
-- **Callbacks**: `renderSVG` exposes `onArcEnter`, `onArcMove`, `onArcLeave`, and `onArcClick` with the arc metadata and the rendered `path`.
-- **Tooltips**: enable with `tooltip: true` or pass `{ formatter, container }` for custom markup.
-- **Breadcrumbs**: pass `breadcrumbs: true` to auto-render a trail or supply `{ container, formatter, separator }`; `formatArcBreadcrumb(arc)` helps generate custom labels.
-- **Highlights**: enable `highlightByKey: true` (or supply options) to add a shared class for arcs with the same `key`, and optionally toggle pinned highlights via `pinOnClick`.
-- **Collapsing**: set `collapsed: true` on a node to keep its descendants hidden from the rendered layout while preserving its aggregated value.
-- **Updates**: keep the returned handle from `renderSVG` and call `chart.update({ config: nextConfig })` (or pass a full config) to redraw without re-binding listeners.
+Highlight related arcs by key.
 
-See `src/types/index.ts` for the full TypeScript contracts.
+#### Basic Highlighting
 
-## 🧪 Build & Test
-
-```bash
-npm run test    # type check + node test runner
-npm run build   # rollup (ESM + minified IIFE bundles)
-npm run verify  # convenience: runs tests and build
+```javascript
+renderSVG({
+  el: '#chart',
+  config,
+  highlightByKey: true  // Enable with defaults
+});
 ```
 
-`dist/` contains the publishable artifacts. The IIFE bundle exposes `window.SandJS` for CDN usage (`https://unpkg.com/@akitain/sandjs@0.3.3/dist/sandjs.iife.min.js`).
+#### Advanced Options
 
-## ✅ Release Checklist
-
-1. `npm run verify`
-2. Manually review the `demo/` example in a browser.
-3. Update `CHANGELOG.md` and bump the package version.
-4. `npm publish --access public`
+```javascript
+highlightByKey: {
+  className: 'highlighted',  // Custom CSS class
+  pinOnClick: true,          // Keep highlight on click
+  onPinChange: (key, pinned) => {
+    console.log(`${key} is ${pinned ? 'pinned' : 'unpinned'}`);
+  }
+}
+```
 
 ---
 
-## 🛣️ Roadmap
+### Transitions
 
-### Phase 0.1 – MVP (npm + CDN)
-- Core layout (`layout(config)` → arcs `{x0,x1,y0,y1}`)
-- SVG renderer (`renderSVG({ el, config })`)
-- JSON-driven charts (radius, layers, nodes)
-- Modes `free` / `align` with `key`
-- Basic `expandLevels` (within a layer)
-- Offsets: `baseOffset`, `arcOffsetMode`, `defaultArcOffset`
-- Auto color palette (category10)
-- Simple interactions: hover, click callbacks
-- Builds: ESM + IIFE (CDN/global)
-- Publish to npm + GitHub Pages demo
+Smooth animations when updating your chart.
 
-### Phase 0.2 – Interactions & Stability
-- Tooltips (name, value, %)
-- Breadcrumbs (full path of arc)
-- Highlight by key
-- Collapse/expand (`collapsed: true`)
-- API `update(newConfig)` (no animation yet)
-- Unit tests for invariants (angles, radial order)
+#### Enable Transitions
 
-### Phase 0.3 – Animation & Polish ✅
-- ✅ Animated transitions (morphing arcs with key-based interpolation)
-- ✅ Zoom/drill-down (interactive navigation with breadcrumbs)
-- ✅ Radial labels (auto-positioned text on curved paths)
-- ✅ Color themes (14 palettes: qualitative, sequential, diverging)
-- ✅ Transition options (duration, easing, delay)
-- Export: `exportSVG()`, `exportPNG()` → planned for 0.4
-- Accessibility (aria-labels, keyboard nav) → planned for 0.4
+```javascript
+renderSVG({
+  el: '#chart',
+  config,
+  transition: true  // Enable with defaults
+});
+```
 
-### Phase 0.4 – Extensions & Performance
-- Canvas renderer (performance for >5k arcs)
-- Plugin system (legends, labels, effects)
-- Layout-only mode (server / custom renderers)
-- Partial angle support (gauge 180°/270°)
-- Advanced animation (easing, delays)
-- Large dataset tests (50k arcs in Canvas)
-- Publish also on JSR (Deno/Bun)
+#### Custom Transition Settings
 
-### Long term (1.0+)
-- Online editor/playground
-- Smart labels (collision detection)
-- Skins/themes (flat, material, dark)
-- Framework wrappers (React/Vue/Svelte)
-- Full documentation site + gallery
+```javascript
+transition: {
+  duration: 800,           // Animation duration (ms)
+  easing: (t) => t * t,   // Easing function
+  delay: 100              // Delay before animation starts (ms)
+}
+```
 
+#### Updating with Transitions
 
-## 📝 License
+```javascript
+const chart = renderSVG({ el: '#chart', config, transition: true });
+
+// Later, update with smooth transition
+chart.update({
+  config: newConfig,
+  transition: {
+    duration: 500
+  }
+});
+```
+
+---
+
+### Labels
+
+Render text labels on arcs.
+
+#### Enable Labels
+
+```javascript
+renderSVG({
+  el: '#chart',
+  config,
+  labels: true  // Enable default labels
+});
+```
+
+#### Custom Label Formatting
+
+```javascript
+labels: {
+  formatter: (arc) => {
+    if (arc.percentage > 10) {
+      return `${arc.data.name} (${arc.percentage.toFixed(0)}%)`;
+    }
+    return '';  // Hide labels for small arcs
+  }
+}
+```
+
+Note: Labels automatically hide on arcs that are too narrow to display text legibly.
+
+---
+
+## API Reference
+
+### renderSVG(options)
+
+Main function to create a sunburst chart.
+
+**Parameters:**
+
+```typescript
+{
+  el: string | SVGElement;           // Target SVG element or selector
+  config: SunburstConfig;            // Chart configuration
+  tooltip?: boolean | TooltipOptions; // Tooltip settings
+  breadcrumbs?: boolean | BreadcrumbOptions; // Breadcrumb settings
+  highlightByKey?: boolean | HighlightByKeyOptions; // Highlight settings
+  navigation?: boolean | NavigationOptions; // Navigation settings
+  transition?: boolean | TransitionOptions; // Transition settings
+  labels?: boolean | LabelOptions;   // Label settings
+  colorTheme?: ColorThemeOptions;    // Color theme
+  onArcEnter?: (payload) => void;    // Hover enter callback
+  onArcMove?: (payload) => void;     // Hover move callback
+  onArcLeave?: (payload) => void;    // Hover leave callback
+  onArcClick?: (payload) => void;    // Click callback
+  debug?: boolean;                   // Enable diagnostic logging
+}
+```
+
+**Returns:**
+
+```typescript
+{
+  update: (updateInput) => void;     // Update the chart
+  dispose: () => void;               // Clean up resources
+  resetNavigation?: () => void;      // Reset to root (if navigation enabled)
+}
+```
+
+### layout(config)
+
+Compute arc geometries from configuration (layout-only mode).
+
+**Parameters:**
+- `config` (SunburstConfig): Chart configuration
+
+**Returns:**
+- `LayoutArc[]`: Array of computed arcs with geometry and metadata
+
+### formatArcBreadcrumb(arc)
+
+Generate a breadcrumb trail for an arc.
+
+**Parameters:**
+- `arc` (LayoutArc): The arc to generate breadcrumbs for
+
+**Returns:**
+- `BreadcrumbTrailItem[]`: Array of breadcrumb items
+
+---
+
+## Build & Development
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/aqu1tain/sandjs.git
+cd sandjs
+
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Build the library
+npm run build
+
+# Run tests and build
+npm run verify
+```
+
+### Development Server
+
+```bash
+npm run dev
+```
+
+Opens a development server at `http://localhost:4173` with live examples.
+
+### Project Structure
+
+```
+sandjs/
+├── src/
+│   ├── index.ts           # Public API exports
+│   ├── layout/            # Layout computation
+│   ├── render/            # SVG rendering
+│   └── types/             # TypeScript definitions
+├── demo/                  # Interactive examples
+├── dist/                  # Build output (generated)
+└── tests/                 # Test suite
+```
+
+### Build Output
+
+- `dist/sandjs.mjs`: ES Module (default)
+- `dist/sandjs.iife.min.js`: Minified IIFE for CDN usage
+- `dist/index.d.ts`: TypeScript type definitions
+
+---
+
+## CDN Usage
+
+For quick prototyping or non-bundled environments:
+
+```html
+<svg id="chart"></svg>
+
+<script src="https://unpkg.com/@akitain/sandjs@0.3.3/dist/sandjs.iife.min.js"></script>
+<script>
+  const { renderSVG } = window.SandJS;
+
+  renderSVG({
+    el: '#chart',
+    config: {
+      size: { radius: 200 },
+      layers: [
+        {
+          id: 'main',
+          radialUnits: [0, 2],
+          angleMode: 'free',
+          tree: [
+            { name: 'Category A', value: 40 },
+            { name: 'Category B', value: 60 }
+          ]
+        }
+      ]
+    },
+    tooltip: true
+  });
+</script>
+```
+
+---
+
+## License
 
 MIT © Aqu1tain
