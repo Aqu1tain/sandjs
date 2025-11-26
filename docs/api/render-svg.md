@@ -29,6 +29,10 @@ interface RenderSvgOptions {
   labels?: boolean | LabelOptions;
   colorTheme?: ColorThemeOptions;
 
+  // Styling
+  borderColor?: string;
+  borderWidth?: number;
+
   // Event callbacks
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
@@ -203,6 +207,104 @@ const chart = renderSVG({
     easing: (t) => t * t
   }
 });
+```
+
+### With Custom Borders
+
+```javascript
+const chart = renderSVG({
+  el: '#chart',
+  config,
+
+  // Global border styling for all arcs
+  borderColor: '#ffffff',
+  borderWidth: 2,
+
+  colorTheme: {
+    type: 'qualitative',
+    palette: 'ocean'
+  }
+});
+
+// Or use layer-specific borders in config
+const configWithLayerBorders = {
+  size: { radius: 200 },
+  layers: [
+    {
+      id: 'inner',
+      radialUnits: [0, 1],
+      angleMode: 'free',
+      borderColor: '#000000',  // Black borders for inner layer
+      borderWidth: 1,
+      tree: [...]
+    },
+    {
+      id: 'outer',
+      radialUnits: [1, 2],
+      angleMode: 'free',
+      borderColor: '#ff0000',  // Red borders for outer layer
+      borderWidth: 3,
+      tree: [...]
+    }
+  ]
+};
+```
+
+### With Label Customization
+
+```javascript
+// Auto-contrast labels (black on light, white on dark)
+const chart = renderSVG({
+  el: '#chart',
+  config,
+  labels: {
+    showLabels: true,
+    autoLabelColor: true  // Automatically choose black or white for contrast
+  },
+  colorTheme: {
+    type: 'qualitative',
+    palette: 'vibrant'
+  }
+});
+
+// Manual label color
+const chart2 = renderSVG({
+  el: '#chart',
+  config,
+  labels: {
+    showLabels: true,
+    labelColor: '#ffffff'  // White labels for all arcs
+  }
+});
+
+// Hide labels
+const chart3 = renderSVG({
+  el: '#chart',
+  config,
+  labels: false  // or { showLabels: false }
+});
+
+// Layer-specific and node-specific labels
+const configWithLabelOverrides = {
+  size: { radius: 200 },
+  layers: [
+    {
+      id: 'layer1',
+      radialUnits: [0, 1],
+      angleMode: 'free',
+      labelColor: '#ff0000',  // Red labels for this layer
+      showLabels: true,
+      tree: [
+        {
+          name: 'Custom',
+          value: 50,
+          labelColor: '#00ff00'  // Override with green for this node
+        },
+        { name: 'Default', value: 50 }
+      ]
+    }
+  ]
+};
 ```
 
 ### Dynamic Updates

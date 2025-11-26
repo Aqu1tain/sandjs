@@ -188,6 +188,10 @@ The root configuration object for your chart.
   baseOffset?: number;                 // Global rotation offset (radians)
   arcOffsetMode?: 'relative' | 'absolute'; // Offset calculation mode
   defaultArcOffset?: number;           // Default offset for all arcs
+  borderColor?: string;                // Border color for arcs in this layer
+  borderWidth?: number;                // Border width in pixels
+  labelColor?: string;                 // Label text color for this layer
+  showLabels?: boolean;                // Show/hide labels for this layer
   tree: TreeNodeInput | TreeNodeInput[]; // Data structure
 }
 ```
@@ -202,6 +206,7 @@ The root configuration object for your chart.
   expandLevels?: number;     // Radial thickness in rings (default: 1)
   offset?: number;           // Local angular offset
   color?: string;            // Custom color (CSS format)
+  labelColor?: string;       // Custom label text color
   children?: TreeNodeInput[]; // Child nodes
   tooltip?: string;          // Custom tooltip content
   collapsed?: boolean;       // Hide children while preserving value
@@ -622,7 +627,7 @@ For quick prototyping or non-bundled environments:
 ```html
 <svg id="chart"></svg>
 
-<script src="https://unpkg.com/@akitain/sandjs@0.3.3/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@0.3.4/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 

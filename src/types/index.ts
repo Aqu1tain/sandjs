@@ -27,6 +27,7 @@ export interface TreeNodeInput {
   expandLevels?: number;
   offset?: number;
   color?: string;
+  labelColor?: string;
   padAngle?: number;
   children?: TreeNodeInput[];
   tooltip?: string;
@@ -49,6 +50,10 @@ export interface LayerConfig {
   arcOffsetMode?: 'relative' | 'absolute';
   defaultArcOffset?: number;
   tree: TreeNodeInput | TreeNodeInput[];
+  borderColor?: string;
+  borderWidth?: number;
+  labelColor?: string;
+  showLabels?: boolean;
 }
 
 /**

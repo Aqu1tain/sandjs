@@ -184,8 +184,6 @@
     }
 
     .sand-arc {
-      stroke: #1a1f2e;
-      stroke-width: 2;
       transition: opacity 0.2s;
       cursor: pointer;
     }
@@ -197,7 +195,6 @@
     .sand-arc-label {
       font-size: 14px;
       font-weight: 500;
-      fill: #fff;
       text-shadow: 0 1px 3px rgba(0,0,0,0.5);
     }
 
@@ -258,6 +255,59 @@
           </select>
         </div>
 
+        <div class="control-group">
+          <label for="border-color">Border Color</label>
+          <select id="border-color">
+            <option value="">None</option>
+            <option value="#ffffff">White</option>
+            <option value="#000000">Black</option>
+            <option value="#1a1f2e" selected>Dark (Match Background)</option>
+            <option value="#60a5fa">Blue</option>
+            <option value="#34d399">Green</option>
+            <option value="#f87171">Red</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="border-width">Border Width</label>
+          <select id="border-width">
+            <option value="0">None (0)</option>
+            <option value="1">Thin (1)</option>
+            <option value="2" selected>Medium (2)</option>
+            <option value="3">Thick (3)</option>
+            <option value="4">Extra Thick (4)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="show-labels">Show Labels</label>
+          <select id="show-labels">
+            <option value="true" selected>Show</option>
+            <option value="false">Hide</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="label-color-mode">Label Color Mode</label>
+          <select id="label-color-mode">
+            <option value="auto" selected>Auto Contrast</option>
+            <option value="manual">Manual Color</option>
+            <option value="default">Default (Black)</option>
+          </select>
+        </div>
+
+        <div class="control-group" id="manual-label-color-group" style="display: none;">
+          <label for="manual-label-color">Manual Label Color</label>
+          <select id="manual-label-color">
+            <option value="#ffffff" selected>White</option>
+            <option value="#000000">Black</option>
+            <option value="#60a5fa">Blue</option>
+            <option value="#34d399">Green</option>
+            <option value="#f87171">Red</option>
+            <option value="#fbbf24">Yellow</option>
+          </select>
+        </div>
+
         <div class="palette-info" id="palette-info">
           <!-- Palette description -->
         </div>
@@ -294,7 +344,7 @@
 
     // Sample data
     const config = {
-      size: { radius: 280 },
+      size: { radius: 400 },
       layers: [
         {
           id: 'main',
@@ -356,6 +406,12 @@
     const themeTypeEl = document.getElementById('theme-type');
     const paletteEl = document.getElementById('palette');
     const assignByEl = document.getElementById('assign-by');
+    const borderColorEl = document.getElementById('border-color');
+    const borderWidthEl = document.getElementById('border-width');
+    const showLabelsEl = document.getElementById('show-labels');
+    const labelColorModeEl = document.getElementById('label-color-mode');
+    const manualLabelColorEl = document.getElementById('manual-label-color');
+    const manualLabelColorGroup = document.getElementById('manual-label-color-group');
     const paletteInfoEl = document.getElementById('palette-info');
     const arcCountEl = document.getElementById('arc-count');
     const colorCountEl = document.getElementById('color-count');
@@ -406,6 +462,11 @@
       const type = themeTypeEl.value;
       const palette = paletteEl.value;
       const assignBy = assignByEl.value;
+      const borderColor = borderColorEl.value;
+      const borderWidth = parseFloat(borderWidthEl.value);
+      const showLabels = showLabelsEl.value === 'true';
+      const labelColorMode = labelColorModeEl.value;
+      const manualLabelColor = manualLabelColorEl.value;
 
       // Set default assignBy based on type if not explicitly changed
       const defaultAssignBy = type === 'qualitative' ? 'key' : 'depth';
@@ -414,7 +475,7 @@
         chart.destroy();
       }
 
-      chart = renderSVG({
+      const renderOptions = {
         el: '#sunburst',
         config,
         colorTheme: {
@@ -425,7 +486,34 @@
         tooltip: true,
         navigation: true,
         transition: true
-      });
+      };
+
+      // Add border options if specified
+      if (borderColor) {
+        renderOptions.borderColor = borderColor;
+      }
+      if (borderWidth > 0) {
+        renderOptions.borderWidth = borderWidth;
+      }
+
+      // Add label options
+      if (labelColorMode === 'auto') {
+        renderOptions.labels = {
+          showLabels: showLabels,
+          autoLabelColor: true
+        };
+      } else if (labelColorMode === 'manual') {
+        renderOptions.labels = {
+          showLabels: showLabels,
+          labelColor: manualLabelColor,
+          autoLabelColor: false
+        };
+      } else {
+        // default mode - just use showLabels
+        renderOptions.labels = showLabels;
+      }
+
+      chart = renderSVG(renderOptions);
 
       // Update stats
       arcCountEl.textContent = chart.length;
@@ -457,6 +545,24 @@
     });
 
     assignByEl.addEventListener('change', render);
+
+    borderColorEl.addEventListener('change', render);
+
+    borderWidthEl.addEventListener('change', render);
+
+    showLabelsEl.addEventListener('change', render);
+
+    labelColorModeEl.addEventListener('change', () => {
+      // Show/hide manual color picker based on mode
+      if (labelColorModeEl.value === 'manual') {
+        manualLabelColorGroup.style.display = '';
+      } else {
+        manualLabelColorGroup.style.display = 'none';
+      }
+      render();
+    });
+
+    manualLabelColorEl.addEventListener('change', render);
   </script>
 </body>
 </html>

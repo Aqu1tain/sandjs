@@ -20,6 +20,10 @@ interface LayerConfig {
   baseOffset?: number;
   arcOffsetMode?: 'relative' | 'absolute';
   defaultArcOffset?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  labelColor?: string;
+  showLabels?: boolean;
 }
 ```
 
@@ -173,6 +177,71 @@ Default offset applied to all arcs in layer.
 defaultArcOffset: 0.05
 ```
 
+### borderColor
+
+Border (stroke) color for all arcs in this layer.
+
+**Type:** `string | undefined`
+
+**Default:** `undefined` (uses global `borderColor` if set)
+
+**Example:**
+```javascript
+borderColor: '#000000'  // Black borders
+borderColor: 'rgba(255, 255, 255, 0.5)'  // Semi-transparent white
+```
+
+This setting overrides the global `borderColor` option for arcs in this layer only.
+
+### borderWidth
+
+Border (stroke) width in pixels for all arcs in this layer.
+
+**Type:** `number | undefined`
+
+**Default:** `undefined` (uses global `borderWidth` if set)
+
+**Example:**
+```javascript
+borderWidth: 2  // 2px borders
+borderWidth: 0  // No borders
+```
+
+This setting overrides the global `borderWidth` option for arcs in this layer only.
+
+### labelColor
+
+Label text color for all arcs in this layer.
+
+**Type:** `string | undefined`
+
+**Default:** `undefined` (uses global label color settings)
+
+**Example:**
+```javascript
+labelColor: '#ffffff'  // White labels
+labelColor: 'rgb(255, 0, 0)'  // Red labels
+labelColor: 'rgba(0, 0, 0, 0.8)'  // Semi-transparent black
+```
+
+This setting overrides global label color options for this layer. Individual nodes can further override this with `TreeNodeInput.labelColor`.
+
+### showLabels
+
+Show or hide labels for all arcs in this layer.
+
+**Type:** `boolean | undefined`
+
+**Default:** `undefined` (uses global `labels.showLabels` setting)
+
+**Example:**
+```javascript
+showLabels: true   // Show labels for this layer
+showLabels: false  // Hide labels for this layer
+```
+
+This setting overrides the global `labels.showLabels` option for arcs in this layer only.
+
 ## Complete Examples
 
 ### Simple Free Layer
@@ -219,6 +288,57 @@ defaultArcOffset: 0.05
   tree: [
     { name: 'Arc 1', value: 50 },
     { name: 'Arc 2', value: 50, offset: 0.2 }  // Override default
+  ]
+}
+```
+
+### Layer with Custom Borders
+
+```javascript
+{
+  id: 'highlighted-layer',
+  radialUnits: [1, 2],
+  angleMode: 'free',
+  borderColor: '#ff0000',  // Red borders for this layer
+  borderWidth: 3,          // Thicker borders
+  tree: [
+    { name: 'Important A', value: 40 },
+    { name: 'Important B', value: 60 }
+  ]
+}
+```
+
+### Layer with Custom Labels
+
+```javascript
+{
+  id: 'special-layer',
+  radialUnits: [0, 1],
+  angleMode: 'free',
+  labelColor: '#ffff00',  // Yellow labels for this layer
+  showLabels: true,
+  tree: [
+    {
+      name: 'Custom Label',
+      value: 30,
+      labelColor: '#00ff00'  // Override with green for this specific node
+    },
+    { name: 'Normal Label', value: 70 }  // Uses layer's yellow
+  ]
+}
+```
+
+### Layer with Hidden Labels
+
+```javascript
+{
+  id: 'no-labels',
+  radialUnits: [1, 2],
+  angleMode: 'free',
+  showLabels: false,  // Hide all labels in this layer
+  tree: [
+    { name: 'Hidden', value: 50 },
+    { name: 'Also Hidden', value: 50 }
   ]
 }
 ```
