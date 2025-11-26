@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2025-01-26
+
 ### Added
 - **Border customization**: Added `borderColor` and `borderWidth` options to customize arc borders (strokes). Supports both global settings via `RenderSvgOptions` and per-layer overrides via `LayerConfig`. Layer-specific settings take priority over global options. Accepts any valid CSS color string for `borderColor` (hex, rgb, rgba, named colors) and numeric pixel values for `borderWidth`.
 
