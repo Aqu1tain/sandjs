@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Border customization**: Added `borderColor` and `borderWidth` options to customize arc borders (strokes). Supports both global settings via `RenderSvgOptions` and per-layer overrides via `LayerConfig`. Layer-specific settings take priority over global options. Accepts any valid CSS color string for `borderColor` (hex, rgb, rgba, named colors) and numeric pixel values for `borderWidth`.
 
+- **Label visibility and color control**: Added comprehensive label customization with three levels of control:
+  - **Global control** via `labels` option: `true`/`false` for simple enable/disable, or `LabelOptions` object with `showLabels`, `labelColor`, and `autoLabelColor` properties
+  - **Layer-level control** via `LayerConfig.showLabels` and `LayerConfig.labelColor` to override global settings per layer
+  - **Node-level control** via `TreeNodeInput.labelColor` for individual arc label colors (highest priority)
+  - **Auto-contrast mode**: When `autoLabelColor: true`, automatically chooses black or white label color based on arc background using WCAG relative luminance calculation for optimal readability
+  - Priority cascade: Node labelColor → Layer labelColor → Global labelColor → Auto-contrast → Default (#000000)
+
 ## [0.3.3] - 2025-11-21
 
 ### Fixed

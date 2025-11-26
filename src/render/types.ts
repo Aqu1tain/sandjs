@@ -63,6 +63,17 @@ export interface TransitionOptions {
 }
 
 /**
+ * Configures label behavior and styling for arcs.
+ *
+ * @public
+ */
+export interface LabelOptions {
+  showLabels?: boolean;
+  labelColor?: string;
+  autoLabelColor?: boolean;
+}
+
+/**
  * Color theme configuration for automatic arc coloring.
  *
  * Supports three theme types:
@@ -154,6 +165,7 @@ export interface RenderSvgOptions {
   breadcrumbs?: boolean | BreadcrumbOptions;
   transition?: boolean | TransitionOptions;
   navigation?: boolean | NavigationOptions;
+  labels?: boolean | LabelOptions;
   debug?: boolean;
   borderColor?: string;
   borderWidth?: number;

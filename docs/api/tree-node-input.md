@@ -17,6 +17,7 @@ interface TreeNodeInput {
   expandLevels?: number;
   offset?: number;
   color?: string;
+  labelColor?: string;
   padAngle?: number;
   children?: TreeNodeInput[];
   tooltip?: string;
@@ -157,6 +158,29 @@ color: 'hsl(0, 100%, 71%)'
 
 Overrides theme color for this arc.
 
+### labelColor
+
+Custom label text color for this node.
+
+**Type:** `string | undefined`
+
+**Example:**
+```javascript
+labelColor: '#ffffff'  // White label
+labelColor: 'rgb(255, 0, 0)'  // Red label
+labelColor: 'rgba(0, 0, 0, 0.8)'  // Semi-transparent black
+```
+
+**Priority:** This has the highest priority and overrides:
+- Global `labels.labelColor`
+- Layer `labelColor`
+- Auto-contrast color
+
+**Use cases:**
+- Highlight important nodes with distinct label colors
+- Ensure readability on custom arc colors
+- Create visual hierarchy
+
 ### children
 
 Nested child nodes for hierarchical structure.
@@ -286,8 +310,20 @@ tooltip: {
   value: 50,
   key: 'proj-001',
   color: '#ff0000',
+  labelColor: '#ffffff',  // White label on red arc
   expandLevels: 2,
   tooltip: 'High priority - needs attention'
+}
+```
+
+### Node with Custom Label Only
+
+```javascript
+{
+  name: 'Important',
+  value: 75,
+  labelColor: '#ffff00',  // Yellow label for visibility
+  tooltip: 'Highlighted with custom label color'
 }
 ```
 
