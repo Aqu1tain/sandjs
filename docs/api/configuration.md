@@ -870,16 +870,41 @@ See [Transitions Guide](../guides/transitions.md) for details.
 
 #### labels
 
-Enable text labels on arcs.
+Configure label visibility and appearance.
 
 ```javascript
-// Simple enable
-labels: true
+// Simple enable/disable
+labels: true   // Show labels with default color
+labels: false  // Hide all labels
 
-// Custom options
+// Auto-contrast labels (recommended)
+labels: {
+  showLabels: true,
+  autoLabelColor: true  // Automatically choose black or white based on background
+}
+
+// Manual label color
+labels: {
+  showLabels: true,
+  labelColor: '#ffffff'  // White labels for all arcs
+}
+
+// Just control visibility
+labels: {
+  showLabels: false  // Hide labels but keep other options available
+}
 ```
 
-See [Labels Guide](../guides/labels.md) for details.
+**Type:** `boolean | LabelOptions`
+
+**LabelOptions:**
+- `showLabels?: boolean` - Show or hide labels (default: true)
+- `labelColor?: string` - Color for all labels (any CSS color)
+- `autoLabelColor?: boolean` - Automatically choose black/white for optimal contrast (default: false)
+
+**Priority:** Node labelColor > Layer labelColor > Global labelColor > Auto-contrast > Default (#000000)
+
+**Note:** Layer-specific and node-specific label colors can override global settings.
 
 #### colorTheme
 

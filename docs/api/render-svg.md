@@ -250,6 +250,63 @@ const configWithLayerBorders = {
 };
 ```
 
+### With Label Customization
+
+```javascript
+// Auto-contrast labels (black on light, white on dark)
+const chart = renderSVG({
+  el: '#chart',
+  config,
+  labels: {
+    showLabels: true,
+    autoLabelColor: true  // Automatically choose black or white for contrast
+  },
+  colorTheme: {
+    type: 'qualitative',
+    palette: 'vibrant'
+  }
+});
+
+// Manual label color
+const chart2 = renderSVG({
+  el: '#chart',
+  config,
+  labels: {
+    showLabels: true,
+    labelColor: '#ffffff'  // White labels for all arcs
+  }
+});
+
+// Hide labels
+const chart3 = renderSVG({
+  el: '#chart',
+  config,
+  labels: false  // or { showLabels: false }
+});
+
+// Layer-specific and node-specific labels
+const configWithLabelOverrides = {
+  size: { radius: 200 },
+  layers: [
+    {
+      id: 'layer1',
+      radialUnits: [0, 1],
+      angleMode: 'free',
+      labelColor: '#ff0000',  // Red labels for this layer
+      showLabels: true,
+      tree: [
+        {
+          name: 'Custom',
+          value: 50,
+          labelColor: '#00ff00'  // Override with green for this node
+        },
+        { name: 'Default', value: 50 }
+      ]
+    }
+  ]
+};
+```
+
 ### Dynamic Updates
 
 ```javascript

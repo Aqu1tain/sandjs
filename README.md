@@ -190,6 +190,8 @@ The root configuration object for your chart.
   defaultArcOffset?: number;           // Default offset for all arcs
   borderColor?: string;                // Border color for arcs in this layer
   borderWidth?: number;                // Border width in pixels
+  labelColor?: string;                 // Label text color for this layer
+  showLabels?: boolean;                // Show/hide labels for this layer
   tree: TreeNodeInput | TreeNodeInput[]; // Data structure
 }
 ```
@@ -204,6 +206,7 @@ The root configuration object for your chart.
   expandLevels?: number;     // Radial thickness in rings (default: 1)
   offset?: number;           // Local angular offset
   color?: string;            // Custom color (CSS format)
+  labelColor?: string;       // Custom label text color
   children?: TreeNodeInput[]; // Child nodes
   tooltip?: string;          // Custom tooltip content
   collapsed?: boolean;       // Hide children while preserving value
