@@ -13,6 +13,7 @@ import { resolveDocument, resolveHostElement } from './runtime/document.js';
 import { createArcKey } from './keys.js';
 import { cloneSunburstConfig } from './config.js';
 import { createColorAssigner } from './colorAssignment.js';
+import { getContrastTextColor } from './colorUtils.js';
 import {
   SVG_NS,
   XLINK_NS,
@@ -217,6 +218,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           cy,
           navigationMorph,
           debug: state.currentOptions.debug ?? false,
+          renderOptions: state.currentOptions,
         });
       }
     }
@@ -351,7 +353,6 @@ function createManagedPath(params: {
   labelDefs.appendChild(labelPathElement);
 
   labelElement.setAttribute('class', 'sand-arc-label');
-  labelElement.setAttribute('fill', '#000');
   labelElement.setAttribute('text-anchor', 'middle');
   labelElement.setAttribute('dominant-baseline', 'middle');
   labelElement.setAttribute('aria-hidden', 'true');
@@ -485,6 +486,11 @@ function updateManagedPath(
     }
   }
 
+  // Apply color from theme or node.color override
+  const themeColor = getArcColor(arc, index);
+  const fillColor = arc.data.color ?? themeColor ?? 'currentColor';
+  element.setAttribute('fill', fillColor);
+
   const animateArc = Boolean(transition && animationFrom && hasArcGeometryChanged(animationFrom, arc));
   if (animateArc) {
     startArcAnimation({
@@ -497,17 +503,14 @@ function updateManagedPath(
       cx,
       cy,
       debug: options.debug ?? false,
+      renderOptions: options,
+      arcColor: fillColor,
     });
   } else {
     stopArcAnimation(managed);
     applyPathData(element, pathData);
-    updateArcLabel(managed, arc, { cx, cy, allowLogging: options.debug ?? false });
+    updateArcLabel(managed, arc, { cx, cy, allowLogging: options.debug ?? false, renderOptions: options, arcColor: fillColor });
   }
-
-  // Apply color from theme or node.color override
-  const themeColor = getArcColor(arc, index);
-  const fillColor = arc.data.color ?? themeColor ?? 'currentColor';
-  element.setAttribute('fill', fillColor);
 
   // Apply border color and width
   // Priority: layer config > global options > default
@@ -637,6 +640,8 @@ type UpdateArcLabelOptions = {
   cx: number;
   cy: number;
   allowLogging: boolean;
+  renderOptions: RenderSvgOptions;
+  arcColor: string;
 };
 
 type LabelEvaluation = {
@@ -650,10 +655,21 @@ type LabelEvaluation = {
 };
 
 function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: UpdateArcLabelOptions): void {
-  const { cx, cy, allowLogging } = options;
+  const { cx, cy, allowLogging, renderOptions, arcColor } = options;
 
   if (managed.pendingRemoval) {
     hideLabel(managed, 'pending-removal');
+    return;
+  }
+
+  // Check if labels should be shown (global, layer, or default to true)
+  const labelOptions = renderOptions.labels;
+  const globalShowLabels = typeof labelOptions === 'boolean' ? labelOptions : labelOptions?.showLabels ?? true;
+  const layer = renderOptions.config.layers.find(l => l.id === arc.layerId);
+  const layerShowLabels = layer?.showLabels ?? globalShowLabels;
+
+  if (!layerShowLabels) {
+    hideLabel(managed, 'labels-disabled');
     return;
   }
 
@@ -683,7 +699,24 @@ function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: UpdateArc
     return;
   }
 
-  showLabel(managed, text, evaluation, arc);
+  // Determine label color with priority: node > layer > global > auto-contrast > default
+  const autoLabelColor = typeof labelOptions === 'object' ? labelOptions?.autoLabelColor ?? false : false;
+  const globalLabelColor = typeof labelOptions === 'object' ? labelOptions?.labelColor : undefined;
+
+  let labelColor: string;
+  if (arc.data.labelColor) {
+    labelColor = arc.data.labelColor;
+  } else if (layer?.labelColor) {
+    labelColor = layer.labelColor;
+  } else if (globalLabelColor) {
+    labelColor = globalLabelColor;
+  } else if (autoLabelColor) {
+    labelColor = getContrastTextColor(arcColor);
+  } else {
+    labelColor = '#000000'; // Default black
+  }
+
+  showLabel(managed, text, evaluation, arc, labelColor);
 }
 
 function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: number): LabelEvaluation {
@@ -796,7 +829,7 @@ function createLabelArcPath(params: {
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`;
 }
 
-function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation, arc: LayoutArc): void {
+function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation, arc: LayoutArc, labelColor: string): void {
   const { labelElement, textPathElement, labelPathElement } = managed;
   if (!evaluation.x || !evaluation.y || !evaluation.fontSize || !evaluation.pathData) {
     return;
@@ -808,6 +841,7 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
   labelElement.style.display = '';
   labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
   labelElement.style.opacity = managed.element.style.opacity;
+  labelElement.setAttribute('fill', labelColor);
   labelElement.setAttribute('data-layer', arc.layerId);
   labelElement.setAttribute('data-depth', String(arc.depth));
   labelPathElement.setAttribute('d', evaluation.pathData);
@@ -901,8 +935,10 @@ function startArcAnimation(params: {
   cx: number;
   cy: number;
   debug: boolean;
+  renderOptions: RenderSvgOptions;
+  arcColor: string;
 }): void {
-  const { managed, from, to, finalPath, transition, drivers, cx, cy, debug } = params;
+  const { managed, from, to, finalPath, transition, drivers, cx, cy, debug, renderOptions, arcColor } = params;
   stopArcAnimation(managed);
 
   const element = managed.element;
@@ -915,16 +951,16 @@ function startArcAnimation(params: {
       const frameArc = interpolateArc(from, to, progress);
       const framePath = describeArcPath(frameArc, cx, cy) ?? finalPath;
       applyPathData(element, framePath);
-      updateArcLabel(managed, frameArc, { cx, cy, allowLogging: false });
+      updateArcLabel(managed, frameArc, { cx, cy, allowLogging: false, renderOptions, arcColor });
     },
     onComplete: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: debug });
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor });
       managed.animation = null;
     },
     onCancel: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: debug });
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor });
       managed.animation = null;
     },
   });
@@ -1080,8 +1116,9 @@ function scheduleManagedRemoval(params: {
   cy: number;
   navigationMorph: boolean;
   debug: boolean;
+  renderOptions: RenderSvgOptions;
 }): void {
-  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph, debug } = params;
+  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph, debug, renderOptions } = params;
   if (managed.pendingRemoval) {
     return;
   }
@@ -1115,6 +1152,7 @@ function scheduleManagedRemoval(params: {
   if (navigationMorph) {
     const collapsedArc = createCollapsedArc(managed.arc);
     const collapsedPath = describeArcPath(collapsedArc, cx, cy) ?? '';
+    const arcColor = managed.element.getAttribute('fill') || 'currentColor';
     startArcAnimation({
       managed,
       from: managed.arc,
@@ -1125,6 +1163,8 @@ function scheduleManagedRemoval(params: {
       cx,
       cy,
       debug,
+      renderOptions,
+      arcColor,
     });
   }
 

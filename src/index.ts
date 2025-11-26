@@ -29,6 +29,7 @@ export type {
   NavigationOptions,
   NavigationFocusState,
   ColorThemeOptions,
+  LabelOptions,
 } from './render/types.js';
 export type {
   QualitativePaletteName,
