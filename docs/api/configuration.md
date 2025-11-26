@@ -735,6 +735,9 @@ interface RenderSvgOptions {
   labels?: boolean | LabelOptions;
   colorTheme?: ColorThemeOptions;
 
+  borderColor?: string;
+  borderWidth?: number;
+
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
   onArcLeave?: (payload: ArcPointerEventPayload) => void;
@@ -891,6 +894,81 @@ colorTheme: {
 ```
 
 See [Color Themes Guide](../guides/color-themes.md) for details.
+
+### Styling Options
+
+#### borderColor
+
+Global border color for all arcs.
+
+```javascript
+renderSVG({
+  el: '#chart',
+  config,
+  borderColor: '#ffffff'  // White borders
+});
+```
+
+**Type:** `string | undefined`
+
+**Default:** `undefined` (no borders)
+
+**Accepts:** Any valid CSS color string (hex, rgb, rgba, named colors)
+
+**Notes:**
+- Can be overridden per layer using `LayerConfig.borderColor`
+- Use `rgba()` for semi-transparent borders
+- Set to match background for seamless appearance
+
+#### borderWidth
+
+Global border width for all arcs in pixels.
+
+```javascript
+renderSVG({
+  el: '#chart',
+  config,
+  borderWidth: 2  // 2px borders
+});
+```
+
+**Type:** `number | undefined`
+
+**Default:** `undefined` (no borders)
+
+**Notes:**
+- Can be overridden per layer using `LayerConfig.borderWidth`
+- Set to `0` to explicitly disable borders
+- Larger values create more visual separation
+
+**Example with both:**
+```javascript
+renderSVG({
+  el: '#chart',
+  config: {
+    size: { radius: 250 },
+    layers: [
+      {
+        id: 'inner',
+        radialUnits: [0, 1],
+        angleMode: 'free',
+        borderColor: '#000000',  // Override: black borders for inner
+        borderWidth: 1,
+        tree: [...]
+      },
+      {
+        id: 'outer',
+        radialUnits: [1, 2],
+        angleMode: 'free',
+        // Uses global border settings
+        tree: [...]
+      }
+    ]
+  },
+  borderColor: '#ffffff',  // Global: white borders
+  borderWidth: 2
+});
+```
 
 ### Event Callbacks
 

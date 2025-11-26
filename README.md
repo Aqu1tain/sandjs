@@ -188,6 +188,8 @@ The root configuration object for your chart.
   baseOffset?: number;                 // Global rotation offset (radians)
   arcOffsetMode?: 'relative' | 'absolute'; // Offset calculation mode
   defaultArcOffset?: number;           // Default offset for all arcs
+  borderColor?: string;                // Border color for arcs in this layer
+  borderWidth?: number;                // Border width in pixels
   tree: TreeNodeInput | TreeNodeInput[]; // Data structure
 }
 ```

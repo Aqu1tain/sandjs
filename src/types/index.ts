@@ -49,6 +49,8 @@ export interface LayerConfig {
   arcOffsetMode?: 'relative' | 'absolute';
   defaultArcOffset?: number;
   tree: TreeNodeInput | TreeNodeInput[];
+  borderColor?: string;
+  borderWidth?: number;
 }
 
 /**

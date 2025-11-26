@@ -184,8 +184,6 @@
     }
 
     .sand-arc {
-      stroke: #1a1f2e;
-      stroke-width: 2;
       transition: opacity 0.2s;
       cursor: pointer;
     }
@@ -255,6 +253,30 @@
             <option value="depth">By Depth (Hierarchical)</option>
             <option value="index">By Index (Sequential)</option>
             <option value="value">By Value (Magnitude)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="border-color">Border Color</label>
+          <select id="border-color">
+            <option value="">None</option>
+            <option value="#ffffff">White</option>
+            <option value="#000000">Black</option>
+            <option value="#1a1f2e" selected>Dark (Match Background)</option>
+            <option value="#60a5fa">Blue</option>
+            <option value="#34d399">Green</option>
+            <option value="#f87171">Red</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="border-width">Border Width</label>
+          <select id="border-width">
+            <option value="0">None (0)</option>
+            <option value="1">Thin (1)</option>
+            <option value="2" selected>Medium (2)</option>
+            <option value="3">Thick (3)</option>
+            <option value="4">Extra Thick (4)</option>
           </select>
         </div>
 
@@ -356,6 +378,8 @@
     const themeTypeEl = document.getElementById('theme-type');
     const paletteEl = document.getElementById('palette');
     const assignByEl = document.getElementById('assign-by');
+    const borderColorEl = document.getElementById('border-color');
+    const borderWidthEl = document.getElementById('border-width');
     const paletteInfoEl = document.getElementById('palette-info');
     const arcCountEl = document.getElementById('arc-count');
     const colorCountEl = document.getElementById('color-count');
@@ -406,6 +430,8 @@
       const type = themeTypeEl.value;
       const palette = paletteEl.value;
       const assignBy = assignByEl.value;
+      const borderColor = borderColorEl.value;
+      const borderWidth = parseFloat(borderWidthEl.value);
 
       // Set default assignBy based on type if not explicitly changed
       const defaultAssignBy = type === 'qualitative' ? 'key' : 'depth';
@@ -414,7 +440,7 @@
         chart.destroy();
       }
 
-      chart = renderSVG({
+      const renderOptions = {
         el: '#sunburst',
         config,
         colorTheme: {
@@ -425,7 +451,17 @@
         tooltip: true,
         navigation: true,
         transition: true
-      });
+      };
+
+      // Add border options if specified
+      if (borderColor) {
+        renderOptions.borderColor = borderColor;
+      }
+      if (borderWidth > 0) {
+        renderOptions.borderWidth = borderWidth;
+      }
+
+      chart = renderSVG(renderOptions);
 
       // Update stats
       arcCountEl.textContent = chart.length;
@@ -457,6 +493,10 @@
     });
 
     assignByEl.addEventListener('change', render);
+
+    borderColorEl.addEventListener('change', render);
+
+    borderWidthEl.addEventListener('change', render);
   </script>
 </body>
 </html>

@@ -20,6 +20,8 @@ interface LayerConfig {
   baseOffset?: number;
   arcOffsetMode?: 'relative' | 'absolute';
   defaultArcOffset?: number;
+  borderColor?: string;
+  borderWidth?: number;
 }
 ```
 
@@ -173,6 +175,38 @@ Default offset applied to all arcs in layer.
 defaultArcOffset: 0.05
 ```
 
+### borderColor
+
+Border (stroke) color for all arcs in this layer.
+
+**Type:** `string | undefined`
+
+**Default:** `undefined` (uses global `borderColor` if set)
+
+**Example:**
+```javascript
+borderColor: '#000000'  // Black borders
+borderColor: 'rgba(255, 255, 255, 0.5)'  // Semi-transparent white
+```
+
+This setting overrides the global `borderColor` option for arcs in this layer only.
+
+### borderWidth
+
+Border (stroke) width in pixels for all arcs in this layer.
+
+**Type:** `number | undefined`
+
+**Default:** `undefined` (uses global `borderWidth` if set)
+
+**Example:**
+```javascript
+borderWidth: 2  // 2px borders
+borderWidth: 0  // No borders
+```
+
+This setting overrides the global `borderWidth` option for arcs in this layer only.
+
 ## Complete Examples
 
 ### Simple Free Layer
@@ -219,6 +253,22 @@ defaultArcOffset: 0.05
   tree: [
     { name: 'Arc 1', value: 50 },
     { name: 'Arc 2', value: 50, offset: 0.2 }  // Override default
+  ]
+}
+```
+
+### Layer with Custom Borders
+
+```javascript
+{
+  id: 'highlighted-layer',
+  radialUnits: [1, 2],
+  angleMode: 'free',
+  borderColor: '#ff0000',  // Red borders for this layer
+  borderWidth: 3,          // Thicker borders
+  tree: [
+    { name: 'Important A', value: 40 },
+    { name: 'Important B', value: 60 }
   ]
 }
 ```

@@ -155,6 +155,8 @@ export interface RenderSvgOptions {
   transition?: boolean | TransitionOptions;
   navigation?: boolean | NavigationOptions;
   debug?: boolean;
+  borderColor?: string;
+  borderWidth?: number;
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
   onArcLeave?: (payload: ArcPointerEventPayload) => void;

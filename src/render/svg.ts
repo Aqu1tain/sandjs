@@ -508,6 +508,20 @@ function updateManagedPath(
   const themeColor = getArcColor(arc, index);
   const fillColor = arc.data.color ?? themeColor ?? 'currentColor';
   element.setAttribute('fill', fillColor);
+
+  // Apply border color and width
+  // Priority: layer config > global options > default
+  const layer = options.config.layers.find(l => l.id === arc.layerId);
+  const borderColor = layer?.borderColor ?? options.borderColor;
+  const borderWidth = layer?.borderWidth ?? options.borderWidth;
+
+  if (borderColor) {
+    element.setAttribute('stroke', borderColor);
+  }
+  if (borderWidth !== undefined) {
+    element.setAttribute('stroke-width', String(borderWidth));
+  }
+
   element.setAttribute('data-layer', arc.layerId);
   element.setAttribute('data-name', arc.data.name);
   element.setAttribute('data-depth', String(arc.depth));
