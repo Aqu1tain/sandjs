@@ -29,6 +29,10 @@ interface RenderSvgOptions {
   labels?: boolean | LabelOptions;
   colorTheme?: ColorThemeOptions;
 
+  // Styling
+  borderColor?: string;
+  borderWidth?: number;
+
   // Event callbacks
   onArcEnter?: (payload: ArcPointerEventPayload) => void;
   onArcMove?: (payload: ArcPointerEventPayload) => void;
@@ -203,6 +207,47 @@ const chart = renderSVG({
     easing: (t) => t * t
   }
 });
+```
+
+### With Custom Borders
+
+```javascript
+const chart = renderSVG({
+  el: '#chart',
+  config,
+
+  // Global border styling for all arcs
+  borderColor: '#ffffff',
+  borderWidth: 2,
+
+  colorTheme: {
+    type: 'qualitative',
+    palette: 'ocean'
+  }
+});
+
+// Or use layer-specific borders in config
+const configWithLayerBorders = {
+  size: { radius: 200 },
+  layers: [
+    {
+      id: 'inner',
+      radialUnits: [0, 1],
+      angleMode: 'free',
+      borderColor: '#000000',  // Black borders for inner layer
+      borderWidth: 1,
+      tree: [...]
+    },
+    {
+      id: 'outer',
+      radialUnits: [1, 2],
+      angleMode: 'free',
+      borderColor: '#ff0000',  // Red borders for outer layer
+      borderWidth: 3,
+      tree: [...]
+    }
+  ]
+};
 ```
 
 ### Dynamic Updates

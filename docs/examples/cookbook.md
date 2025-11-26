@@ -366,6 +366,84 @@ function generateConfig() {
 }
 ```
 
+## Pattern: Custom Border Styling
+
+Add visual separation between arcs with borders:
+
+```javascript
+// Global borders for all arcs
+const chart = renderSVG({
+  el: '#chart',
+  config,
+  borderColor: '#ffffff',
+  borderWidth: 2,
+  tooltip: true
+});
+
+// Layer-specific borders with different colors
+const configWithLayerBorders = {
+  size: { radius: 250 },
+  layers: [
+    {
+      id: 'categories',
+      radialUnits: [0, 1],
+      angleMode: 'free',
+      borderColor: '#000000',  // Black borders
+      borderWidth: 2,
+      tree: [
+        { name: 'Category A', value: 40 },
+        { name: 'Category B', value: 60 }
+      ]
+    },
+    {
+      id: 'details',
+      radialUnits: [1, 2],
+      angleMode: 'free',
+      borderColor: 'rgba(255, 255, 255, 0.3)',  // Semi-transparent
+      borderWidth: 1,
+      tree: [
+        { name: 'Detail 1', value: 25 },
+        { name: 'Detail 2', value: 35 },
+        { name: 'Detail 3', value: 40 }
+      ]
+    }
+  ]
+};
+
+// Use CSS variables for dynamic theming
+const styles = document.createElement('style');
+styles.textContent = `
+  :root {
+    --chart-border-color: #333;
+    --chart-border-width: 2px;
+  }
+
+  .sand-arc {
+    stroke: var(--chart-border-color);
+    stroke-width: var(--chart-border-width);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --chart-border-color: #eee;
+    }
+  }
+`;
+document.head.appendChild(styles);
+
+// Match borders to background for seamless look
+const seamlessChart = renderSVG({
+  el: '#seamless-chart',
+  config,
+  borderColor: '#1a1f2e',  // Same as dark background
+  borderWidth: 2,
+  colorTheme: {
+    type: 'qualitative',
+    palette: 'vibrant'
+  }
+});
+```
+
 ---
 
 [← Back to Documentation](../README.md)
