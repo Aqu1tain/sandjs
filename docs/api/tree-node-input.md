@@ -20,6 +20,7 @@ interface TreeNodeInput {
   labelColor?: string;
   padAngle?: number;
   children?: TreeNodeInput[];
+  parents?: string[];  // EXPERIMENTAL
   tooltip?: string;
   collapsed?: boolean;
   hidden?: boolean;
@@ -203,6 +204,41 @@ children: [
   }
 ]
 ```
+
+### parents
+
+**⚠️ EXPERIMENTAL FEATURE**
+
+Array of parent keys that creates a unified parent arc spanning multiple nodes.
+
+**Type:** `string[] | undefined`
+
+**Example:**
+```javascript
+{
+  name: 'Frontend Team',
+  value: 25,
+  parents: ['dept-eng', 'dept-design']
+  // This node becomes a child of the unified Engineering+Design parent
+}
+```
+
+**How it works:**
+- Parent nodes with matching keys are unified into ONE combined arc
+- This node becomes a child of that unified parent
+- Multiple nodes can share the same `parents` array
+
+**Constraints:**
+- Must be an array of at least 2 strings
+- Each string must match a `key` property of a root-level node in the same layer
+- Parent nodes should not have their own `children`
+
+**Use cases:**
+- Shared resources across departments
+- Matrix organizational structures
+- Many-to-many relationships
+
+See [Configuration Reference](./configuration.md#parents) for detailed documentation.
 
 ### tooltip
 

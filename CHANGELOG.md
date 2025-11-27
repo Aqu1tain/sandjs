@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-parent nodes (EXPERIMENTAL)**: Added `parents` property to `TreeNodeInput` to create unified parent arcs spanning multiple nodes. When a node specifies `parents: ['key1', 'key2']`, the parent nodes with those keys are treated as ONE combined arc, and the node becomes a child of that unified parent. Multiple nodes can share the same parent set, creating many-to-many relationships. This feature is marked as experimental and includes a console warning on first use due to potential issues with animations, value calculations, and navigation. Parent nodes in a multi-parent group should not have their own individual children.
+
 ## [0.3.4] - 2025-01-26
 
 ### Added

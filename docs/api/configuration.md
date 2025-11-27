@@ -714,6 +714,103 @@ Completely hide this node from layout.
 - `collapsed`: Hides children, keeps value
 - `hidden`: Removes node entirely
 
+#### parents
+
+**⚠️ EXPERIMENTAL FEATURE - Use at your own risk**
+
+Array of parent keys that creates a unified parent arc spanning multiple nodes. When multiple parent keys are specified, those parent nodes are treated as ONE combined arc, and this node becomes a child of that unified parent.
+
+```javascript
+{
+  name: 'Frontend Team',
+  value: 30,
+  parents: ['dept-eng', 'dept-design']
+  // This node will be a child of the unified Engineering+Design parent
+}
+```
+
+**Behavior:**
+- Parent nodes with matching keys are unified into a single combined arc
+- The combined arc spans from the start of the first parent to the end of the last parent
+- Multiple nodes can share the same `parents` array and will all be children of the unified parent
+- Parent nodes referenced in `parents` arrays should not have their own individual children
+- A console warning will appear the first time this feature is used
+
+**How it works:**
+1. Nodes with a `parents` property are extracted during normalization
+2. After laying out base nodes, parent arcs are found by their keys
+3. A combined angular span is calculated (from min start to max end of all parent arcs)
+4. Multi-parent children are laid out within that combined span
+
+**⚠️ Warning:**
+This feature may cause unexpected behavior with:
+- Animations and transitions
+- Value calculations (parents lose their individual values)
+- Key-based highlighting
+- Navigation and drill-down
+
+**Constraints:**
+- Must be an array of at least 2 strings
+- Each string must match the `key` property of a root-level node in the same layer
+- Parent nodes should not have their own `children` property
+- Parent keys must reference existing nodes
+
+**Example:**
+```javascript
+{
+  size: { radius: 200 },
+  layers: [
+    {
+      id: 'main',
+      radialUnits: [0, 3],
+      angleMode: 'free',
+      tree: [
+        {
+          name: 'Engineering',
+          key: 'dept-eng',
+          value: 40  // No children - will be unified
+        },
+        {
+          name: 'Design',
+          key: 'dept-design',
+          value: 30  // No children - will be unified
+        },
+        {
+          name: 'Product',
+          key: 'dept-product',
+          value: 30
+        },
+        // These nodes are children of the unified Eng+Design parent
+        {
+          name: 'Frontend Team',
+          value: 25,
+          parents: ['dept-eng', 'dept-design']
+        },
+        {
+          name: 'Shared Tools',
+          value: 20,
+          parents: ['dept-eng', 'dept-design']
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Visual result:**
+- Engineering and Design appear side-by-side
+- Frontend Team and Shared Tools appear in a deeper ring, spanning across both Engineering and Design arcs
+- Product appears normally with no unified children
+
+**Use cases:**
+- Shared resources across departments
+- Matrix organizational structures
+- Cross-functional teams spanning multiple divisions
+- Many-to-many relationships
+
+**Recommended approach:**
+This feature is experimental. For simpler cases, consider using multiple layers with alignment instead.
+
 ---
 
 ## RenderSvgOptions

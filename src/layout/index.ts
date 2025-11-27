@@ -1,5 +1,5 @@
 import { LayoutArc, LayerConfig, SunburstConfig } from '../types/index.js';
-import { normalizeTree, normalizePad, normalizeRotation } from './normalization.js';
+import { normalizeTree, normalizePad, normalizeRotation, type MultiParentGroup } from './normalization.js';
 import { layoutAlignedLayer } from './aligned.js';
 import { layoutSiblingsFree } from './free.js';
 import type { LayerContext } from './shared.js';
@@ -62,8 +62,11 @@ function layoutLayer(params: {
     throw new Error(`Layer "${layer.id}" must declare radialUnits with end > start`);
   }
 
-  const roots = normalizeTree(layer.tree);
-  if (roots.length === 0) {
+  const normalizationResult = normalizeTree(layer.tree);
+  const roots = normalizationResult.nodes;
+  const multiParentGroups = normalizationResult.multiParentGroups;
+
+  if (roots.length === 0 && multiParentGroups.length === 0) {
     return [];
   }
 
@@ -84,6 +87,8 @@ function layoutLayer(params: {
     totalAngle,
   );
   const span = totalAngle;
+
+  // Layout normal nodes first
   layoutSiblingsFree({
     siblings: roots,
     context,
@@ -94,5 +99,75 @@ function layoutLayer(params: {
     padAngle: normalizePad(layer.padAngle),
   });
 
+  // Layout multi-parent groups
+  layoutMultiParentGroups({
+    groups: multiParentGroups,
+    context,
+    padAngle: normalizePad(layer.padAngle),
+  });
+
   return context.arcs;
+}
+
+/**
+ * Layouts multi-parent groups by finding parent arcs and creating unified parent spans
+ */
+function layoutMultiParentGroups(params: {
+  groups: MultiParentGroup[];
+  context: LayerContext;
+  padAngle: number;
+}): void {
+  const { groups, context, padAngle } = params;
+
+  for (const group of groups) {
+    // Find all arcs with keys matching the parent keys
+    const parentArcs = context.arcs.filter(arc =>
+      arc.key && group.parentKeys.includes(arc.key)
+    );
+
+    if (parentArcs.length === 0) {
+      console.warn(
+        `[Sand.js] Multi-parent group references non-existent parent keys: ${group.parentKeys.join(', ')}`
+      );
+      continue;
+    }
+
+    if (parentArcs.length !== group.parentKeys.length) {
+      const foundKeys = parentArcs.map(arc => arc.key).filter(Boolean);
+      const missingKeys = group.parentKeys.filter(key => !foundKeys.includes(key));
+      console.warn(
+        `[Sand.js] Multi-parent group is missing parent arcs for keys: ${missingKeys.join(', ')}`
+      );
+    }
+
+    // Calculate combined angular span
+    const startAngle = Math.min(...parentArcs.map(arc => arc.x0));
+    const endAngle = Math.max(...parentArcs.map(arc => arc.x1));
+    const span = endAngle - startAngle;
+
+    // Calculate depth (use maximum depth of parent arcs + 1)
+    const maxParentDepth = Math.max(...parentArcs.map(arc => arc.depth));
+    const depth = maxParentDepth + 1;
+
+    // Calculate radial position in units (not pixels!)
+    // Parent arcs at depth 0 extend from depthUnits=0 by their expandLevels
+    // Children should start after the thickest parent
+    const maxParentExpandLevels = Math.max(
+      ...parentArcs.map(arc => arc.data.expandLevels ?? 1)
+    );
+
+    // Children start where parents end
+    const depthUnits = maxParentExpandLevels;
+
+    // Layout the children within the combined span
+    layoutSiblingsFree({
+      siblings: group.children,
+      context,
+      startAngle,
+      span,
+      depthUnits,
+      depth,
+      padAngle,
+    });
+  }
 }
