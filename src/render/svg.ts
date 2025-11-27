@@ -866,6 +866,14 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
   labelElement.setAttribute('data-layer', arc.layerId);
   labelElement.setAttribute('data-depth', String(arc.depth));
 
+  // Enable CSS transitions for smooth crossfade
+  if (!textPathElement.style.transition) {
+    textPathElement.style.transition = 'opacity 0.3s ease-in-out';
+  }
+  if (!straightTextElement.style.transition) {
+    straightTextElement.style.transition = 'opacity 0.3s ease-in-out';
+  }
+
   if (useStraightLabel) {
     // Use straight text at center
     if (straightTextElement.textContent !== text) {
@@ -874,11 +882,18 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
     straightTextElement.style.display = '';
     straightTextElement.setAttribute('x', String(cx));
     straightTextElement.setAttribute('y', String(cy));
+    straightTextElement.style.opacity = '1';
 
-    // Hide curved text elements
-    textPathElement.style.display = 'none';
-    textPathElement.textContent = '';
-    labelPathElement.removeAttribute('d');
+    // Fade out and hide curved text elements
+    textPathElement.style.opacity = '0';
+    // Wait for fade out before hiding to avoid flash
+    setTimeout(() => {
+      if (straightTextElement.style.opacity === '1') {
+        textPathElement.style.display = 'none';
+        textPathElement.textContent = '';
+        labelPathElement.removeAttribute('d');
+      }
+    }, 300);
 
     labelElement.removeAttribute('transform');
     labelElement.removeAttribute('data-inverted');
@@ -895,10 +910,17 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
     labelPathElement.setAttribute('d', evaluation.pathData);
     textPathElement.setAttribute('startOffset', '50%');
     textPathElement.setAttribute('spacing', 'auto');
+    textPathElement.style.opacity = '1';
 
-    // Hide straight text element
-    straightTextElement.style.display = 'none';
-    straightTextElement.textContent = '';
+    // Fade out and hide straight text element
+    straightTextElement.style.opacity = '0';
+    // Wait for fade out before hiding to avoid flash
+    setTimeout(() => {
+      if (textPathElement.style.opacity === '1') {
+        straightTextElement.style.display = 'none';
+        straightTextElement.textContent = '';
+      }
+    }, 300);
 
     labelElement.removeAttribute('transform');
     if (evaluation.inverted) {
@@ -925,8 +947,10 @@ function hideLabel(
     managed.labelVisible = false;
     managed.textPathElement.textContent = '';
     managed.textPathElement.style.display = 'none';
+    managed.textPathElement.style.opacity = '';
     managed.straightTextElement.textContent = '';
     managed.straightTextElement.style.display = 'none';
+    managed.straightTextElement.style.opacity = '';
     managed.labelPathElement.removeAttribute('d');
     managed.labelElement.removeAttribute('transform');
     managed.labelElement.removeAttribute('data-inverted');
