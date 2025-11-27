@@ -84,8 +84,12 @@
   </div>
 
   <div class="description">
-    This demo shows nodes with the <code>parents</code> property that unify multiple parent arcs.
-    Engineering and Design are treated as ONE unified parent, and Frontend/Shared Tools are children of this combined arc.
+    This demo shows <strong>NESTED</strong> multi-parent nodes! Now you can use the <code>parents</code> property at any depth.
+    <br><br>
+    <strong>Root-level:</strong> Engineering + Design → Frontend Team (outer ring)
+    <br>
+    <strong>Nested:</strong> Backend + DevOps → Shared Infrastructure (inside Engineering)
+    <br><br>
     Open your browser console to see the experimental feature warning.
   </div>
 
@@ -103,15 +107,35 @@
       layers: [
         {
           id: 'main',
-          radialUnits: [0, 3],
+          radialUnits: [0, 4],
           angleMode: 'free',
           padAngle: 0.01,
           tree: [
             {
               name: 'Engineering',
               key: 'dept-eng',
-              value: 40,
-              color: '#4ecdc4'
+              color: '#4ecdc4',
+              children: [
+                {
+                  name: 'Backend',
+                  key: 'backend',
+                  value: 20,
+                  color: '#45b7af'
+                },
+                {
+                  name: 'DevOps',
+                  key: 'devops',
+                  value: 15,
+                  color: '#3da39c'
+                },
+                // NESTED multi-parent node!
+                {
+                  name: 'Shared Infra',
+                  value: 10,
+                  color: '#ffb347',
+                  parents: ['backend', 'devops']
+                }
+              ]
             },
             {
               name: 'Design',
@@ -125,12 +149,12 @@
               value: 30,
               color: '#f38181'
             },
-            // Multi-parent nodes: these will be children of the unified Eng+Design parent
+            // ROOT-LEVEL multi-parent node
             {
               name: 'Frontend Team',
               value: 25,
               color: '#ff6b6b',
-              parents: ['dept-eng', 'dept-design']
+              parents: ['dept-product', 'dept-design']
             }
           ]
         }
@@ -149,9 +173,15 @@
       borderWidth: 2
     });
 
-    console.log('✅ Chart rendered. Engineering and Design form a unified parent arc.');
-    console.log('💡 Frontend Team and Shared Tools appear as children of the combined Eng+Design arc.');
-    console.log('🔍 Notice how the multi-parent children span across both parent arcs.');
+    console.log('✅ Chart rendered with NESTED multi-parent nodes!');
+    console.log('');
+    console.log('🔵 ROOT-LEVEL multi-parent:');
+    console.log('   Engineering + Design → Frontend Team (outer ring)');
+    console.log('');
+    console.log('🟠 NESTED multi-parent:');
+    console.log('   Backend + DevOps → Shared Infra (inside Engineering)');
+    console.log('');
+    console.log('🔍 Both multi-parent children span across their respective parent arcs!');
   </script>
 </body>
 </html>

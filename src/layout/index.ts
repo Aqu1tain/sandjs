@@ -140,6 +140,21 @@ function layoutMultiParentGroups(params: {
       );
     }
 
+    // Validate: parent nodes should NOT have children
+    const parentsWithChildren = parentArcs.filter(arc =>
+      arc.data.children && arc.data.children.length > 0
+    );
+
+    if (parentsWithChildren.length > 0) {
+      const invalidKeys = parentsWithChildren.map(arc => arc.key).filter(Boolean);
+      console.error(
+        `[Sand.js] ❌ Multi-parent validation failed: Parent nodes [${invalidKeys.join(', ')}] have children. ` +
+        `Parent nodes referenced in 'parents' arrays should NOT have their own children. ` +
+        `Skipping multi-parent group for: ${group.children.map(c => c.input.name).join(', ')}`
+      );
+      continue; // Skip this multi-parent group
+    }
+
     // Calculate combined angular span
     const startAngle = Math.min(...parentArcs.map(arc => arc.x0));
     const endAngle = Math.max(...parentArcs.map(arc => arc.x1));
@@ -150,14 +165,13 @@ function layoutMultiParentGroups(params: {
     const depth = maxParentDepth + 1;
 
     // Calculate radial position in units (not pixels!)
-    // Parent arcs at depth 0 extend from depthUnits=0 by their expandLevels
-    // Children should start after the thickest parent
-    const maxParentExpandLevels = Math.max(
-      ...parentArcs.map(arc => arc.data.expandLevels ?? 1)
-    );
+    // Parent nodes are validated to have NO children, so we just use their y1
+    const pixelsPerUnit = context.unitToRadius(1) - context.unitToRadius(0);
+    const radiusToUnit = (pixels: number) => pixels / pixelsPerUnit;
 
-    // Children start where parents end
-    const depthUnits = maxParentExpandLevels;
+    // Find the maximum y1 position in units, then subtract layerStart to get depthUnits
+    const maxParentY1Units = Math.max(...parentArcs.map(arc => radiusToUnit(arc.y1)));
+    const depthUnits = maxParentY1Units - context.layerStart;
 
     // Layout the children within the combined span
     layoutSiblingsFree({
