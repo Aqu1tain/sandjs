@@ -184,6 +184,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         navigationMorph,
         index,
         getArcColor: state.getArcColor,
+        allArcs: arcs,
       });
 
       // Only append new elements to fragments; existing elements stay in DOM
@@ -219,6 +220,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           navigationMorph,
           debug: state.currentOptions.debug ?? false,
           renderOptions: state.currentOptions,
+          allArcs: arcs,
         });
       }
     }
@@ -471,9 +473,10 @@ function updateManagedPath(
     navigationMorph: boolean;
     index: number;
     getArcColor: (arc: LayoutArc, index: number) => string | null;
+    allArcs: LayoutArc[];
   },
 ): void {
-  const { arc, options, runtime, pathData, previousArc, transition, drivers, cx, cy, navigationMorph, index, getArcColor } =
+  const { arc, options, runtime, pathData, previousArc, transition, drivers, cx, cy, navigationMorph, index, getArcColor, allArcs } =
     params;
 
   managed.arc = arc;
@@ -513,11 +516,12 @@ function updateManagedPath(
       debug: options.debug ?? false,
       renderOptions: options,
       arcColor: fillColor,
+      allArcs,
     });
   } else {
     stopArcAnimation(managed);
     applyPathData(element, pathData);
-    updateArcLabel(managed, arc, { cx, cy, allowLogging: options.debug ?? false, renderOptions: options, arcColor: fillColor });
+    updateArcLabel(managed, arc, { cx, cy, allowLogging: options.debug ?? false, renderOptions: options, arcColor: fillColor, allArcs });
   }
 
   // Apply border color and width
@@ -650,6 +654,7 @@ type UpdateArcLabelOptions = {
   allowLogging: boolean;
   renderOptions: RenderSvgOptions;
   arcColor: string;
+  allArcs: LayoutArc[];
 };
 
 type LabelEvaluation = {
@@ -725,8 +730,15 @@ function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: UpdateArc
   }
 
   // Determine if root label should be straight
+  // Only apply straight mode when there's exactly one root node in the layer
   const rootLabelMode = typeof labelOptions === 'object' ? labelOptions?.rootLabelMode ?? 'curved' : 'curved';
-  const useStraightLabel = arc.depth === 0 && rootLabelMode === 'straight';
+  let useStraightLabel = false;
+
+  if (arc.depth === 0 && rootLabelMode === 'straight') {
+    // Count root nodes in this layer
+    const rootNodesInLayer = options.allArcs.filter(a => a.layerId === arc.layerId && a.depth === 0);
+    useStraightLabel = rootNodesInLayer.length === 1;
+  }
 
   showLabel(managed, text, evaluation, arc, labelColor, useStraightLabel, cx, cy);
 }
@@ -981,8 +993,9 @@ function startArcAnimation(params: {
   debug: boolean;
   renderOptions: RenderSvgOptions;
   arcColor: string;
+  allArcs: LayoutArc[];
 }): void {
-  const { managed, from, to, finalPath, transition, drivers, cx, cy, debug, renderOptions, arcColor } = params;
+  const { managed, from, to, finalPath, transition, drivers, cx, cy, debug, renderOptions, arcColor, allArcs } = params;
   stopArcAnimation(managed);
 
   const element = managed.element;
@@ -995,16 +1008,16 @@ function startArcAnimation(params: {
       const frameArc = interpolateArc(from, to, progress);
       const framePath = describeArcPath(frameArc, cx, cy) ?? finalPath;
       applyPathData(element, framePath);
-      updateArcLabel(managed, frameArc, { cx, cy, allowLogging: false, renderOptions, arcColor });
+      updateArcLabel(managed, frameArc, { cx, cy, allowLogging: false, renderOptions, arcColor, allArcs });
     },
     onComplete: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor });
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor, allArcs });
       managed.animation = null;
     },
     onCancel: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor });
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor, allArcs });
       managed.animation = null;
     },
   });
@@ -1161,8 +1174,9 @@ function scheduleManagedRemoval(params: {
   navigationMorph: boolean;
   debug: boolean;
   renderOptions: RenderSvgOptions;
+  allArcs: LayoutArc[];
 }): void {
-  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph, debug, renderOptions } = params;
+  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph, debug, renderOptions, allArcs } = params;
   if (managed.pendingRemoval) {
     return;
   }
@@ -1209,6 +1223,7 @@ function scheduleManagedRemoval(params: {
       debug,
       renderOptions,
       arcColor,
+      allArcs,
     });
   }
 
