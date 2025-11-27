@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2025-01-27
+
+### Enhanced
+- **Multi-parent nodes nested support**: Multi-parent nodes can now be placed at any depth in the tree hierarchy, not just at root level. Removed restriction that limited `parents` property to root-level nodes only.
+
+### Added
+- **Multi-parent validation**: Added validation to prevent parent nodes referenced in `parents` arrays from having their own children. When a parent node has children, the multi-parent group is skipped with a clear error message explaining the constraint violation.
+
+### Fixed
+- **Multi-parent radial positioning**: Fixed radial depth calculation for multi-parent children by properly converting y1 pixel values back to units. This prevents multi-parent children from overlapping with their unified parent arcs.
+
 ## [0.3.5] - 2025-01-27
 
 ### Added
