@@ -308,6 +308,14 @@
           </select>
         </div>
 
+        <div class="control-group">
+          <label for="root-label-mode">Root Label Mode</label>
+          <select id="root-label-mode">
+            <option value="curved" selected>Curved (Default)</option>
+            <option value="straight">Straight (Centered)</option>
+          </select>
+        </div>
+
         <div class="palette-info" id="palette-info">
           <!-- Palette description -->
         </div>
@@ -412,6 +420,7 @@
     const labelColorModeEl = document.getElementById('label-color-mode');
     const manualLabelColorEl = document.getElementById('manual-label-color');
     const manualLabelColorGroup = document.getElementById('manual-label-color-group');
+    const rootLabelModeEl = document.getElementById('root-label-mode');
     const paletteInfoEl = document.getElementById('palette-info');
     const arcCountEl = document.getElementById('arc-count');
     const colorCountEl = document.getElementById('color-count');
@@ -467,6 +476,7 @@
       const showLabels = showLabelsEl.value === 'true';
       const labelColorMode = labelColorModeEl.value;
       const manualLabelColor = manualLabelColorEl.value;
+      const rootLabelMode = rootLabelModeEl.value;
 
       // Set default assignBy based on type if not explicitly changed
       const defaultAssignBy = type === 'qualitative' ? 'key' : 'depth';
@@ -500,17 +510,22 @@
       if (labelColorMode === 'auto') {
         renderOptions.labels = {
           showLabels: showLabels,
-          autoLabelColor: true
+          autoLabelColor: true,
+          rootLabelMode: rootLabelMode
         };
       } else if (labelColorMode === 'manual') {
         renderOptions.labels = {
           showLabels: showLabels,
           labelColor: manualLabelColor,
-          autoLabelColor: false
+          autoLabelColor: false,
+          rootLabelMode: rootLabelMode
         };
       } else {
-        // default mode - just use showLabels
-        renderOptions.labels = showLabels;
+        // default mode
+        renderOptions.labels = {
+          showLabels: showLabels,
+          rootLabelMode: rootLabelMode
+        };
       }
 
       chart = renderSVG(renderOptions);
@@ -563,6 +578,8 @@
     });
 
     manualLabelColorEl.addEventListener('change', render);
+
+    rootLabelModeEl.addEventListener('change', render);
   </script>
 </body>
 </html>
