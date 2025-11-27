@@ -866,12 +866,21 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
   labelElement.setAttribute('data-layer', arc.layerId);
   labelElement.setAttribute('data-depth', String(arc.depth));
 
-  // Enable CSS transitions for smooth crossfade
-  if (!textPathElement.style.transition) {
-    textPathElement.style.transition = 'opacity 0.3s ease-in-out';
-  }
-  if (!straightTextElement.style.transition) {
-    straightTextElement.style.transition = 'opacity 0.3s ease-in-out';
+  // Check if arc animation is running - if so, don't transition label mode yet
+  const isAnimating = managed.animation !== null;
+
+  // Enable CSS transitions for smooth crossfade (but not during arc animations)
+  if (!isAnimating) {
+    if (!textPathElement.style.transition) {
+      textPathElement.style.transition = 'opacity 0.3s ease-in-out';
+    }
+    if (!straightTextElement.style.transition) {
+      straightTextElement.style.transition = 'opacity 0.3s ease-in-out';
+    }
+  } else {
+    // Disable transitions during arc animation to avoid conflicts
+    textPathElement.style.transition = 'none';
+    straightTextElement.style.transition = 'none';
   }
 
   if (useStraightLabel) {
@@ -882,18 +891,35 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
     straightTextElement.style.display = '';
     straightTextElement.setAttribute('x', String(cx));
     straightTextElement.setAttribute('y', String(cy));
-    straightTextElement.style.opacity = '1';
 
-    // Fade out and hide curved text elements
-    textPathElement.style.opacity = '0';
-    // Wait for fade out before hiding to avoid flash
-    setTimeout(() => {
-      if (straightTextElement.style.opacity === '1') {
-        textPathElement.style.display = 'none';
-        textPathElement.textContent = '';
-        labelPathElement.removeAttribute('d');
+    if (isAnimating) {
+      // During animation, keep both hidden or show curved until animation completes
+      straightTextElement.style.opacity = '0';
+      textPathElement.style.opacity = '1';
+      if (!evaluation.pathData) {
+        textPathElement.style.opacity = '0';
+      } else {
+        if (textPathElement.textContent !== text) {
+          textPathElement.textContent = text;
+        }
+        textPathElement.style.display = '';
+        labelPathElement.setAttribute('d', evaluation.pathData);
+        textPathElement.setAttribute('startOffset', '50%');
+        textPathElement.setAttribute('spacing', 'auto');
       }
-    }, 300);
+    } else {
+      // Not animating - perform smooth crossfade
+      straightTextElement.style.opacity = '1';
+      textPathElement.style.opacity = '0';
+      // Wait for fade out before hiding to avoid flash
+      setTimeout(() => {
+        if (straightTextElement.style.opacity === '1' && !managed.animation) {
+          textPathElement.style.display = 'none';
+          textPathElement.textContent = '';
+          labelPathElement.removeAttribute('d');
+        }
+      }, 300);
+    }
 
     labelElement.removeAttribute('transform');
     labelElement.removeAttribute('data-inverted');
@@ -910,17 +936,23 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
     labelPathElement.setAttribute('d', evaluation.pathData);
     textPathElement.setAttribute('startOffset', '50%');
     textPathElement.setAttribute('spacing', 'auto');
-    textPathElement.style.opacity = '1';
 
-    // Fade out and hide straight text element
-    straightTextElement.style.opacity = '0';
-    // Wait for fade out before hiding to avoid flash
-    setTimeout(() => {
-      if (textPathElement.style.opacity === '1') {
-        straightTextElement.style.display = 'none';
-        straightTextElement.textContent = '';
-      }
-    }, 300);
+    if (isAnimating) {
+      // During animation, show curved immediately
+      textPathElement.style.opacity = '1';
+      straightTextElement.style.opacity = '0';
+    } else {
+      // Not animating - perform smooth crossfade
+      textPathElement.style.opacity = '1';
+      straightTextElement.style.opacity = '0';
+      // Wait for fade out before hiding to avoid flash
+      setTimeout(() => {
+        if (textPathElement.style.opacity === '1' && !managed.animation) {
+          straightTextElement.style.display = 'none';
+          straightTextElement.textContent = '';
+        }
+      }, 300);
+    }
 
     labelElement.removeAttribute('transform');
     if (evaluation.inverted) {
@@ -1036,13 +1068,19 @@ function startArcAnimation(params: {
     },
     onComplete: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor, allArcs });
       managed.animation = null;
+      // Re-enable transitions before updating label so crossfade can happen
+      managed.textPathElement.style.transition = 'opacity 0.3s ease-in-out';
+      managed.straightTextElement.style.transition = 'opacity 0.3s ease-in-out';
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor, allArcs });
     },
     onCancel: () => {
       applyPathData(element, finalPath);
-      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor, allArcs });
       managed.animation = null;
+      // Re-enable transitions before updating label so crossfade can happen
+      managed.textPathElement.style.transition = 'opacity 0.3s ease-in-out';
+      managed.straightTextElement.style.transition = 'opacity 0.3s ease-in-out';
+      updateArcLabel(managed, to, { cx, cy, allowLogging: debug, renderOptions, arcColor, allArcs });
     },
   });
 
