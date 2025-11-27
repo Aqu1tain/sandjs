@@ -751,9 +751,10 @@ This feature may cause unexpected behavior with:
 
 **Constraints:**
 - Must be an array of at least 2 strings
-- Each string must match the `key` property of a root-level node in the same layer
-- Parent nodes should not have their own `children` property
-- Parent keys must reference existing nodes
+- Each string must match the `key` property of a node anywhere in the same layer
+- Parent nodes referenced should not have their own `children` property
+- Parent keys must reference existing nodes with keys
+- Multi-parent nodes can be at any depth (root level or nested)
 
 **Example:**
 ```javascript
@@ -797,10 +798,48 @@ This feature may cause unexpected behavior with:
 }
 ```
 
+**Nested Example:**
+```javascript
+{
+  size: { radius: 200 },
+  layers: [
+    {
+      id: 'main',
+      radialUnits: [0, 4],
+      angleMode: 'free',
+      tree: [
+        {
+          name: 'Department A',
+          children: [
+            {
+              name: 'Team 1',
+              key: 'team1',
+              value: 30
+            },
+            {
+              name: 'Team 2',
+              key: 'team2',
+              value: 20
+            },
+            // Multi-parent node nested within Department A
+            {
+              name: 'Shared Resource',
+              value: 15,
+              parents: ['team1', 'team2']
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
 **Visual result:**
 - Engineering and Design appear side-by-side
 - Frontend Team and Shared Tools appear in a deeper ring, spanning across both Engineering and Design arcs
 - Product appears normally with no unified children
+- Multi-parent nodes can now be nested at any depth in the hierarchy
 
 **Use cases:**
 - Shared resources across departments

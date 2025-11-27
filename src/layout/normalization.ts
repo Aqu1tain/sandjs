@@ -49,8 +49,8 @@ export function normalizeTree(
       return;
     }
 
-    // Extract multi-parent nodes at root level
-    if (isRoot && node.parents && Array.isArray(node.parents) && node.parents.length > 1) {
+    // Extract multi-parent nodes at any level
+    if (node.parents && Array.isArray(node.parents) && node.parents.length > 1) {
       if (!warnOnce.warned) {
         console.warn(
           '[Sand.js] ⚠️  EXPERIMENTAL FEATURE: Multi-parent nodes detected. ' +
