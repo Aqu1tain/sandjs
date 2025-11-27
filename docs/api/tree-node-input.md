@@ -230,8 +230,9 @@ Array of parent keys that creates a unified parent arc spanning multiple nodes.
 
 **Constraints:**
 - Must be an array of at least 2 strings
-- Each string must match a `key` property of a root-level node in the same layer
-- Parent nodes should not have their own `children`
+- Each string must match a `key` property of a node anywhere in the same layer
+- Parent nodes referenced should not have their own `children`
+- Can be used at any depth (root level or nested)
 
 **Use cases:**
 - Shared resources across departments
