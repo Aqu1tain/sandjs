@@ -71,6 +71,12 @@ export interface LabelOptions {
   showLabels?: boolean;
   labelColor?: string;
   autoLabelColor?: boolean;
+  /**
+   * Display mode for root node (depth 0) labels.
+   * - 'curved': Label follows the arc path (default)
+   * - 'straight': Label appears as horizontal text at the center
+   */
+  rootLabelMode?: 'curved' | 'straight';
 }
 
 /**

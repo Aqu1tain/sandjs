@@ -40,6 +40,7 @@ export type ManagedPath = {
   labelElement: SVGTextElement;
   labelPathElement: SVGPathElement;
   textPathElement: SVGTextPathElement;
+  straightTextElement: SVGTSpanElement;
   labelPathId: string;
   arc: LayoutArc;
   options: RenderSvgOptions;

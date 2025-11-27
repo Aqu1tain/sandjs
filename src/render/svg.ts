@@ -343,6 +343,7 @@ function createManagedPath(params: {
   const labelPathElement = doc.createElementNS(SVG_NS, 'path');
   const labelElement = doc.createElementNS(SVG_NS, 'text');
   const textPathElement = doc.createElementNS(SVG_NS, 'textPath');
+  const straightTextElement = doc.createElementNS(SVG_NS, 'tspan');
   const labelPathId = `sand-arc-label-${labelIdCounter++}`;
 
   labelPathElement.setAttribute('id', labelPathId);
@@ -370,7 +371,13 @@ function createManagedPath(params: {
   textPathElement.setAttributeNS(XLINK_NS, 'xlink:href', `#${labelPathId}`);
   textPathElement.setAttribute('href', `#${labelPathId}`);
 
+  straightTextElement.setAttribute('class', 'sand-arc-label-straight');
+  straightTextElement.textContent = '';
+  straightTextElement.style.pointerEvents = 'none';
+  straightTextElement.style.display = 'none';
+
   labelElement.appendChild(textPathElement);
+  labelElement.appendChild(straightTextElement);
 
   const abortController = new AbortController();
 
@@ -380,6 +387,7 @@ function createManagedPath(params: {
     labelElement,
     labelPathElement,
     textPathElement,
+    straightTextElement,
     labelPathId,
     arc,
     options,
@@ -716,7 +724,11 @@ function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: UpdateArc
     labelColor = '#000000'; // Default black
   }
 
-  showLabel(managed, text, evaluation, arc, labelColor);
+  // Determine if root label should be straight
+  const rootLabelMode = typeof labelOptions === 'object' ? labelOptions?.rootLabelMode ?? 'curved' : 'curved';
+  const useStraightLabel = arc.depth === 0 && rootLabelMode === 'straight';
+
+  showLabel(managed, text, evaluation, arc, labelColor, useStraightLabel, cx, cy);
 }
 
 function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: number): LabelEvaluation {
@@ -829,30 +841,59 @@ function createLabelArcPath(params: {
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`;
 }
 
-function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation, arc: LayoutArc, labelColor: string): void {
-  const { labelElement, textPathElement, labelPathElement } = managed;
-  if (!evaluation.x || !evaluation.y || !evaluation.fontSize || !evaluation.pathData) {
+function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation, arc: LayoutArc, labelColor: string, useStraightLabel: boolean, cx: number, cy: number): void {
+  const { labelElement, textPathElement, labelPathElement, straightTextElement } = managed;
+  if (!evaluation.x || !evaluation.y || !evaluation.fontSize) {
     return;
   }
 
-  if (textPathElement.textContent !== text) {
-    textPathElement.textContent = text;
-  }
   labelElement.style.display = '';
   labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
   labelElement.style.opacity = managed.element.style.opacity;
   labelElement.setAttribute('fill', labelColor);
   labelElement.setAttribute('data-layer', arc.layerId);
   labelElement.setAttribute('data-depth', String(arc.depth));
-  labelPathElement.setAttribute('d', evaluation.pathData);
-  textPathElement.setAttribute('startOffset', '50%');
-  textPathElement.setAttribute('spacing', 'auto');
 
-  labelElement.removeAttribute('transform');
-  if (evaluation.inverted) {
-    labelElement.setAttribute('data-inverted', 'true');
-  } else {
+  if (useStraightLabel) {
+    // Use straight text at center
+    if (straightTextElement.textContent !== text) {
+      straightTextElement.textContent = text;
+    }
+    straightTextElement.style.display = '';
+    straightTextElement.setAttribute('x', String(cx));
+    straightTextElement.setAttribute('y', String(cy));
+
+    // Hide curved text elements
+    textPathElement.style.display = 'none';
+    textPathElement.textContent = '';
+    labelPathElement.removeAttribute('d');
+
+    labelElement.removeAttribute('transform');
     labelElement.removeAttribute('data-inverted');
+  } else {
+    // Use curved text along path
+    if (!evaluation.pathData) {
+      return;
+    }
+
+    if (textPathElement.textContent !== text) {
+      textPathElement.textContent = text;
+    }
+    textPathElement.style.display = '';
+    labelPathElement.setAttribute('d', evaluation.pathData);
+    textPathElement.setAttribute('startOffset', '50%');
+    textPathElement.setAttribute('spacing', 'auto');
+
+    // Hide straight text element
+    straightTextElement.style.display = 'none';
+    straightTextElement.textContent = '';
+
+    labelElement.removeAttribute('transform');
+    if (evaluation.inverted) {
+      labelElement.setAttribute('data-inverted', 'true');
+    } else {
+      labelElement.removeAttribute('data-inverted');
+    }
   }
 
   managed.labelVisible = true;
@@ -871,6 +912,9 @@ function hideLabel(
     managed.labelElement.style.opacity = managed.element.style.opacity;
     managed.labelVisible = false;
     managed.textPathElement.textContent = '';
+    managed.textPathElement.style.display = 'none';
+    managed.straightTextElement.textContent = '';
+    managed.straightTextElement.style.display = 'none';
     managed.labelPathElement.removeAttribute('d');
     managed.labelElement.removeAttribute('transform');
     managed.labelElement.removeAttribute('data-inverted');
