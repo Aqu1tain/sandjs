@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Parent Nodes Test - Sand.js</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #1a1f2e;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .warning {
+      background: #ff6b6b;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin: 10px 0 20px 0;
+      font-size: 14px;
+      text-align: center;
+      max-width: 600px;
+    }
+
+    .description {
+      max-width: 600px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #b8c5db;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .chart-container {
+      background: #252b3d;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    svg {
+      display: block;
+    }
+
+    .sand-tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 1000;
+      white-space: nowrap;
+    }
+
+    .sand-arc {
+      transition: opacity 0.2s;
+      cursor: pointer;
+    }
+
+    .sand-arc:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚧 Multi-Parent Nodes Test</h1>
+
+  <div class="warning">
+    ⚠️ EXPERIMENTAL FEATURE - Check console for warnings
+  </div>
+
+  <div class="description">
+    This demo shows nodes with the <code>parents</code> property that unify multiple parent arcs.
+    Engineering and Design are treated as ONE unified parent, and Frontend/Shared Tools are children of this combined arc.
+    Open your browser console to see the experimental feature warning.
+  </div>
+
+  <div class="chart-container">
+    <svg id="chart" width="500" height="500"></svg>
+  </div>
+
+  <script type="module">
+    import { renderSVG } from '../dist/sandjs.mjs';
+
+    const config = {
+      size: {
+        radius: 220
+      },
+      layers: [
+        {
+          id: 'main',
+          radialUnits: [0, 3],
+          angleMode: 'free',
+          padAngle: 0.01,
+          tree: [
+            {
+              name: 'Engineering',
+              key: 'dept-eng',
+              value: 40,
+              color: '#4ecdc4'
+            },
+            {
+              name: 'Design',
+              key: 'dept-design',
+              value: 30,
+              color: '#95e1d3'
+            },
+            {
+              name: 'Product',
+              key: 'dept-product',
+              value: 30,
+              color: '#f38181'
+            },
+            // Multi-parent nodes: these will be children of the unified Eng+Design parent
+            {
+              name: 'Frontend Team',
+              value: 25,
+              color: '#ff6b6b',
+              parents: ['dept-eng', 'dept-design']
+            }
+          ]
+        }
+      ]
+    };
+
+    renderSVG({
+      el: '#chart',
+      config: config,
+      tooltip: true,
+      labels: {
+        showLabels: true,
+        autoLabelColor: true
+      },
+      borderColor: '#1a1f2e',
+      borderWidth: 2
+    });
+
+    console.log('✅ Chart rendered. Engineering and Design form a unified parent arc.');
+    console.log('💡 Frontend Team and Shared Tools appear as children of the combined Eng+Design arc.');
+    console.log('🔍 Notice how the multi-parent children span across both parent arcs.');
+  </script>
+</body>
+</html>

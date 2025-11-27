@@ -13,14 +13,35 @@ export type NormalizedNode = {
 };
 
 /**
- * Normalizes the tree structure, computing values and expand levels
+ * Represents a group of nodes that share the same parent keys
+ */
+export type MultiParentGroup = {
+  parentKeys: string[];
+  children: NormalizedNode[];
+};
+
+/**
+ * Result of normalization including multi-parent groups
+ */
+export type NormalizationResult = {
+  nodes: NormalizedNode[];
+  multiParentGroups: MultiParentGroup[];
+};
+
+/**
+ * Normalizes the tree structure, computing values and expand levels.
+ * Also extracts nodes with `parents` property into multi-parent groups.
  */
 export function normalizeTree(
   tree: LayerConfig['tree'],
   parentPath: TreeNodeInput[] = [],
   parentIndices: number[] = [],
-): NormalizedNode[] {
-  const nodes = Array.isArray(tree) ? tree : [tree];
+  multiParentGroups: Map<string, MultiParentGroup> = new Map(),
+  warnOnce: { warned: boolean } = { warned: false },
+): NormalizationResult {
+  let nodes = Array.isArray(tree) ? tree : [tree];
+  const isRoot = parentPath.length === 0;
+
   const normalized: NormalizedNode[] = [];
 
   nodes.forEach((node, index) => {
@@ -28,10 +49,56 @@ export function normalizeTree(
       return;
     }
 
+    // Extract multi-parent nodes at root level
+    if (isRoot && node.parents && Array.isArray(node.parents) && node.parents.length > 1) {
+      if (!warnOnce.warned) {
+        console.warn(
+          '[Sand.js] ⚠️  EXPERIMENTAL FEATURE: Multi-parent nodes detected. ' +
+          'Parent nodes with matching keys will be unified into a single combined arc. ' +
+          'Use at your own risk.'
+        );
+        warnOnce.warned = true;
+      }
+
+      // Create unique key for this parent set
+      const parentKey = node.parents.slice().sort().join(',');
+
+      // Get or create group for this parent set
+      let group = multiParentGroups.get(parentKey);
+      if (!group) {
+        group = {
+          parentKeys: node.parents.slice().sort(),
+          children: []
+        };
+        multiParentGroups.set(parentKey, group);
+      }
+
+      // Normalize this node and add to the group
+      const path = parentPath.concat(node);
+      const pathIndices = parentIndices.concat(index);
+      const rawValue = typeof node.value === 'number' ? node.value : 0;
+      const value = Number.isFinite(rawValue) ? Math.max(rawValue, 0) : 0;
+      const baseExpand = normalizeExpandLevels(node.expandLevels);
+
+      group.children.push({
+        input: node,
+        value,
+        expandLevels: baseExpand,
+        children: [],
+        path,
+        pathIndices,
+        collapsed: false,
+        subtreeThickness: baseExpand,
+      });
+
+      return; // Don't add to normalized tree
+    }
+
     const children = Array.isArray(node.children) ? node.children : [];
     const path = parentPath.concat(node);
     const pathIndices = parentIndices.concat(index);
-    const normalizedChildren = normalizeTree(children, path, pathIndices);
+    const childResult = normalizeTree(children, path, pathIndices, multiParentGroups, warnOnce);
+    const normalizedChildren = childResult.nodes;
     const collapsed = Boolean(node.collapsed);
     const childrenValue = normalizedChildren.reduce((sum, child) => sum + Math.max(child.value, 0), 0);
     const childThickness = normalizedChildren.reduce(
@@ -57,7 +124,14 @@ export function normalizeTree(
     });
   });
 
-  return normalized;
+  if (isRoot) {
+    return {
+      nodes: normalized,
+      multiParentGroups: Array.from(multiParentGroups.values())
+    };
+  }
+
+  return { nodes: normalized, multiParentGroups: [] };
 }
 
 /**

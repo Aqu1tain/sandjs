@@ -73,7 +73,7 @@ Add the script to import Sand.js. You can use either a module bundler or CDN:
 ### Option B: Using CDN
 
 ```html
-<script src="https://unpkg.com/@akitain/sandjs@0.3.4/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@0.3.5/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 
@@ -176,7 +176,7 @@ Here's everything together:
     <svg id="chart" width="400" height="400"></svg>
   </div>
 
-  <script src="https://unpkg.com/@akitain/sandjs@0.3.4/dist/sandjs.iife.min.js"></script>
+  <script src="https://unpkg.com/@akitain/sandjs@0.3.5/dist/sandjs.iife.min.js"></script>
   <script>
     const { renderSVG } = window.SandJS;
 
