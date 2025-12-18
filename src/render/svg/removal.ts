@@ -9,6 +9,11 @@ import {
   createCollapsedArc,
   getCurrentOpacity,
 } from './animation.js';
+import {
+  startArcAnimation,
+  stopArcAnimation,
+  stopManagedAnimations,
+} from './path-management.js';
 
 /**
  * Cancels a pending removal operation on a managed path
@@ -38,21 +43,6 @@ type ScheduleRemovalParams = {
   navigationMorph: boolean;
   debug: boolean;
   renderOptions: RenderSvgOptions;
-  startArcAnimation: (params: {
-    managed: ManagedPath;
-    from: LayoutArc;
-    to: LayoutArc;
-    finalPath: string;
-    transition: ResolvedTransition;
-    drivers: AnimationDrivers;
-    cx: number;
-    cy: number;
-    debug: boolean;
-    renderOptions: RenderSvgOptions;
-    arcColor: string;
-  }) => void;
-  stopArcAnimation: (managed: ManagedPath) => void;
-  stopManagedAnimations: (managed: ManagedPath) => void;
 };
 
 /**
@@ -71,9 +61,6 @@ export function scheduleManagedRemoval(params: ScheduleRemovalParams): void {
     navigationMorph,
     debug,
     renderOptions,
-    startArcAnimation,
-    stopArcAnimation,
-    stopManagedAnimations,
   } = params;
 
   if (managed.pendingRemoval) {
