@@ -35,6 +35,7 @@ import {
   getCurrentOpacity,
   runAnimation,
 } from './svg/animation.js';
+import { cancelPendingRemoval, scheduleManagedRemoval } from './svg/removal.js';
 
 let labelIdCounter = 0;
 
@@ -223,6 +224,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
           navigationMorph,
           debug: state.currentOptions.debug ?? false,
           renderOptions: state.currentOptions,
+          startArcAnimation,
+          stopArcAnimation,
+          stopManagedAnimations,
         });
       }
     }
@@ -982,98 +986,4 @@ function stopArcAnimation(managed: ManagedPath): void {
 function stopManagedAnimations(managed: ManagedPath): void {
   stopArcAnimation(managed);
   stopFade(managed);
-}
-
-function cancelPendingRemoval(managed: ManagedPath): void {
-  if (!managed.pendingRemoval) {
-    return;
-  }
-  managed.pendingRemoval = false;
-  stopFade(managed);
-  managed.element.style.opacity = '';
-  managed.element.style.pointerEvents = '';
-}
-
-function scheduleManagedRemoval(params: {
-  key: string;
-  managed: ManagedPath;
-  host: SVGElement;
-  registry: Map<string, ManagedPath>;
-  transition: ResolvedTransition | null;
-  drivers: AnimationDrivers;
-  cx: number;
-  cy: number;
-  navigationMorph: boolean;
-  debug: boolean;
-  renderOptions: RenderSvgOptions;
-}): void {
-  const { key, managed, host, registry, transition, drivers, cx, cy, navigationMorph, debug, renderOptions } = params;
-  if (managed.pendingRemoval) {
-    return;
-  }
-
-  managed.pendingRemoval = true;
-  stopArcAnimation(managed);
-  stopFade(managed);
-  managed.element.style.pointerEvents = 'none';
-  hideLabel(managed, 'pending-removal');
-
-  const remove = () => {
-    stopManagedAnimations(managed);
-    if (managed.element.parentNode === host) {
-      host.removeChild(managed.element);
-    }
-    if (managed.labelElement.parentNode === host) {
-      host.removeChild(managed.labelElement);
-    }
-    if (managed.labelPathElement.parentNode) {
-      managed.labelPathElement.parentNode.removeChild(managed.labelPathElement);
-    }
-    registry.delete(key);
-    managed.dispose();
-  };
-
-  if (!transition) {
-    remove();
-    return;
-  }
-
-  if (navigationMorph) {
-    const collapsedArc = createCollapsedArc(managed.arc);
-    const collapsedPath = describeArcPath(collapsedArc, cx, cy) ?? '';
-    const arcColor = managed.element.getAttribute('fill') || 'currentColor';
-    startArcAnimation({
-      managed,
-      from: managed.arc,
-      to: collapsedArc,
-      finalPath: collapsedPath,
-      transition,
-      drivers,
-      cx,
-      cy,
-      debug,
-      renderOptions,
-      arcColor,
-    });
-  }
-
-  const startOpacity = getCurrentOpacity(managed.element);
-  managed.fade = startFade({
-    managed,
-    from: startOpacity,
-    to: 0,
-    transition,
-    drivers,
-    resetStyleOnComplete: false,
-    onComplete: () => {
-      managed.fade = null;
-      remove();
-    },
-    onCancel: () => {
-      managed.fade = null;
-      managed.pendingRemoval = false;
-      managed.element.style.opacity = '';
-      managed.element.style.pointerEvents = '';
-    },
-  });
 }
