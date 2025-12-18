@@ -170,17 +170,21 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
         getArcColor: state.getArcColor,
       });
 
-      // Only append new elements to fragments; existing elements stay in DOM
-      if (isNewElement) {
-        if (supportsFragment && fragment && labelFragment) {
-          fragment.appendChild(managed.element);
-          labelFragment.appendChild(managed.labelElement);
-        } else {
-          // Fallback for test environments without createDocumentFragment
-          host.appendChild(managed.element);
-          host.appendChild(managed.labelElement);
-        }
+      // Only append new elements; existing elements stay in DOM
+      if (!isNewElement) {
+        continue;
       }
+
+      // Use document fragments for better performance
+      if (supportsFragment && fragment && labelFragment) {
+        fragment.appendChild(managed.element);
+        labelFragment.appendChild(managed.labelElement);
+        continue;
+      }
+
+      // Fallback for test environments without createDocumentFragment
+      host.appendChild(managed.element);
+      host.appendChild(managed.labelElement);
     }
 
     // Batch append all new elements at once to minimize reflows

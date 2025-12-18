@@ -290,33 +290,40 @@ export function updateManagedPath(
     managed.labelPendingLogReason = null;
   }
 
-  if (!previousArc) {
-    if (transition) {
-      if (navigationMorph) {
-        element.style.opacity = '';
-      } else {
-        element.style.opacity = '0';
-        managed.fade = startFade({
-          managed,
-          from: 0,
-          to: 1,
-          transition,
-          drivers,
-          resetStyleOnComplete: true,
-          onComplete: () => {
-            managed.fade = null;
-          },
-          onCancel: () => {
-            managed.fade = null;
-          },
-        });
-      }
-    } else {
-      element.style.opacity = '';
-    }
-  } else {
+  // Existing arc - reset opacity
+  if (previousArc) {
     element.style.opacity = '';
+    return;
   }
+
+  // New arc without transition
+  if (!transition) {
+    element.style.opacity = '';
+    return;
+  }
+
+  // New arc with navigation morph - no fade needed
+  if (navigationMorph) {
+    element.style.opacity = '';
+    return;
+  }
+
+  // New arc with fade-in transition
+  element.style.opacity = '0';
+  managed.fade = startFade({
+    managed,
+    from: 0,
+    to: 1,
+    transition,
+    drivers,
+    resetStyleOnComplete: true,
+    onComplete: () => {
+      managed.fade = null;
+    },
+    onCancel: () => {
+      managed.fade = null;
+    },
+  });
 }
 
 /**
