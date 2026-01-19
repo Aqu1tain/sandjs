@@ -12,7 +12,7 @@ export function findNodeByKey(
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index];
     const path = prefix.concat(index);
-    if (node && node.key === key) {
+    if (node?.key === key) {
       return { node, path };
     }
     if (Array.isArray(node?.children)) {

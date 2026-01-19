@@ -9,13 +9,13 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
     let r: number, g: number, b: number;
 
     if (hex.length === 3) {
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
+      r = Number.parseInt(hex[0] + hex[0], 16);
+      g = Number.parseInt(hex[1] + hex[1], 16);
+      b = Number.parseInt(hex[2] + hex[2], 16);
     } else if (hex.length === 6) {
-      r = parseInt(hex.slice(0, 2), 16);
-      g = parseInt(hex.slice(2, 4), 16);
-      b = parseInt(hex.slice(4, 6), 16);
+      r = Number.parseInt(hex.slice(0, 2), 16);
+      g = Number.parseInt(hex.slice(2, 4), 16);
+      b = Number.parseInt(hex.slice(4, 6), 16);
     } else {
       return null;
     }
@@ -24,12 +24,12 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
   }
 
   // Handle rgb() and rgba() formats
-  const rgbMatch = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  const rgbMatch = new RegExp(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i).exec(color);
   if (rgbMatch) {
     return {
-      r: parseInt(rgbMatch[1], 10),
-      g: parseInt(rgbMatch[2], 10),
-      b: parseInt(rgbMatch[3], 10),
+      r: Number.parseInt(rgbMatch[1], 10),
+      g: Number.parseInt(rgbMatch[2], 10),
+      b: Number.parseInt(rgbMatch[3], 10),
     };
   }
 

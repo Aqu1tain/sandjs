@@ -5,8 +5,8 @@ export function resolveDocument(explicit: Document | undefined): Document {
     return explicit;
   }
 
-  if (typeof window !== 'undefined' && window.document) {
-    return window.document;
+  if (typeof globalThis.window !== 'undefined' && globalThis.document) {
+    return globalThis.document;
   }
 
   throw new Error('renderSVG requires a Document instance');
@@ -19,7 +19,7 @@ export function resolveHostElement(target: RenderSvgOptions['el'], doc: Document
       throw new Error(`renderSVG could not find SVG element for selector "${target}"`);
     }
     if (!(resolved instanceof SVGElement)) {
-      throw new Error(`renderSVG selector "${target}" did not resolve to an SVG element`);
+      throw new TypeError(`renderSVG selector "${target}" did not resolve to an SVG element`);
     }
     return resolved;
   }

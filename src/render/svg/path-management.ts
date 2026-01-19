@@ -155,9 +155,9 @@ function applyBorderStyles(element: SVGPathElement, arc: LayoutArc, options: Ren
 }
 
 function applyDataAttributes(element: SVGPathElement, arc: LayoutArc): void {
-  element.setAttribute('data-layer', arc.layerId);
-  element.setAttribute('data-name', arc.data.name);
-  element.setAttribute('data-depth', String(arc.depth));
+  element.dataset.layer = arc.layerId;
+  element.dataset.name = arc.data.name;
+  element.dataset.depth = String(arc.depth);
 
   setOrRemoveAttribute(element, 'data-collapsed', arc.data.collapsed ? 'true' : null);
   setOrRemoveAttribute(element, 'data-key', arc.key ?? null);

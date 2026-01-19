@@ -26,7 +26,7 @@ export function resolveTransition(input: RenderSvgOptions['transition']): Resolv
   }
 
   const config: TransitionOptions | null =
-    input === true ? {} : typeof input === 'object' ? (input as TransitionOptions) : null;
+    input === true ? {} : typeof input === 'object' ? (input) : null;
 
   const duration = normalizePositiveNumber(config?.duration, DEFAULT_DURATION);
   const delay = normalizePositiveNumber(config?.delay, DEFAULT_DELAY);

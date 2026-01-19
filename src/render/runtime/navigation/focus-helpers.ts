@@ -1,9 +1,8 @@
-import type { LayoutArc, TreeNodeInput } from '../../../types/index.js';
+import type { LayoutArc, TreeNodeInput, SunburstConfig } from '../../../types';
 import type { NavigationOptions, RenderSvgOptions } from '../../types.js';
 import { arcIdentifierFromPath, resolveArcKey, resolveNodeKey } from '../../keys.js';
 import type { FocusTarget, NavigationTransitionContext } from './types.js';
 import { collectNodesAlongPath } from './tree-utils.js';
-import type { SunburstConfig } from '../../../types/index.js';
 
 /**
  * Creates a focus target from an arc

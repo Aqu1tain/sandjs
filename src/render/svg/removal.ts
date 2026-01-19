@@ -1,7 +1,6 @@
 import { describeArcPath } from '../geometry.js';
 import type { ResolvedTransition } from '../transition.js';
 import type { ManagedPath, AnimationDrivers } from './types.js';
-import type { LayoutArc } from '../../types/index.js';
 import type { RenderSvgOptions } from '../types.js';
 import {
   startFade,

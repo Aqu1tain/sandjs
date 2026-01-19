@@ -124,7 +124,7 @@ function resolveLabelColor(
  */
 function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: number): LabelEvaluation {
   const span = arc.x1 - arc.x0;
-  if (!(span > 0)) {
+  if (span <= 0) {
     return { visible: false, reason: 'no-span' };
   }
 
@@ -199,12 +199,12 @@ function createLabelArcPath(params: {
   cy: number;
 }): string | null {
   const { arc, radius, inverted, cx, cy } = params;
-  if (!(radius > ZERO_TOLERANCE)) {
+  if (radius <= ZERO_TOLERANCE) {
     return null;
   }
 
   const span = Math.max(arc.x1 - arc.x0, 0);
-  if (!(span > ZERO_TOLERANCE)) {
+  if (span <= ZERO_TOLERANCE) {
     return null;
   }
 
@@ -250,17 +250,17 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
   labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
   labelElement.style.opacity = managed.element.style.opacity;
   labelElement.setAttribute('fill', labelColor);
-  labelElement.setAttribute('data-layer', arc.layerId);
-  labelElement.setAttribute('data-depth', String(arc.depth));
+  labelElement.dataset.layer = arc.layerId;
+  labelElement.dataset.depth = String(arc.depth);
   labelPathElement.setAttribute('d', evaluation.pathData);
   textPathElement.setAttribute('startOffset', '50%');
   textPathElement.setAttribute('spacing', 'auto');
 
   labelElement.removeAttribute('transform');
   if (evaluation.inverted) {
-    labelElement.setAttribute('data-inverted', 'true');
+    labelElement.dataset.inverted = 'true';
   } else {
-    labelElement.removeAttribute('data-inverted');
+    delete labelElement.dataset.inverted;
   }
 
   managed.labelVisible = true;
@@ -284,7 +284,7 @@ export function hideLabel(
     managed.textPathElement.textContent = '';
     managed.labelPathElement.removeAttribute('d');
     managed.labelElement.removeAttribute('transform');
-    managed.labelElement.removeAttribute('data-inverted');
+    delete managed.labelElement.dataset.inverted;
   } else {
     managed.labelElement.style.display = 'none';
   }

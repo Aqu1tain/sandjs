@@ -61,13 +61,13 @@ export function normalizeTree(
       }
 
       // Create unique key for this parent set
-      const parentKey = node.parents.slice().sort().join(',');
+      const parentKey = node.parents.slice().sort((a, b) => a.localeCompare(b)).join(',');
 
       // Get or create group for this parent set
       let group = multiParentGroups.get(parentKey);
       if (!group) {
         group = {
-          parentKeys: node.parents.slice().sort(),
+          parentKeys: node.parents.slice().sort((a, b) => a.localeCompare(b)),
           children: []
         };
         multiParentGroups.set(parentKey, group);

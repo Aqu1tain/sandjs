@@ -1,5 +1,5 @@
-import type { SunburstConfig } from '../../types/index.js';
-import type { RenderSvgUpdateInput, RenderSvgUpdateOptions } from '../types.js';
+import type { SunburstConfig } from '../../types';
+import type { RenderSvgUpdateInput} from '../types.js';
 import { SVG_NS } from './constants.js';
 
 /**
@@ -19,13 +19,13 @@ export function isSunburstConfig(value: unknown): value is SunburstConfig {
 export function ensureLabelDefs(host: SVGElement, doc: Document): SVGDefsElement {
   const children = Array.from(host.childNodes);
   for (const child of children) {
-    if (child instanceof SVGDefsElement && child.getAttribute('data-sand-labels') === 'true') {
+    if (child instanceof SVGDefsElement && child.dataset.sandLabels === 'true') {
       return child;
     }
   }
 
   const defs = doc.createElementNS(SVG_NS, 'defs');
-  defs.setAttribute('data-sand-labels', 'true');
+  defs.dataset.sandLabels = 'true';
   if (host.firstChild) {
     host.insertBefore(defs, host.firstChild);
   } else {
@@ -45,7 +45,7 @@ export function extractConfigFromUpdate(
     return input;
   }
   if (input && typeof input === 'object') {
-    const candidate = (input as RenderSvgUpdateOptions).config;
+    const candidate = (input).config;
     if (candidate) {
       return candidate;
     }

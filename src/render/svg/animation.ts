@@ -169,7 +169,7 @@ function finalizeOpacity(element: SVGElement, opacity: number, resetStyle?: bool
  * Creates animation drivers (raf, caf, now) with fallbacks
  */
 export function createAnimationDrivers(doc: Document): AnimationDrivers {
-  const view = doc.defaultView ?? (typeof window !== 'undefined' ? window : undefined);
+  const view = doc.defaultView ?? (typeof globalThis.window === 'undefined' ? undefined : globalThis);
 
   const raf =
     view && typeof view.requestAnimationFrame === 'function'
