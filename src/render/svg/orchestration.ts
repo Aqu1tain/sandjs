@@ -222,10 +222,8 @@ function processArcs(params: {
   const { arcs, state, runtime, host, doc, labelDefs, drivers, transition, navigationMorph, cx, cy } = params;
   const usedKeys = new Set<string>();
 
-  const supportsFragment = typeof doc.createDocumentFragment === 'function';
-  const fragment = supportsFragment ? doc.createDocumentFragment() : null;
-  const labelFragment = supportsFragment ? doc.createDocumentFragment() : null;
-  const newElements: ManagedPath[] = [];
+  const batchTargets = createBatchTargets(doc, host);
+  let hasNewElements = false;
 
   for (let index = 0; index < arcs.length; index += 1) {
     const arc = arcs[index];
@@ -245,7 +243,7 @@ function processArcs(params: {
     } else {
       managed = createManagedPath({ key, arc, options: state.currentOptions, runtime, doc, labelDefs });
       state.pathRegistry.set(key, managed);
-      newElements.push(managed);
+      hasNewElements = true;
     }
 
     updateManagedPath(managed, {
@@ -264,32 +262,46 @@ function processArcs(params: {
     });
 
     if (isNew) {
-      appendNewElement(managed, host, fragment, labelFragment, supportsFragment);
+      batchTargets.append(managed.element, managed.labelElement);
     }
   }
 
-  if (newElements.length > 0 && supportsFragment && fragment && labelFragment) {
-    host.appendChild(fragment);
-    host.appendChild(labelFragment);
+  if (hasNewElements) {
+    batchTargets.flush();
   }
 
   return usedKeys;
 }
 
-function appendNewElement(
-  managed: ManagedPath,
-  host: SVGElement,
-  fragment: DocumentFragment | null,
-  labelFragment: DocumentFragment | null,
-  supportsFragment: boolean,
-): void {
-  if (supportsFragment && fragment && labelFragment) {
-    fragment.appendChild(managed.element);
-    labelFragment.appendChild(managed.labelElement);
-  } else {
-    host.appendChild(managed.element);
-    host.appendChild(managed.labelElement);
+type BatchTargets = {
+  append: (element: SVGElement, label: SVGElement) => void;
+  flush: () => void;
+};
+
+function createBatchTargets(doc: Document, host: SVGElement): BatchTargets {
+  if (typeof doc.createDocumentFragment !== 'function') {
+    return {
+      append: (element, label) => {
+        host.appendChild(element);
+        host.appendChild(label);
+      },
+      flush: () => {},
+    };
   }
+
+  const fragment = doc.createDocumentFragment();
+  const labelFragment = doc.createDocumentFragment();
+
+  return {
+    append: (element, label) => {
+      fragment.appendChild(element);
+      labelFragment.appendChild(label);
+    },
+    flush: () => {
+      host.appendChild(fragment);
+      host.appendChild(labelFragment);
+    },
+  };
 }
 
 function scheduleRemovals(params: {
