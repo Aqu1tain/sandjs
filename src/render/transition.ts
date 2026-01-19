@@ -20,13 +20,18 @@ const DEFAULT_DELAY = 0;
 const DEFAULT_EASING: TransitionEasing = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
+function resolveTransitionConfig(input: RenderSvgOptions['transition']): TransitionOptions | null {
+  if (input === true) return {};
+  if (typeof input === 'object') return input;
+  return null;
+}
+
 export function resolveTransition(input: RenderSvgOptions['transition']): ResolvedTransition | null {
   if (input === false || input == null) {
     return null;
   }
 
-  const config: TransitionOptions | null =
-    input === true ? {} : typeof input === 'object' ? (input) : null;
+  const config = resolveTransitionConfig(input);
 
   const duration = normalizePositiveNumber(config?.duration, DEFAULT_DURATION);
   const delay = normalizePositiveNumber(config?.delay, DEFAULT_DELAY);
