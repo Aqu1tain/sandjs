@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **orchestration.ts**: Split `renderSVG` (222→59 lines) into `createRenderLoop`, `executeRender`, `processArcs`, `applySvgDimensions`, `appendNewElement`, `scheduleRemovals`. Replaced `Object.defineProperties` with direct assignment.
 - **label-system.ts**: Extracted `resolveLabelColor` helper. Replaced if-else chain in `logHiddenLabel` with `LABEL_HIDDEN_REASONS` map. Added `LABEL_TANGENT_*` constants for magic numbers.
 - **navigation.ts**: Consolidated 8 mutable variables into `NavigationState` type. Renamed WeakMaps to clearer names (`nodeToBase`, `baseToPath`, `derivedToPath`). Extracted `registerSingleArc` and `setFocus` helpers. Flattened nested conditionals with guard clauses.
+- **aligned.ts**: Reduced `layoutAlignedLayer` cognitive complexity from 27 to ~5 by extracting `getSourceLayer`, `buildRootSourceMap`, `getAlignedSlot`, `computeTrimmedBounds`, `layoutAlignedNode`, `fallbackToFreeLayout`.
 
 ## [0.3.6] - 2025-01-27
 
