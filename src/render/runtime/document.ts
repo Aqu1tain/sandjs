@@ -5,7 +5,7 @@ export function resolveDocument(explicit: Document | undefined): Document {
     return explicit;
   }
 
-  if (typeof globalThis.window !== 'undefined' && globalThis.document) {
+  if (globalThis.window !== undefined && globalThis.document) {
     return globalThis.document;
   }
 

@@ -101,6 +101,12 @@ function registerSingleArc(arc: LayoutArc, state: NavigationState): void {
   arc.pathIndices = basePath.slice();
 }
 
+function resolveNavigationOptions(input: RenderSvgOptions['navigation']): NavigationOptions {
+  if (input === true) return {};
+  if (typeof input === 'object' && input !== null) return input;
+  return {};
+}
+
 export function createNavigationRuntime(
   input: RenderSvgOptions['navigation'],
   deps: NavigationDeps,
@@ -108,8 +114,7 @@ export function createNavigationRuntime(
 ): NavigationRuntime | null {
   if (!input) return null;
 
-  const options: NavigationOptions =
-    input === true ? {} : typeof input === 'object' && input !== null ? (input) : {};
+  const options: NavigationOptions = resolveNavigationOptions(input);
 
   const allowedLayers = options.layers ? new Set(options.layers) : null;
   const { requestRender, breadcrumbs } = deps;

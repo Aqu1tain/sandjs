@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **normalization.ts**: Reduced `normalizeTree` cognitive complexity from 17 to ~6 by extracting `isMultiParentNode`, `warnMultiParentFeature`, `addToMultiParentGroup`, `normalizeValue`, `normalizeNode`.
 - **orchestration.ts**: Replace boolean `supportsFragment` parameter with `BatchTargets` strategy pattern.
 - **removal.ts, path-management.ts**: Use `element.remove()` instead of `parentNode.removeChild(element)`.
+- **normalization.ts**: Avoid object literal as default parameter for `warnOnce`.
+- **navigation.ts**: Extract nested ternary into `resolveNavigationOptions` helper.
+- **index.ts**: Use `Set` with `has()` instead of array with `includes()` for `foundKeys`.
+- **document.ts, animation.ts**: Compare with `undefined` directly instead of using `typeof`.
+- **colorAssignment.ts**: Use `codePointAt()` instead of `charCodeAt()`.
+- **multi-parent-test.html**: Improve text contrast ratio.
 
 ## [0.3.6] - 2025-01-27
 

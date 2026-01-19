@@ -87,8 +87,9 @@ export function normalizeTree(
   parentPath: TreeNodeInput[] = [],
   parentIndices: number[] = [],
   multiParentGroups: Map<string, MultiParentGroup> = new Map(),
-  warnOnce: { warned: boolean } = { warned: false },
+  warnOnce?: { warned: boolean },
 ): NormalizationResult {
+  const warnState = warnOnce ?? { warned: false };
   const nodes = Array.isArray(tree) ? tree : [tree];
   const isRoot = parentPath.length === 0;
   const normalized: NormalizedNode[] = [];
@@ -97,12 +98,12 @@ export function normalizeTree(
     if (!node || node.hidden) return;
 
     if (isMultiParentNode(node)) {
-      warnMultiParentFeature(warnOnce);
+      warnMultiParentFeature(warnState);
       addToMultiParentGroup(node, index, parentPath, parentIndices, multiParentGroups);
       return;
     }
 
-    normalized.push(normalizeNode(node, index, parentPath, parentIndices, multiParentGroups, warnOnce));
+    normalized.push(normalizeNode(node, index, parentPath, parentIndices, multiParentGroups, warnState));
   });
 
   if (isRoot) {

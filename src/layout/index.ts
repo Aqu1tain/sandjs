@@ -133,8 +133,8 @@ function layoutMultiParentGroups(params: {
     }
 
     if (parentArcs.length !== group.parentKeys.length) {
-      const foundKeys = parentArcs.map(arc => arc.key).filter(Boolean);
-      const missingKeys = group.parentKeys.filter(key => !foundKeys.includes(key));
+      const foundKeys = new Set(parentArcs.map(arc => arc.key).filter(Boolean));
+      const missingKeys = group.parentKeys.filter(key => !foundKeys.has(key));
       console.warn(
         `[Sand.js] Multi-parent group is missing parent arcs for keys: ${missingKeys.join(', ')}`
       );
