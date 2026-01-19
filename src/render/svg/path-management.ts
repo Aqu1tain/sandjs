@@ -3,7 +3,7 @@ import { interpolateArc } from '../transition.js';
 import { SVG_NS, XLINK_NS } from './constants.js';
 import type { RuntimeSet, ManagedPath, AnimationDrivers } from './types.js';
 import type { LayoutArc } from '../../types/index.js';
-import type { RenderSvgOptions } from '../types.js';
+import type { ResolvedRenderOptions } from '../types.js';
 import type { ResolvedTransition } from '../transition.js';
 import {
   startFade,
@@ -24,7 +24,7 @@ let labelIdCounter = 0;
 export function createManagedPath(params: {
   key: string;
   arc: LayoutArc;
-  options: RenderSvgOptions;
+  options: ResolvedRenderOptions;
   runtime: RuntimeSet;
   doc: Document;
   labelDefs: SVGDefsElement;
@@ -145,7 +145,7 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   element.addEventListener('click', handleClick, { signal });
 }
 
-function applyBorderStyles(element: SVGPathElement, arc: LayoutArc, options: RenderSvgOptions): void {
+function applyBorderStyles(element: SVGPathElement, arc: LayoutArc, options: ResolvedRenderOptions): void {
   const layer = options.config.layers.find(l => l.id === arc.layerId);
   const borderColor = layer?.borderColor ?? options.borderColor;
   const borderWidth = layer?.borderWidth ?? options.borderWidth;
@@ -172,7 +172,7 @@ function setOrRemoveAttribute(element: Element, name: string, value: string | nu
   }
 }
 
-function buildClassList(arc: LayoutArc, options: RenderSvgOptions): string {
+function buildClassList(arc: LayoutArc, options: ResolvedRenderOptions): string {
   const tokens: string[] = ['sand-arc'];
   const seen = new Set<string>(tokens);
 
@@ -203,7 +203,7 @@ export function updateManagedPath(
   managed: ManagedPath,
   params: {
     arc: LayoutArc;
-    options: RenderSvgOptions;
+    options: ResolvedRenderOptions;
     runtime: RuntimeSet;
     pathData: string;
     previousArc: LayoutArc | null;
@@ -326,7 +326,7 @@ export function startArcAnimation(params: {
   cx: number;
   cy: number;
   debug: boolean;
-  renderOptions: RenderSvgOptions;
+  renderOptions: ResolvedRenderOptions;
   arcColor: string;
 }): void {
   const { managed, from, to, finalPath, transition, drivers, cx, cy, debug, renderOptions, arcColor } = params;

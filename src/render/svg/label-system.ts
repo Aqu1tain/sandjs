@@ -13,7 +13,7 @@ import {
 } from './constants.js';
 import type { ManagedPath } from './types.js';
 import type { LayoutArc } from '../../types/index.js';
-import type { RenderSvgOptions } from '../types.js';
+import type { ResolvedRenderOptions } from '../types.js';
 
 /**
  * Options for updating arc labels
@@ -22,7 +22,7 @@ export type UpdateArcLabelOptions = {
   cx: number;
   cy: number;
   allowLogging: boolean;
-  renderOptions: RenderSvgOptions;
+  renderOptions: ResolvedRenderOptions;
   arcColor: string;
 };
 
@@ -104,7 +104,7 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
 function resolveLabelColor(
   arc: LayoutArc,
   layer: { labelColor?: string } | undefined,
-  renderOptions: RenderSvgOptions,
+  renderOptions: ResolvedRenderOptions,
   arcColor: string,
 ): string {
   if (arc.data.labelColor) return arc.data.labelColor;

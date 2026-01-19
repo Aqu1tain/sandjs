@@ -1,7 +1,7 @@
 import { describeArcPath } from '../geometry.js';
 import type { ResolvedTransition } from '../transition.js';
 import type { ManagedPath, AnimationDrivers } from './types.js';
-import type { RenderSvgOptions } from '../types.js';
+import type { ResolvedRenderOptions } from '../types.js';
 import {
   startFade,
   stopFade,
@@ -41,7 +41,7 @@ type ScheduleRemovalParams = {
   cy: number;
   navigationMorph: boolean;
   debug: boolean;
-  renderOptions: RenderSvgOptions;
+  renderOptions: ResolvedRenderOptions;
 };
 
 /**

@@ -1,4 +1,4 @@
-import type { LayoutArc, SunburstConfig } from '../types/index.js';
+import type { LayoutArc, SunburstConfig, TreeNodeInput } from '../types/index.js';
 import type {
   QualitativePaletteName,
   SequentialPaletteName,
@@ -155,7 +155,19 @@ export interface ArcClickEventPayload {
  */
 export interface RenderSvgOptions {
   el: SVGElement | string;
-  config: SunburstConfig;
+
+  /** Full configuration (advanced). Mutually exclusive with `data`. */
+  config?: SunburstConfig;
+
+  /** Simple tree data (creates a default single layer). Mutually exclusive with `config`. */
+  data?: TreeNodeInput | TreeNodeInput[];
+
+  /** Radius in pixels (shorthand for config.size.radius). Required when using `data`. */
+  radius?: number;
+
+  /** Total angle in radians (default: 2π for full circle). */
+  angle?: number;
+
   document?: Document;
   colorTheme?: ColorThemeOptions;
   classForArc?: (arc: LayoutArc) => string | string[] | undefined;
@@ -201,4 +213,12 @@ export type RenderSvgUpdateInput = SunburstConfig | RenderSvgUpdateOptions;
  */
 export interface RenderSvgUpdateOptions extends Partial<Omit<RenderSvgOptions, 'el'>> {
   config?: SunburstConfig;
+}
+
+/**
+ * Internal type for options after config resolution.
+ * Config is guaranteed to be defined after resolveConfig.
+ */
+export interface ResolvedRenderOptions extends RenderSvgOptions {
+  config: SunburstConfig;
 }

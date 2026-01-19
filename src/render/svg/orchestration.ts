@@ -2,6 +2,7 @@ import { layout } from '../../layout/index.js';
 import { LayoutArc, SunburstConfig } from '../../types/index.js';
 import {
   RenderSvgOptions,
+  ResolvedRenderOptions,
   RenderHandle,
   RenderSvgUpdateInput,
 } from '../types.js';
@@ -13,7 +14,7 @@ import { cloneSunburstConfig } from '../config.js';
 import { createColorAssigner } from '../colorAssignment.js';
 import type { RuntimeSet, AnimationDrivers, ManagedPath } from './types.js';
 import { createRuntimeSet, disposeRuntimeSet } from './runtime-creation.js';
-import { isSunburstConfig, ensureLabelDefs, extractConfigFromUpdate } from './utils.js';
+import { isSunburstConfig, ensureLabelDefs, extractConfigFromUpdate, resolveConfig } from './utils.js';
 import { createAnimationDrivers } from './animation.js';
 import { cancelPendingRemoval, scheduleManagedRemoval } from './removal.js';
 import { createManagedPath, updateManagedPath } from './path-management.js';
@@ -22,7 +23,7 @@ import { createManagedPath, updateManagedPath } from './path-management.js';
  * Encapsulates all mutable render state for better lifecycle management
  */
 class RenderState {
-  currentOptions: RenderSvgOptions;
+  currentOptions: ResolvedRenderOptions;
   baseConfig: SunburstConfig;
   pathRegistry: Map<string, ManagedPath>;
   runtimes: RuntimeSet;
@@ -31,7 +32,7 @@ class RenderState {
   pendingRender: boolean = false;
 
   constructor(
-    options: RenderSvgOptions,
+    options: ResolvedRenderOptions,
     runtimes: RuntimeSet,
   ) {
     this.currentOptions = options;
@@ -44,7 +45,7 @@ class RenderState {
     this.getArcColor = createColorAssigner(this.currentOptions.colorTheme, baseArcs);
   }
 
-  updateConfig(nextOptions: RenderSvgOptions, nextConfig: SunburstConfig): void {
+  updateConfig(nextOptions: ResolvedRenderOptions, nextConfig: SunburstConfig): void {
     this.baseConfig = cloneSunburstConfig(nextConfig);
     this.currentOptions = {
       ...nextOptions,
@@ -72,11 +73,12 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
   const host = resolveHostElement(options.el, doc);
   const labelDefs = ensureLabelDefs(host, doc);
 
-  const normalizedOptions: RenderSvgOptions = {
+  const resolvedConfig = resolveConfig(options);
+  const normalizedOptions: ResolvedRenderOptions = {
     ...options,
     el: host,
     document: doc,
-    config: cloneSunburstConfig(options.config),
+    config: cloneSunburstConfig(resolvedConfig),
   };
 
   const drivers = createAnimationDrivers(doc);
@@ -102,7 +104,7 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     const nextOptions = normalizeUpdateOptions(state.currentOptions, input, host, doc);
     const nextConfigInput = extractConfigFromUpdate(input, state.baseConfig);
     const nextConfig = cloneSunburstConfig(nextConfigInput);
-    const finalOptions = { ...nextOptions, config: nextConfig };
+    const finalOptions: ResolvedRenderOptions = { ...nextOptions, config: nextConfig };
 
     state.updateConfig(finalOptions, nextConfig);
     disposeRuntimeSet(state.runtimes);
@@ -334,11 +336,11 @@ function scheduleRemovals(params: {
 }
 
 function normalizeUpdateOptions(
-  current: RenderSvgOptions,
+  current: ResolvedRenderOptions,
   input: RenderSvgUpdateInput,
   host: SVGElement,
   doc: Document,
-): RenderSvgOptions {
+): ResolvedRenderOptions {
   if (isSunburstConfig(input)) {
     return {
       ...current,

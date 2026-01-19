@@ -1,5 +1,5 @@
-import type { SunburstConfig } from '../../types';
-import type { RenderSvgUpdateInput} from '../types.js';
+import type { SunburstConfig, TreeNodeInput } from '../../types';
+import type { RenderSvgOptions, RenderSvgUpdateInput} from '../types.js';
 import { SVG_NS } from './constants.js';
 
 /**
@@ -51,4 +51,52 @@ export function extractConfigFromUpdate(
     }
   }
   return fallback;
+}
+
+/**
+ * Resolves RenderSvgOptions into a SunburstConfig.
+ * Supports both simple `data` API and full `config` API.
+ */
+export function resolveConfig(options: RenderSvgOptions): SunburstConfig {
+  if (options.config) {
+    return options.config;
+  }
+
+  if (!options.data) {
+    throw new Error('renderSVG requires either `config` or `data`');
+  }
+
+  if (!options.radius) {
+    throw new Error('renderSVG requires `radius` when using `data`');
+  }
+
+  const tree = normalizeTreeInput(options.data);
+  const maxDepth = computeMaxDepth(tree);
+
+  return {
+    size: {
+      radius: options.radius,
+      angle: options.angle,
+    },
+    layers: [{
+      id: 'default',
+      radialUnits: [0, maxDepth],
+      angleMode: 'free',
+      tree,
+    }],
+  };
+}
+
+function normalizeTreeInput(data: TreeNodeInput | TreeNodeInput[]): TreeNodeInput[] {
+  return Array.isArray(data) ? data : [data];
+}
+
+function computeMaxDepth(nodes: TreeNodeInput[], current = 1): number {
+  let max = current;
+  for (const node of nodes) {
+    if (node.children && node.children.length > 0) {
+      max = Math.max(max, computeMaxDepth(node.children, current + 1));
+    }
+  }
+  return max;
 }

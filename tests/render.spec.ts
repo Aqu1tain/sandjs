@@ -353,3 +353,36 @@ test('navigation runtime drills down into arcs and breadcrumbs remain interactiv
   assert.ok(firstFocus && firstFocus.pathIndices.join('.') === '0', 'first focus should target alpha');
   assert.equal(secondFocus, null, 'last focus should reset to null');
 });
+
+test('renderSVG supports simple data API without config', () => {
+  const document = new StubDocument();
+  const hostStub = new StubSVGElement('svg');
+
+  const chart = renderSVG({
+    el: hostStub as unknown as SVGElement,
+    document: document as unknown as Document,
+    radius: 100,
+    data: [
+      { name: 'A', value: 2 },
+      {
+        name: 'B',
+        value: 3,
+        children: [
+          { name: 'B1', value: 1 },
+          { name: 'B2', value: 2 },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(chart.length, 4, 'should render all arcs including nested children');
+  assert.deepEqual(
+    chart.map((arc) => arc.data.name),
+    ['A', 'B', 'B1', 'B2'],
+  );
+
+  const paths = hostStub.children.filter((c) => c.tagName === 'path');
+  assert.equal(paths.length, 4, 'should create path elements for all arcs');
+
+  chart.destroy();
+});

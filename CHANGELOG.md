@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Simple API**: New simplified way to create sunbursts without layer configuration. Use `data` and `radius` props directly instead of wrapping everything in `config.layers`. The library auto-computes layer depth from tree structure. Example: `renderSVG({ el: '#chart', radius: 400, data: [{ name: 'A', children: [...] }] })`. Full `config` API remains available for advanced use cases (multi-layer, aligned layers, etc.).
+
 ### Refactoring
 - **path-management.ts**: Extracted `attachEventHandlers`, `applyBorderStyles`, `applyDataAttributes`, `buildClassList` helpers. Simplified opacity conditionals with single guard clause.
 - **orchestration.ts**: Split `renderSVG` (222→59 lines) into `createRenderLoop`, `executeRender`, `processArcs`, `applySvgDimensions`, `appendNewElement`, `scheduleRemovals`. Replaced `Object.defineProperties` with direct assignment.
