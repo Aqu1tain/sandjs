@@ -109,7 +109,7 @@ export function createNavigationRuntime(
   if (!input) return null;
 
   const options: NavigationOptions =
-    input === true ? {} : typeof input === 'object' && input !== null ? (input as NavigationOptions) : {};
+    input === true ? {} : typeof input === 'object' && input !== null ? (input) : {};
 
   const allowedLayers = options.layers ? new Set(options.layers) : null;
   const { requestRender, breadcrumbs } = deps;

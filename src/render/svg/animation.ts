@@ -187,7 +187,7 @@ export function createAnimationDrivers(doc: Document): AnimationDrivers {
         };
 
   const now =
-    view && view.performance && typeof view.performance.now === 'function'
+      view?.performance && typeof view.performance.now === 'function'
       ? () => view.performance.now()
       : () => Date.now();
 

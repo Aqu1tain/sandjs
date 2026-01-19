@@ -10,7 +10,7 @@ import type { LayerContext } from './shared.js';
  * @public
  */
 export function layout(config: SunburstConfig): LayoutArc[] {
-  if (!config.size || !(config.size.radius > 0)) {
+  if (!config.size || config.size.radius <= 0) {
     throw new Error('Sunburst size.radius must be a positive number');
   }
 
@@ -23,7 +23,7 @@ export function layout(config: SunburstConfig): LayoutArc[] {
     return Math.max(max, end);
   }, 0);
 
-  if (!(maxUnit > 0)) {
+  if (maxUnit <= 0) {
     throw new Error('Layer radialUnits must define a positive range');
   }
 
@@ -58,7 +58,7 @@ function layoutLayer(params: {
   const { layer, unitToRadius, totalAngle, previousLayers } = params;
   const [layerStart, layerEnd] = layer.radialUnits;
 
-  if (!(layerEnd > layerStart)) {
+  if (layerEnd <= layerStart) {
     throw new Error(`Layer "${layer.id}" must declare radialUnits with end > start`);
   }
 
