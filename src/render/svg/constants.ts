@@ -13,6 +13,9 @@ export const LABEL_MAX_FONT_SIZE = 18; // Maximum font size for labels
 export const LABEL_CHAR_WIDTH_FACTOR = 0.7; // Average character width as fraction of font size
 export const LABEL_PADDING = 8; // Padding around label text (pixels)
 export const LABEL_SAFETY_MARGIN = 1.15; // 15% safety margin for label fitting calculations
+export const LABEL_TANGENT_SAMPLE_RATIO = 0.01; // Proportion of arc span for tangent sampling
+export const LABEL_TANGENT_MIN_DELTA = 1e-4; // Minimum delta to avoid numerical instability
+export const LABEL_TANGENT_MAX_DELTA = 0.1; // Maximum delta to keep sampling local
 
 /**
  * Collapsed arc visual indicators

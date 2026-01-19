@@ -7,6 +7,9 @@ import {
   LABEL_CHAR_WIDTH_FACTOR,
   LABEL_PADDING,
   LABEL_SAFETY_MARGIN,
+  LABEL_TANGENT_SAMPLE_RATIO,
+  LABEL_TANGENT_MIN_DELTA,
+  LABEL_TANGENT_MAX_DELTA,
 } from './constants.js';
 import type { ManagedPath } from './types.js';
 import type { LayoutArc } from '../../types/index.js';
@@ -94,24 +97,26 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
     return;
   }
 
-  // Determine label color with priority: node > layer > global > auto-contrast > default
-  const autoLabelColor = typeof labelOptions === 'object' ? labelOptions?.autoLabelColor ?? false : false;
-  const globalLabelColor = typeof labelOptions === 'object' ? labelOptions?.labelColor : undefined;
+  const labelColor = resolveLabelColor(arc, layer, renderOptions, arcColor);
+  showLabel(managed, text, evaluation, arc, labelColor);
+}
 
-  let labelColor: string;
-  if (arc.data.labelColor) {
-    labelColor = arc.data.labelColor;
-  } else if (layer?.labelColor) {
-    labelColor = layer.labelColor;
-  } else if (globalLabelColor) {
-    labelColor = globalLabelColor;
-  } else if (autoLabelColor) {
-    labelColor = getContrastTextColor(arcColor);
-  } else {
-    labelColor = '#000000'; // Default black
+function resolveLabelColor(
+  arc: LayoutArc,
+  layer: { labelColor?: string } | undefined,
+  renderOptions: RenderSvgOptions,
+  arcColor: string,
+): string {
+  if (arc.data.labelColor) return arc.data.labelColor;
+  if (layer?.labelColor) return layer.labelColor;
+
+  const labelOptions = renderOptions.labels;
+  if (typeof labelOptions === 'object') {
+    if (labelOptions.labelColor) return labelOptions.labelColor;
+    if (labelOptions.autoLabelColor) return getContrastTextColor(arcColor);
   }
 
-  showLabel(managed, text, evaluation, arc, labelColor);
+  return '#000000';
 }
 
 /**
@@ -142,8 +147,7 @@ function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: n
   const angle = (arc.x0 + arc.x1) * 0.5;
   const point = polarToCartesian(cx, cy, midRadius, angle);
 
-  // Compute a small delta angle for local sampling (keeps delta proportional to arc span)
-  const smallDelta = Math.min(Math.max(span * 0.01, 1e-4), 0.1);
+  const smallDelta = Math.min(Math.max(span * LABEL_TANGENT_SAMPLE_RATIO, LABEL_TANGENT_MIN_DELTA), LABEL_TANGENT_MAX_DELTA);
 
   // Sample points just before and after midpoint
   const aBefore = angle - smallDelta;
@@ -304,33 +308,20 @@ function createLabelLogPayload(arc: LayoutArc, text: string, reason: string): La
   };
 }
 
-/**
- * Determines if a label hiding reason should be logged
- */
+const LABEL_HIDDEN_REASONS: Record<string, string> = {
+  'thin-radius': 'radial thickness is too small for a readable label',
+  'narrow-arc': 'arc span is too narrow for the label text',
+  'no-span': 'the arc span is effectively zero',
+  'path-error': 'the label path could not be established for this arc',
+};
+
 function shouldLogLabelReason(reason: string): boolean {
-  return reason === 'thin-radius' || reason === 'narrow-arc' || reason === 'no-span' || reason === 'path-error';
+  return reason in LABEL_HIDDEN_REASONS;
 }
 
-/**
- * Logs information about a hidden label
- */
 function logHiddenLabel(payload: LabelLogPayload): void {
-  if (typeof console === 'undefined' || typeof console.info !== 'function') {
-    return;
-  }
+  if (typeof console === 'undefined' || typeof console.info !== 'function') return;
 
-  let friendlyReason = 'node is too small to display a label safely';
-  if (payload.reason === 'thin-radius') {
-    friendlyReason = 'radial thickness is too small for a readable label';
-  } else if (payload.reason === 'narrow-arc') {
-    friendlyReason = 'arc span is too narrow for the label text';
-  } else if (payload.reason === 'no-span') {
-    friendlyReason = 'the arc span is effectively zero';
-  } else if (payload.reason === 'path-error') {
-    friendlyReason = 'the label path could not be established for this arc';
-  }
-
-  console.info(
-    `[Sand.js] Hiding label "${payload.name}" on layer "${payload.layerId}" because ${friendlyReason}.`,
-  );
+  const friendlyReason = LABEL_HIDDEN_REASONS[payload.reason] ?? 'node is too small to display a label safely';
+  console.info(`[Sand.js] Hiding label "${payload.name}" on layer "${payload.layerId}" because ${friendlyReason}.`);
 }
