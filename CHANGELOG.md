@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **aligned.ts**: Reduced `layoutAlignedLayer` cognitive complexity from 27 to ~5 by extracting `getSourceLayer`, `buildRootSourceMap`, `getAlignedSlot`, `computeTrimmedBounds`, `layoutAlignedNode`, `fallbackToFreeLayout`.
 - **breadcrumbs.ts**: Use `.dataset` instead of `setAttribute` for data attributes.
 - **orchestration.ts**: Refactor `scheduleRemovals` to use options object (8→1 parameters).
+- **normalization.ts**: Reduced `normalizeTree` cognitive complexity from 17 to ~6 by extracting `isMultiParentNode`, `warnMultiParentFeature`, `addToMultiParentGroup`, `normalizeValue`, `normalizeNode`.
 
 ## [0.3.6] - 2025-01-27
 
