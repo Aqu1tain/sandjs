@@ -81,6 +81,11 @@ class StubElement {
     return child;
   }
 
+  remove(): void {
+    if (!this.parentNode) return;
+    this.parentNode.removeChild(this);
+  }
+
   addEventListener(type: string, handler: (event: any) => void): void {
     if (!this.listeners[type]) {
       this.listeners[type] = [];

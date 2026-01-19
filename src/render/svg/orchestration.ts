@@ -60,7 +60,7 @@ class RenderState {
     for (const managed of this.pathRegistry.values()) {
       managed.dispose();
       if (managed.element.parentNode === host) {
-        host.removeChild(managed.element);
+        managed.element.remove();
       }
     }
     this.pathRegistry.clear();

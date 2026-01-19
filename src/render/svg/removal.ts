@@ -79,13 +79,13 @@ export function scheduleManagedRemoval(params: ScheduleRemovalParams): void {
   const remove = () => {
     stopManagedAnimations(managed);
     if (managed.element.parentNode === host) {
-      host.removeChild(managed.element);
+      managed.element.remove();
     }
     if (managed.labelElement.parentNode === host) {
-      host.removeChild(managed.labelElement);
+      managed.labelElement.remove();
     }
     if (managed.labelPathElement.parentNode) {
-      managed.labelPathElement.parentNode.removeChild(managed.labelPathElement);
+      managed.labelPathElement.remove();
     }
     registry.delete(key);
     managed.dispose();

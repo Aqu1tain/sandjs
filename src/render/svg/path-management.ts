@@ -88,10 +88,10 @@ export function createManagedPath(params: {
       managed.pendingRemoval = false;
       managed.abortController.abort();
       if (labelElement.parentNode) {
-        labelElement.parentNode.removeChild(labelElement);
+        labelElement.remove();
       }
       if (labelPathElement.parentNode) {
-        labelPathElement.parentNode.removeChild(labelPathElement);
+        labelPathElement.remove();
       }
     },
   };
