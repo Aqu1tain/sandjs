@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **label-system.ts**: Extracted `resolveLabelColor` helper. Replaced if-else chain in `logHiddenLabel` with `LABEL_HIDDEN_REASONS` map. Added `LABEL_TANGENT_*` constants for magic numbers.
 - **navigation.ts**: Consolidated 8 mutable variables into `NavigationState` type. Renamed WeakMaps to clearer names (`nodeToBase`, `baseToPath`, `derivedToPath`). Extracted `registerSingleArc` and `setFocus` helpers. Flattened nested conditionals with guard clauses.
 - **aligned.ts**: Reduced `layoutAlignedLayer` cognitive complexity from 27 to ~5 by extracting `getSourceLayer`, `buildRootSourceMap`, `getAlignedSlot`, `computeTrimmedBounds`, `layoutAlignedNode`, `fallbackToFreeLayout`.
+- **breadcrumbs.ts**: Use `.dataset` instead of `setAttribute` for data attributes.
 
 ## [0.3.6] - 2025-01-27
 
