@@ -194,7 +194,7 @@ function executeRender(
     cy,
   });
 
-  scheduleRemovals(state, host, usedKeys, transition, drivers, cx, cy, navigationMorph);
+  scheduleRemovals({ state, host, usedKeys, transition, drivers, cx, cy, navigationMorph });
 
   return arcs;
 }
@@ -292,16 +292,17 @@ function appendNewElement(
   }
 }
 
-function scheduleRemovals(
-  state: RenderState,
-  host: SVGElement,
-  usedKeys: Set<string>,
-  transition: ReturnType<typeof resolveTransition>,
-  drivers: AnimationDrivers,
-  cx: number,
-  cy: number,
-  navigationMorph: boolean,
-): void {
+function scheduleRemovals(params: {
+  state: RenderState;
+  host: SVGElement;
+  usedKeys: Set<string>;
+  transition: ReturnType<typeof resolveTransition>;
+  drivers: AnimationDrivers;
+  cx: number;
+  cy: number;
+  navigationMorph: boolean;
+}): void {
+  const { state, host, usedKeys, transition, drivers, cx, cy, navigationMorph } = params;
   for (const [key, managed] of state.pathRegistry) {
     if (usedKeys.has(key)) continue;
     scheduleManagedRemoval({

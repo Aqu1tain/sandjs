@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **navigation.ts**: Consolidated 8 mutable variables into `NavigationState` type. Renamed WeakMaps to clearer names (`nodeToBase`, `baseToPath`, `derivedToPath`). Extracted `registerSingleArc` and `setFocus` helpers. Flattened nested conditionals with guard clauses.
 - **aligned.ts**: Reduced `layoutAlignedLayer` cognitive complexity from 27 to ~5 by extracting `getSourceLayer`, `buildRootSourceMap`, `getAlignedSlot`, `computeTrimmedBounds`, `layoutAlignedNode`, `fallbackToFreeLayout`.
 - **breadcrumbs.ts**: Use `.dataset` instead of `setAttribute` for data attributes.
+- **orchestration.ts**: Refactor `scheduleRemovals` to use options object (8→1 parameters).
 
 ## [0.3.6] - 2025-01-27
 
