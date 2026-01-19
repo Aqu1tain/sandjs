@@ -13,6 +13,11 @@
     "tests/layout.spec.ts",
     "tests/render.spec.ts",
     "tests/colorAssignment.spec.ts",
-    "tests/geometry.spec.ts"
+    "tests/geometry.spec.ts",
+    "tests/simpleApi.spec.ts",
+    "tests/errorHandling.spec.ts",
+    "tests/runtimes.spec.ts",
+    "tests/navigation.spec.ts",
+    "tests/labels.spec.ts"
   ]
 }

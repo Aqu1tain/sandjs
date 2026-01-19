@@ -1,0 +1,213 @@
+import { test, describe } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { resolveConfig, isSunburstConfig } from '../src/render/svg/utils.js';
+import type { RenderSvgOptions } from '../src/render/types.js';
+import type { SunburstConfig, TreeNodeInput } from '../src/types/index.js';
+
+// Re-implement computeMaxDepth for testing (since it's not exported)
+function testComputeMaxDepth(nodes: TreeNodeInput[], current = 1): number {
+  let max = current;
+  for (const node of nodes) {
+    if (node.children && node.children.length > 0) {
+      max = Math.max(max, testComputeMaxDepth(node.children, current + 1));
+    }
+  }
+  return max;
+}
+
+describe('Simple API - resolveConfig', () => {
+  test('returns config when config is provided', () => {
+    const config: SunburstConfig = {
+      size: { radius: 100 },
+      layers: [{ id: 'test', radialUnits: [0, 1], angleMode: 'free', tree: [{ name: 'A' }] }],
+    };
+    const options = { el: '#chart', config } as RenderSvgOptions;
+    const result = resolveConfig(options);
+    assert.strictEqual(result, config);
+  });
+
+  test('creates config from data and radius', () => {
+    const options = {
+      el: '#chart',
+      radius: 200,
+      data: [{ name: 'A', value: 10 }],
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    assert.equal(result.size.radius, 200);
+    assert.equal(result.layers.length, 1);
+    assert.equal(result.layers[0].id, 'default');
+    assert.equal(result.layers[0].angleMode, 'free');
+  });
+
+  test('throws when neither config nor data is provided', () => {
+    const options = { el: '#chart' } as RenderSvgOptions;
+    assert.throws(() => resolveConfig(options), /requires either `config` or `data`/);
+  });
+
+  test('throws when data is provided without radius', () => {
+    const options = {
+      el: '#chart',
+      data: [{ name: 'A' }],
+    } as RenderSvgOptions;
+    assert.throws(() => resolveConfig(options), /requires `radius` when using `data`/);
+  });
+
+  test('handles single node data (not array)', () => {
+    const options = {
+      el: '#chart',
+      radius: 100,
+      data: { name: 'Single', value: 5 },
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    assert.ok(Array.isArray(result.layers[0].tree));
+    const tree = result.layers[0].tree as any[];
+    assert.equal(tree.length, 1);
+    assert.equal(tree[0].name, 'Single');
+  });
+
+  test('computes correct radialUnits from tree depth', () => {
+    const options = {
+      el: '#chart',
+      radius: 100,
+      data: [
+        {
+          name: 'Root',
+          children: [
+            {
+              name: 'Child',
+              children: [
+                { name: 'Grandchild' }
+              ]
+            }
+          ]
+        }
+      ],
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    // Depth is 3 (Root -> Child -> Grandchild)
+    assert.deepEqual(result.layers[0].radialUnits, [0, 3]);
+  });
+
+  test('preserves angle option', () => {
+    const options = {
+      el: '#chart',
+      radius: 100,
+      angle: Math.PI,
+      data: [{ name: 'A' }],
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    assert.equal(result.size.angle, Math.PI);
+  });
+
+  test('handles deeply nested tree', () => {
+    const options = {
+      el: '#chart',
+      radius: 100,
+      data: [{
+        name: 'L1',
+        children: [{
+          name: 'L2',
+          children: [{
+            name: 'L3',
+            children: [{
+              name: 'L4',
+              children: [{ name: 'L5' }]
+            }]
+          }]
+        }]
+      }],
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    assert.deepEqual(result.layers[0].radialUnits, [0, 5]);
+  });
+
+  test('handles multiple root nodes', () => {
+    const options = {
+      el: '#chart',
+      radius: 100,
+      data: [
+        { name: 'A', children: [{ name: 'A1' }] },
+        { name: 'B' },
+        { name: 'C', children: [{ name: 'C1' }, { name: 'C2' }] },
+      ],
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    const tree = result.layers[0].tree as any[];
+    assert.equal(tree.length, 3);
+    assert.deepEqual(result.layers[0].radialUnits, [0, 2]);
+  });
+});
+
+describe('Simple API - isSunburstConfig', () => {
+  test('returns true for valid SunburstConfig', () => {
+    const config = {
+      size: { radius: 100 },
+      layers: [],
+    };
+    assert.ok(isSunburstConfig(config));
+  });
+
+  test('returns false for null', () => {
+    assert.ok(!isSunburstConfig(null));
+  });
+
+  test('returns false for undefined', () => {
+    assert.ok(!isSunburstConfig(undefined));
+  });
+
+  test('returns false for primitive values', () => {
+    assert.ok(!isSunburstConfig(42));
+    assert.ok(!isSunburstConfig('string'));
+    assert.ok(!isSunburstConfig(true));
+  });
+
+  test('returns false for object missing size', () => {
+    assert.ok(!isSunburstConfig({ layers: [] }));
+  });
+
+  test('returns false for object missing layers', () => {
+    assert.ok(!isSunburstConfig({ size: { radius: 100 } }));
+  });
+
+  test('returns false for array', () => {
+    assert.ok(!isSunburstConfig([{ size: {}, layers: [] }]));
+  });
+});
+
+describe('Simple API - computeMaxDepth', () => {
+  test('returns 1 for flat array', () => {
+    const result = testComputeMaxDepth([{ name: 'A' }, { name: 'B' }]);
+    assert.equal(result, 1);
+  });
+
+  test('returns 2 for one level of children', () => {
+    const result = testComputeMaxDepth([
+      { name: 'A', children: [{ name: 'A1' }] }
+    ]);
+    assert.equal(result, 2);
+  });
+
+  test('returns correct depth for unbalanced tree', () => {
+    const result = testComputeMaxDepth([
+      { name: 'A' },
+      { name: 'B', children: [
+        { name: 'B1', children: [{ name: 'B1a' }] }
+      ]},
+      { name: 'C', children: [{ name: 'C1' }] },
+    ]);
+    assert.equal(result, 3);
+  });
+
+  test('handles empty children array', () => {
+    const result = testComputeMaxDepth([
+      { name: 'A', children: [] }
+    ]);
+    assert.equal(result, 1);
+  });
+});
