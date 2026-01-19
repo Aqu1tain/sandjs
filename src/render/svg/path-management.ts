@@ -96,48 +96,104 @@ export function createManagedPath(params: {
     },
   };
 
+  attachEventHandlers(managed, abortController.signal);
+
+  return managed;
+}
+
+function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
+  const { element } = managed;
+
   const handleEnter = (event: PointerEvent) => {
-    const currentArc = managed.arc;
-    managed.runtime.tooltip?.show(event, currentArc);
-    managed.runtime.highlight?.pointerEnter(currentArc, element);
-    if (!managed.runtime.navigation?.handlesBreadcrumbs()) {
-      managed.runtime.breadcrumbs?.show(currentArc);
+    const { arc, runtime, options } = managed;
+    runtime.tooltip?.show(event, arc);
+    runtime.highlight?.pointerEnter(arc, element);
+    if (!runtime.navigation?.handlesBreadcrumbs()) {
+      runtime.breadcrumbs?.show(arc);
     }
-    managed.options.onArcEnter?.({ arc: currentArc, path: element, event });
+    options.onArcEnter?.({ arc, path: element, event });
   };
 
   const handleMove = (event: PointerEvent) => {
-    const currentArc = managed.arc;
-    managed.runtime.tooltip?.move(event);
-    managed.runtime.highlight?.pointerMove(currentArc, element);
-    managed.options.onArcMove?.({ arc: currentArc, path: element, event });
+    const { arc, runtime, options } = managed;
+    runtime.tooltip?.move(event);
+    runtime.highlight?.pointerMove(arc, element);
+    options.onArcMove?.({ arc, path: element, event });
   };
 
   const handleLeave = (event: PointerEvent) => {
-    const currentArc = managed.arc;
-    managed.runtime.tooltip?.hide();
-    managed.runtime.highlight?.pointerLeave(currentArc, element);
-    if (!managed.runtime.navigation?.handlesBreadcrumbs()) {
-      managed.runtime.breadcrumbs?.clear();
+    const { arc, runtime, options } = managed;
+    runtime.tooltip?.hide();
+    runtime.highlight?.pointerLeave(arc, element);
+    if (!runtime.navigation?.handlesBreadcrumbs()) {
+      runtime.breadcrumbs?.clear();
     }
-    managed.options.onArcLeave?.({ arc: currentArc, path: element, event });
+    options.onArcLeave?.({ arc, path: element, event });
   };
 
   const handleClick = (event: MouseEvent) => {
-    const currentArc = managed.arc;
-    managed.runtime.highlight?.handleClick?.(currentArc, element, event);
-    managed.runtime.navigation?.handleArcClick(currentArc);
-    managed.options.onArcClick?.({ arc: currentArc, path: element, event });
+    const { arc, runtime, options } = managed;
+    runtime.highlight?.handleClick?.(arc, element, event);
+    runtime.navigation?.handleArcClick(arc);
+    options.onArcClick?.({ arc, path: element, event });
   };
 
-  const { signal } = abortController;
   element.addEventListener('pointerenter', handleEnter, { signal });
   element.addEventListener('pointermove', handleMove, { signal });
   element.addEventListener('pointerleave', handleLeave, { signal });
   element.addEventListener('pointercancel', handleLeave, { signal });
   element.addEventListener('click', handleClick, { signal });
+}
 
-  return managed;
+function applyBorderStyles(element: SVGPathElement, arc: LayoutArc, options: RenderSvgOptions): void {
+  const layer = options.config.layers.find(l => l.id === arc.layerId);
+  const borderColor = layer?.borderColor ?? options.borderColor;
+  const borderWidth = layer?.borderWidth ?? options.borderWidth;
+
+  if (borderColor) element.setAttribute('stroke', borderColor);
+  if (borderWidth !== undefined) element.setAttribute('stroke-width', String(borderWidth));
+}
+
+function applyDataAttributes(element: SVGPathElement, arc: LayoutArc): void {
+  element.setAttribute('data-layer', arc.layerId);
+  element.setAttribute('data-name', arc.data.name);
+  element.setAttribute('data-depth', String(arc.depth));
+
+  setOrRemoveAttribute(element, 'data-collapsed', arc.data.collapsed ? 'true' : null);
+  setOrRemoveAttribute(element, 'data-key', arc.key ?? null);
+  setOrRemoveAttribute(element, 'data-tooltip', typeof arc.data.tooltip === 'string' ? arc.data.tooltip : null);
+}
+
+function setOrRemoveAttribute(element: Element, name: string, value: string | null): void {
+  if (value) {
+    element.setAttribute(name, value);
+  } else {
+    element.removeAttribute(name);
+  }
+}
+
+function buildClassList(arc: LayoutArc, options: RenderSvgOptions): string {
+  const tokens: string[] = ['sand-arc'];
+  const seen = new Set<string>(tokens);
+
+  if (arc.depth === 0) tokens.push('is-root');
+  if (arc.data.collapsed) tokens.push('is-collapsed');
+
+  const dynamicClass = options.classForArc?.(arc);
+  const candidates = Array.isArray(dynamicClass) ? dynamicClass : [dynamicClass];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    for (const piece of candidate.split(/\s+/)) {
+      const trimmed = piece.trim();
+      if (trimmed && !seen.has(trimmed)) {
+        seen.add(trimmed);
+        tokens.push(trimmed);
+      }
+    }
+  }
+
+  return tokens.join(' ');
 }
 
 /**
@@ -207,77 +263,9 @@ export function updateManagedPath(
     updateArcLabel(managed, arc, { cx, cy, allowLogging: options.debug ?? false, renderOptions: options, arcColor: fillColor });
   }
 
-  // Apply border color and width
-  // Priority: layer config > global options > default
-  const layer = options.config.layers.find(l => l.id === arc.layerId);
-  const borderColor = layer?.borderColor ?? options.borderColor;
-  const borderWidth = layer?.borderWidth ?? options.borderWidth;
-
-  if (borderColor) {
-    element.setAttribute('stroke', borderColor);
-  }
-  if (borderWidth !== undefined) {
-    element.setAttribute('stroke-width', String(borderWidth));
-  }
-
-  element.setAttribute('data-layer', arc.layerId);
-  element.setAttribute('data-name', arc.data.name);
-  element.setAttribute('data-depth', String(arc.depth));
-
-  const isCollapsed = Boolean(arc.data.collapsed);
-  if (isCollapsed) {
-    element.setAttribute('data-collapsed', 'true');
-  } else {
-    element.removeAttribute('data-collapsed');
-  }
-
-  if (arc.key) {
-    element.setAttribute('data-key', arc.key);
-  } else {
-    element.removeAttribute('data-key');
-  }
-
-  if (typeof arc.data.tooltip === 'string') {
-    element.setAttribute('data-tooltip', arc.data.tooltip);
-  } else {
-    element.removeAttribute('data-tooltip');
-  }
-
-  const classTokens: string[] = [];
-  const seen = new Set<string>();
-  const addClass = (candidate: string | null | undefined) => {
-    if (!candidate) {
-      return;
-    }
-    const pieces = candidate.split(/\s+/);
-    for (const piece of pieces) {
-      const trimmed = piece.trim();
-      if (!trimmed || seen.has(trimmed)) {
-        continue;
-      }
-      seen.add(trimmed);
-      classTokens.push(trimmed);
-    }
-  };
-
-  addClass('sand-arc');
-  if (arc.depth === 0) {
-    addClass('is-root');
-  }
-  if (isCollapsed) {
-    addClass('is-collapsed');
-  }
-
-  const dynamicClass = options.classForArc?.(arc);
-  if (typeof dynamicClass === 'string') {
-    addClass(dynamicClass);
-  } else if (Array.isArray(dynamicClass)) {
-    for (const candidate of dynamicClass) {
-      addClass(candidate);
-    }
-  }
-
-  element.setAttribute('class', classTokens.join(' '));
+  applyBorderStyles(element, arc, options);
+  applyDataAttributes(element, arc);
+  element.setAttribute('class', buildClassList(arc, options));
 
   options.decoratePath?.(element, arc);
   runtime.highlight?.register(arc, element);
@@ -285,30 +273,15 @@ export function updateManagedPath(
   element.style.pointerEvents = '';
 
   if (animateArc) {
-    // When animating, updates will be driven by the animation callbacks.
-    // Ensure pending log reasons are cleared so zoom recomputations can log once animation settles.
     managed.labelPendingLogReason = null;
   }
 
-  // Existing arc - reset opacity
-  if (previousArc) {
+  const needsFadeIn = !previousArc && transition && !navigationMorph;
+  if (!needsFadeIn) {
     element.style.opacity = '';
     return;
   }
 
-  // New arc without transition
-  if (!transition) {
-    element.style.opacity = '';
-    return;
-  }
-
-  // New arc with navigation morph - no fade needed
-  if (navigationMorph) {
-    element.style.opacity = '';
-    return;
-  }
-
-  // New arc with fade-in transition
   element.style.opacity = '0';
   managed.fade = startFade({
     managed,
@@ -317,12 +290,8 @@ export function updateManagedPath(
     transition,
     drivers,
     resetStyleOnComplete: true,
-    onComplete: () => {
-      managed.fade = null;
-    },
-    onCancel: () => {
-      managed.fade = null;
-    },
+    onComplete: () => { managed.fade = null; },
+    onCancel: () => { managed.fade = null; },
   });
 }
 
