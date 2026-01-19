@@ -15,11 +15,25 @@ class StubElement {
     remove: () => {},
     toggle: () => {},
   };
-  public dataset: Record<string, string> = {};
+  public dataset: Record<string, string>;
   public listeners: Record<string, Array<(event: any) => void>> = {};
   private _innerHTML = '';
 
-  constructor(public tagName: string) {}
+  constructor(public tagName: string) {
+    const self = this;
+    this.dataset = new Proxy({} as Record<string, string>, {
+      set(target, prop: string, value: string) {
+        target[prop] = value;
+        self.attributes.set(`data-${prop}`, value);
+        return true;
+      },
+      deleteProperty(target, prop: string) {
+        delete target[prop];
+        self.attributes.delete(`data-${prop}`);
+        return true;
+      },
+    });
+  }
 
   setAttribute(name: string, value: string) {
     this.attributes.set(name, value);
@@ -65,6 +79,11 @@ class StubElement {
     }
     this.firstChild = this.children[0] ?? null;
     return child;
+  }
+
+  remove(): void {
+    if (!this.parentNode) return;
+    this.parentNode.removeChild(this);
   }
 
   addEventListener(type: string, handler: (event: any) => void): void {

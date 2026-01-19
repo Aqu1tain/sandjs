@@ -1,7 +1,6 @@
 import { describeArcPath } from '../geometry.js';
 import type { ResolvedTransition } from '../transition.js';
 import type { ManagedPath, AnimationDrivers } from './types.js';
-import type { LayoutArc } from '../../types/index.js';
 import type { RenderSvgOptions } from '../types.js';
 import {
   startFade,
@@ -80,13 +79,13 @@ export function scheduleManagedRemoval(params: ScheduleRemovalParams): void {
   const remove = () => {
     stopManagedAnimations(managed);
     if (managed.element.parentNode === host) {
-      host.removeChild(managed.element);
+      managed.element.remove();
     }
     if (managed.labelElement.parentNode === host) {
-      host.removeChild(managed.labelElement);
+      managed.labelElement.remove();
     }
     if (managed.labelPathElement.parentNode) {
-      managed.labelPathElement.parentNode.removeChild(managed.labelPathElement);
+      managed.labelPathElement.remove();
     }
     registry.delete(key);
     managed.dispose();

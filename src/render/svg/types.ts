@@ -1,4 +1,4 @@
-import type { LayoutArc, SunburstConfig } from '../../types/index.js';
+import type { LayoutArc } from '../../types/index.js';
 import type { RenderSvgOptions } from '../types.js';
 import type { TooltipRuntime } from '../runtime/tooltip.js';
 import type { BreadcrumbRuntime } from '../runtime/breadcrumbs.js';

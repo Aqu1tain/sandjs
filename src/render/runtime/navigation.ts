@@ -33,123 +33,157 @@ type NavigationDeps = {
   requestRender: () => void;
 };
 
+type NodeMappings = {
+  nodeToBase: WeakMap<TreeNodeInput, TreeNodeInput>;
+  baseToPath: WeakMap<TreeNodeInput, number[]>;
+  derivedToPath: WeakMap<TreeNodeInput, number[]>;
+};
+
+type NavigationState = {
+  baseConfig: SunburstConfig;
+  focus: FocusTarget | null;
+  derivedConfig: SunburstConfig | null;
+  mappings: NodeMappings;
+  arcByIdentifier: Map<string, LayoutArc>;
+  pendingTransition: NavigationTransitionContext | undefined;
+};
+
+function createInitialState(config: SunburstConfig): NavigationState {
+  const mappings: NodeMappings = {
+    nodeToBase: new WeakMap(),
+    baseToPath: new WeakMap(),
+    derivedToPath: new WeakMap(),
+  };
+  const state: NavigationState = {
+    baseConfig: cloneSunburstConfig(config),
+    focus: null,
+    derivedConfig: null,
+    mappings,
+    arcByIdentifier: new Map(),
+    pendingTransition: undefined,
+  };
+  indexBaseConfig(state.baseConfig, mappings.nodeToBase, mappings.baseToPath);
+  return state;
+}
+
+function resetMappings(state: NavigationState): void {
+  state.mappings = {
+    nodeToBase: new WeakMap(),
+    baseToPath: new WeakMap(),
+    derivedToPath: new WeakMap(),
+  };
+}
+
+function registerSingleArc(arc: LayoutArc, state: NavigationState): void {
+  const { nodeToBase, baseToPath, derivedToPath } = state.mappings;
+
+  const baseNode = nodeToBase.get(arc.data) ?? arc.data;
+  nodeToBase.set(arc.data, baseNode);
+  nodeToBase.set(baseNode, baseNode);
+
+  const basePath = derivedToPath.get(arc.data) ?? baseToPath.get(baseNode) ?? arc.pathIndices;
+  if (!basePath) return;
+
+  baseToPath.set(baseNode, basePath);
+  derivedToPath.set(arc.data, basePath);
+
+  const identifier = arcIdentifierFromPath(arc.layerId, basePath);
+  state.arcByIdentifier.set(identifier, arc);
+
+  if (arc.data !== baseNode) {
+    derivedToPath.set(baseNode, basePath);
+  }
+
+  const baseNodes = collectNodesAlongPath(state.baseConfig, arc.layerId, basePath);
+  if (baseNodes) {
+    arc.path = baseNodes;
+  }
+  arc.pathIndices = basePath.slice();
+}
+
+function resolveNavigationOptions(input: RenderSvgOptions['navigation']): NavigationOptions {
+  if (input === true) return {};
+  if (typeof input === 'object' && input !== null) return input;
+  return {};
+}
+
 export function createNavigationRuntime(
   input: RenderSvgOptions['navigation'],
   deps: NavigationDeps,
   baseConfig: SunburstConfig,
 ): NavigationRuntime | null {
-  if (!input) {
-    return null;
-  }
+  if (!input) return null;
 
-  const options: NavigationOptions =
-    input === true ? {} : typeof input === 'object' && input !== null ? (input as NavigationOptions) : {};
+  const options: NavigationOptions = resolveNavigationOptions(input);
 
   const allowedLayers = options.layers ? new Set(options.layers) : null;
-
-  let storedBaseConfig = cloneSunburstConfig(baseConfig);
-  let focus: FocusTarget | null = null;
-  let cachedDerivedConfig: SunburstConfig | null = null;
-  const requestRender = deps.requestRender;
-  const breadcrumbs = deps.breadcrumbs;
+  const { requestRender, breadcrumbs } = deps;
   const handlesBreadcrumbs = Boolean(breadcrumbs?.handlesTrail);
 
-  let nodeSourceMap = new WeakMap<TreeNodeInput, TreeNodeInput>();
-  let nodePathMap = new WeakMap<TreeNodeInput, number[]>();
-  let sourcePathMap = new WeakMap<TreeNodeInput, number[]>();
-  const arcByIdentifier = new Map<string, LayoutArc>();
-  let pendingTransition: NavigationTransitionContext | undefined;
-
-  indexBaseConfig(storedBaseConfig, nodeSourceMap, nodePathMap);
+  const state = createInitialState(baseConfig);
   updateBreadcrumbTrail();
 
   function setBaseConfig(config: SunburstConfig): void {
-    storedBaseConfig = cloneSunburstConfig(config);
-    focus = null;
-    cachedDerivedConfig = null;
-    pendingTransition = undefined;
-    nodeSourceMap = new WeakMap<TreeNodeInput, TreeNodeInput>();
-    nodePathMap = new WeakMap<TreeNodeInput, number[]>();
-    sourcePathMap = new WeakMap<TreeNodeInput, number[]>();
-    arcByIdentifier.clear();
-    indexBaseConfig(storedBaseConfig, nodeSourceMap, nodePathMap);
+    state.baseConfig = cloneSunburstConfig(config);
+    state.focus = null;
+    state.derivedConfig = null;
+    state.pendingTransition = undefined;
+    resetMappings(state);
+    state.arcByIdentifier.clear();
+    indexBaseConfig(state.baseConfig, state.mappings.nodeToBase, state.mappings.baseToPath);
     updateBreadcrumbTrail();
   }
 
   function getActiveConfig(): SunburstConfig {
-    if (!focus) {
-      cachedDerivedConfig = null;
-      return storedBaseConfig;
+    if (!state.focus) {
+      state.derivedConfig = null;
+      return state.baseConfig;
     }
-    if (!cachedDerivedConfig) {
-      cachedDerivedConfig = deriveConfig(
-        storedBaseConfig,
-        focus,
-        nodeSourceMap,
-        nodePathMap,
-        sourcePathMap,
-      );
+    if (!state.derivedConfig) {
+      const { nodeToBase, baseToPath, derivedToPath } = state.mappings;
+      state.derivedConfig = deriveConfig(state.baseConfig, state.focus, nodeToBase, baseToPath, derivedToPath);
     }
-    return cachedDerivedConfig;
+    return state.derivedConfig;
   }
 
   function registerArcs(arcs: LayoutArc[]): void {
-    arcByIdentifier.clear();
+    state.arcByIdentifier.clear();
     for (const arc of arcs) {
-      const baseNode = nodeSourceMap.get(arc.data) ?? arc.data;
-      nodeSourceMap.set(arc.data, baseNode);
-      nodeSourceMap.set(baseNode, baseNode);
-
-    const basePath = sourcePathMap.get(arc.data) ?? nodePathMap.get(baseNode) ?? arc.pathIndices;
-    if (basePath) {
-      nodePathMap.set(baseNode, basePath);
-      sourcePathMap.set(arc.data, basePath);
-      const identifier = arcIdentifierFromPath(arc.layerId, basePath);
-      arcByIdentifier.set(identifier, arc);
-      if (arc.data !== baseNode) {
-        sourcePathMap.set(baseNode, basePath);
-      }
-      const baseNodes = collectNodesAlongPath(storedBaseConfig, arc.layerId, basePath);
-      if (baseNodes) {
-        arc.path = baseNodes;
-      }
-      arc.pathIndices = basePath.slice();
-    }
+      registerSingleArc(arc, state);
     }
     validateFocus();
     updateBreadcrumbTrail();
   }
 
   function handleArcClick(arc: LayoutArc): boolean {
-    if (allowedLayers && !allowedLayers.has(arc.layerId)) {
-      return false;
-    }
+    if (allowedLayers && !allowedLayers.has(arc.layerId)) return false;
 
     const target = createFocusTargetFromArcWrapper(arc);
-    if (!target) {
-      return false;
-    }
+    if (!target) return false;
 
-    if (focus && isSameFocus(target, focus)) {
-      if (!focus.pathIndices || focus.pathIndices.length === 0) {
-        return false;
-      }
-      const parentPath = focus.pathIndices.slice(0, -1);
+    if (state.focus && isSameFocus(target, state.focus)) {
+      if (!state.focus.pathIndices || state.focus.pathIndices.length === 0) return false;
+
+      const parentPath = state.focus.pathIndices.slice(0, -1);
       if (parentPath.length === 0) {
         reset();
         return true;
       }
-      applyFocusPath(focus.layerId, parentPath);
+      applyFocusPath(state.focus.layerId, parentPath);
       return true;
     }
 
-    focus = target;
-    pendingTransition = createTransitionContext(options.focusTransition);
-    cachedDerivedConfig = null;
+    setFocus(target);
+    return true;
+  }
+
+  function setFocus(target: FocusTarget): void {
+    state.focus = target;
+    state.pendingTransition = createTransitionContext(options.focusTransition);
+    state.derivedConfig = null;
     notifyFocusChange(target);
     updateBreadcrumbTrail();
     requestRender();
-    return true;
   }
 
   function handlesBreadcrumbsFlag(): boolean {
@@ -157,34 +191,32 @@ export function createNavigationRuntime(
   }
 
   function reset(): void {
-    if (!focus) {
-      return;
-    }
-    focus = null;
-    cachedDerivedConfig = null;
-    pendingTransition = createTransitionContext(options.focusTransition);
+    if (!state.focus) return;
+
+    state.focus = null;
+    state.derivedConfig = null;
+    state.pendingTransition = createTransitionContext(options.focusTransition);
     notifyFocusChange(null);
     updateBreadcrumbTrail();
     requestRender();
   }
 
   function dispose(): void {
-    focus = null;
-    cachedDerivedConfig = null;
-    arcByIdentifier.clear();
+    state.focus = null;
+    state.derivedConfig = null;
+    state.arcByIdentifier.clear();
     breadcrumbs?.setTrail?.(null);
-    pendingTransition = undefined;
+    state.pendingTransition = undefined;
   }
 
   function notifyFocusChange(target: FocusTarget | null): void {
-    if (typeof options.onFocusChange !== 'function') {
-      return;
-    }
+    if (typeof options.onFocusChange !== 'function') return;
+
     if (!target) {
       options.onFocusChange(null);
       return;
     }
-    const arc = target.arc ?? arcByIdentifier.get(target.identifier);
+    const arc = target.arc ?? state.arcByIdentifier.get(target.identifier);
     options.onFocusChange({
       layerId: target.layerId,
       path: target.pathNodes,
@@ -194,32 +226,29 @@ export function createNavigationRuntime(
   }
 
   function updateBreadcrumbTrail(): void {
-    if (!handlesBreadcrumbs) {
-      return;
-    }
+    if (!handlesBreadcrumbs) return;
+
     const trail: BreadcrumbTrailItem[] = [];
     const rootLabel = options.rootLabel ?? 'All';
     trail.push({
       id: 'root',
       label: rootLabel,
-      active: !focus,
-      onSelect: focus ? () => reset() : undefined,
+      active: !state.focus,
+      onSelect: state.focus ? () => reset() : undefined,
     });
 
-    if (focus) {
-      const activeFocus = focus;
-      activeFocus.pathNodes.forEach((node, index) => {
-        const pathSlice = activeFocus.pathIndices.slice(0, index + 1);
-        const identifier = arcIdentifierFromPath(activeFocus.layerId, pathSlice);
+    if (state.focus) {
+      const { focus } = state;
+      focus.pathNodes.forEach((node, index) => {
+        const pathSlice = focus.pathIndices.slice(0, index + 1);
+        const identifier = arcIdentifierFromPath(focus.layerId, pathSlice);
+        const isLast = index === focus.pathNodes.length - 1;
         trail.push({
           id: identifier,
           label: node?.name ?? `#${index + 1}`,
-          active: index === activeFocus.pathNodes.length - 1,
+          active: isLast,
           arcIdentifier: identifier,
-          onSelect:
-            index === activeFocus.pathNodes.length - 1
-              ? undefined
-              : () => applyFocusPath(activeFocus.layerId, pathSlice),
+          onSelect: isLast ? undefined : () => applyFocusPath(focus.layerId, pathSlice),
         });
       });
     }
@@ -229,36 +258,29 @@ export function createNavigationRuntime(
 
   function applyFocusPath(layerId: string, pathIndices: number[]): void {
     const target = createFocusTargetFromPathWrapper(layerId, pathIndices);
-    if (!target) {
-      return;
-    }
-    focus = target;
-    pendingTransition = createTransitionContext(options.focusTransition);
-    cachedDerivedConfig = null;
-    notifyFocusChange(target);
-    updateBreadcrumbTrail();
-    requestRender();
+    if (!target) return;
+    setFocus(target);
   }
 
   function validateFocus(): void {
-    if (!focus) {
-      return;
-    }
-    const node = getNodeAtPath(storedBaseConfig, focus.layerId, focus.pathIndices);
-    if (!node) {
-      focus = null;
-      cachedDerivedConfig = null;
-      notifyFocusChange(null);
-      updateBreadcrumbTrail();
-    }
+    if (!state.focus) return;
+
+    const node = getNodeAtPath(state.baseConfig, state.focus.layerId, state.focus.pathIndices);
+    if (node) return;
+
+    state.focus = null;
+    state.derivedConfig = null;
+    notifyFocusChange(null);
+    updateBreadcrumbTrail();
   }
 
   function createFocusTargetFromArcWrapper(arc: LayoutArc): FocusTarget | null {
-    return createFocusTargetFromArc(arc, nodeSourceMap, nodePathMap, sourcePathMap, storedBaseConfig);
+    const { nodeToBase, baseToPath, derivedToPath } = state.mappings;
+    return createFocusTargetFromArc(arc, nodeToBase, baseToPath, derivedToPath, state.baseConfig);
   }
 
   function createFocusTargetFromPathWrapper(layerId: string, pathIndices: number[]): FocusTarget | null {
-    return createFocusTargetFromPath(layerId, pathIndices, storedBaseConfig, nodePathMap, arcByIdentifier, getNodeAtPath);
+    return createFocusTargetFromPath(layerId, pathIndices, state.baseConfig, state.mappings.baseToPath, state.arcByIdentifier, getNodeAtPath);
   }
 
   return {
@@ -270,11 +292,8 @@ export function createNavigationRuntime(
     reset,
     dispose,
     consumeTransitionOverride() {
-      if (pendingTransition === undefined) {
-        return undefined;
-      }
-      const result = pendingTransition;
-      pendingTransition = undefined;
+      const result = state.pendingTransition;
+      state.pendingTransition = undefined;
       return result;
     },
   };

@@ -33,7 +33,7 @@ export function createTooltipRuntime(
   }
 
   const options: TooltipOptions =
-    typeof input === 'object' && input !== null ? (input as TooltipOptions) : {};
+    typeof input === 'object' && input !== null ? (input) : {};
   const container = resolveTooltipContainer(doc, options.container);
   const element = ensureTooltipElement(doc, container);
   applyDefaultTooltipStyles(element);
@@ -98,7 +98,7 @@ export function resolveTooltipContainer(doc: Document, container?: HTMLElement |
       throw new Error(`renderSVG tooltip container selector "${container}" did not match any element`);
     }
     if (!(resolved instanceof HTMLElement)) {
-      throw new Error(`renderSVG tooltip container selector "${container}" did not resolve to an HTMLElement`);
+      throw new TypeError(`renderSVG tooltip container selector "${container}" did not resolve to an HTMLElement`);
     }
     return resolved;
   }

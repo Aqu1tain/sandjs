@@ -60,7 +60,7 @@ class RenderState {
     for (const managed of this.pathRegistry.values()) {
       managed.dispose();
       if (managed.element.parentNode === host) {
-        host.removeChild(managed.element);
+        managed.element.remove();
       }
     }
     this.pathRegistry.clear();
@@ -80,145 +80,64 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
   };
 
   const drivers = createAnimationDrivers(doc);
-  const handleArray: LayoutArc[] = [];
-  const handle = handleArray as unknown as RenderHandle;
+  const handle = [] as unknown as RenderHandle;
 
-  // Create render state - will be initialized after runtime creation
   let state: RenderState;
 
-  const execute = (): LayoutArc[] => {
-    const runtime = state.runtimes;
-    const navigation = runtime.navigation;
-    const activeConfig = navigation ? navigation.getActiveConfig() : state.currentOptions.config;
-    state.currentOptions = {
-      ...state.currentOptions,
-      config: activeConfig,
-    };
+  const requestRender = createRenderLoop(
+    () => state,
+    handle,
+    () => executeRender(state, host, doc, labelDefs, drivers),
+  );
 
-    const arcs = layout(activeConfig);
+  const runtimes = createRuntimeSet(doc, normalizedOptions, {
+    baseConfig: normalizedOptions.config,
+    requestRender,
+  });
 
-    navigation?.registerArcs(arcs);
+  state = new RenderState(normalizedOptions, runtimes);
+  requestRender();
 
-    const diameter = activeConfig.size.radius * 2;
-    const cx = activeConfig.size.radius;
-    const cy = activeConfig.size.radius;
+  handle.update = (input: RenderSvgUpdateInput) => {
+    const nextOptions = normalizeUpdateOptions(state.currentOptions, input, host, doc);
+    const nextConfigInput = extractConfigFromUpdate(input, state.baseConfig);
+    const nextConfig = cloneSunburstConfig(nextConfigInput);
+    const finalOptions = { ...nextOptions, config: nextConfig };
 
-    host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
-    host.setAttribute('width', `${diameter}`);
-    host.setAttribute('height', `${diameter}`);
-
-    runtime.tooltip?.hide();
-    if (!navigation || !navigation.handlesBreadcrumbs()) {
-      runtime.breadcrumbs?.clear();
-    }
-
-    const navigationTransition = navigation?.consumeTransitionOverride();
-    const transitionSource = navigationTransition ? navigationTransition.transition : state.currentOptions.transition;
-    const navigationMorph = Boolean(navigationTransition?.morph);
-    const transition = resolveTransition(transitionSource);
-    const usedKeys = new Set<string>();
-
-    // Batch DOM operations to reduce reflows
-    // Use fragments if available (browser), fallback to direct append for test environments
-    const supportsFragment = typeof doc.createDocumentFragment === 'function';
-    const fragment = supportsFragment ? doc.createDocumentFragment() : null;
-    const labelFragment = supportsFragment ? doc.createDocumentFragment() : null;
-    const newElements: ManagedPath[] = [];
-
-    for (let index = 0; index < arcs.length; index += 1) {
-      const arc = arcs[index];
-      const d = describeArcPath(arc, cx, cy);
-      if (!d) {
-        continue;
-      }
-
-      const key = createArcKey(arc);
-      usedKeys.add(key);
-
-      let managed = state.pathRegistry.get(key);
-      let previousArc: LayoutArc | null = null;
-      const isNewElement = !managed;
-
-      if (managed) {
-        previousArc = { ...managed.arc };
-        cancelPendingRemoval(managed);
-      } else {
-        managed = createManagedPath({
-          key,
-          arc,
-          options: state.currentOptions,
-          runtime,
-          doc,
-          labelDefs,
-        });
-        state.pathRegistry.set(key, managed);
-        newElements.push(managed);
-      }
-
-      updateManagedPath(managed, {
-        arc,
-        options: state.currentOptions,
-        runtime,
-        pathData: d,
-        previousArc,
-        transition,
-        drivers,
-        cx,
-        cy,
-        navigationMorph,
-        index,
-        getArcColor: state.getArcColor,
-      });
-
-      // Only append new elements; existing elements stay in DOM
-      if (!isNewElement) {
-        continue;
-      }
-
-      // Use document fragments for better performance
-      if (supportsFragment && fragment && labelFragment) {
-        fragment.appendChild(managed.element);
-        labelFragment.appendChild(managed.labelElement);
-        continue;
-      }
-
-      // Fallback for test environments without createDocumentFragment
-      host.appendChild(managed.element);
-      host.appendChild(managed.labelElement);
-    }
-
-    // Batch append all new elements at once to minimize reflows
-    if (newElements.length > 0 && supportsFragment && fragment && labelFragment) {
-      host.appendChild(fragment);
-      host.appendChild(labelFragment);
-    }
-
-    for (const [key, managed] of state.pathRegistry) {
-      if (!usedKeys.has(key)) {
-        scheduleManagedRemoval({
-          key,
-          managed,
-          host,
-          registry: state.pathRegistry,
-          transition,
-          drivers,
-          cx,
-          cy,
-          navigationMorph,
-          debug: state.currentOptions.debug ?? false,
-          renderOptions: state.currentOptions,
-        });
-      }
-    }
-
-    return arcs;
+    state.updateConfig(finalOptions, nextConfig);
+    disposeRuntimeSet(state.runtimes);
+    state.runtimes = createRuntimeSet(doc, finalOptions, {
+      baseConfig: nextConfig,
+      requestRender,
+    });
+    requestRender();
+    return handle;
   };
 
-  const renderLoop = () => {
-    if (state.isRendering) {
-      state.pendingRender = true;
-      return;
-    }
+  handle.destroy = () => {
+    state.dispose(host);
+    handle.length = 0;
+  };
+
+  handle.getOptions = () => ({ ...state.currentOptions });
+
+  handle.resetNavigation = () => {
+    state.runtimes.navigation?.reset();
+  };
+
+  return handle;
+}
+
+function createRenderLoop(
+  getState: () => RenderState,
+  handle: RenderHandle,
+  execute: () => LayoutArc[],
+): () => void {
+  return () => {
+    const state = getState();
+    state.pendingRender = true;
+    if (state.isRendering) return;
+
     state.isRendering = true;
     do {
       state.pendingRender = false;
@@ -228,67 +147,190 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
     } while (state.pendingRender);
     state.isRendering = false;
   };
+}
 
-  const requestRender = () => {
-    state.pendingRender = true;
-    if (!state.isRendering) {
-      renderLoop();
+function executeRender(
+  state: RenderState,
+  host: SVGElement,
+  doc: Document,
+  labelDefs: SVGDefsElement,
+  drivers: AnimationDrivers,
+): LayoutArc[] {
+  const { runtimes: runtime } = state;
+  const { navigation } = runtime;
+
+  const activeConfig = navigation?.getActiveConfig() ?? state.currentOptions.config;
+  state.currentOptions = { ...state.currentOptions, config: activeConfig };
+
+  const arcs = layout(activeConfig);
+  navigation?.registerArcs(arcs);
+
+  applySvgDimensions(host, activeConfig.size.radius);
+
+  runtime.tooltip?.hide();
+  if (!navigation?.handlesBreadcrumbs()) {
+    runtime.breadcrumbs?.clear();
+  }
+
+  const navigationTransition = navigation?.consumeTransitionOverride();
+  const transitionSource = navigationTransition?.transition ?? state.currentOptions.transition;
+  const navigationMorph = Boolean(navigationTransition?.morph);
+  const transition = resolveTransition(transitionSource);
+
+  const cx = activeConfig.size.radius;
+  const cy = activeConfig.size.radius;
+
+  const usedKeys = processArcs({
+    arcs,
+    state,
+    runtime,
+    host,
+    doc,
+    labelDefs,
+    drivers,
+    transition,
+    navigationMorph,
+    cx,
+    cy,
+  });
+
+  scheduleRemovals({ state, host, usedKeys, transition, drivers, cx, cy, navigationMorph });
+
+  return arcs;
+}
+
+function applySvgDimensions(host: SVGElement, radius: number): void {
+  const diameter = radius * 2;
+  host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
+  host.setAttribute('width', `${diameter}`);
+  host.setAttribute('height', `${diameter}`);
+}
+
+function processArcs(params: {
+  arcs: LayoutArc[];
+  state: RenderState;
+  runtime: RuntimeSet;
+  host: SVGElement;
+  doc: Document;
+  labelDefs: SVGDefsElement;
+  drivers: AnimationDrivers;
+  transition: ReturnType<typeof resolveTransition>;
+  navigationMorph: boolean;
+  cx: number;
+  cy: number;
+}): Set<string> {
+  const { arcs, state, runtime, host, doc, labelDefs, drivers, transition, navigationMorph, cx, cy } = params;
+  const usedKeys = new Set<string>();
+
+  const batchTargets = createBatchTargets(doc, host);
+  let hasNewElements = false;
+
+  for (let index = 0; index < arcs.length; index += 1) {
+    const arc = arcs[index];
+    const d = describeArcPath(arc, cx, cy);
+    if (!d) continue;
+
+    const key = createArcKey(arc);
+    usedKeys.add(key);
+
+    let managed = state.pathRegistry.get(key);
+    let previousArc: LayoutArc | null = null;
+    const isNew = !managed;
+
+    if (managed) {
+      previousArc = { ...managed.arc };
+      cancelPendingRemoval(managed);
+    } else {
+      managed = createManagedPath({ key, arc, options: state.currentOptions, runtime, doc, labelDefs });
+      state.pathRegistry.set(key, managed);
+      hasNewElements = true;
     }
+
+    updateManagedPath(managed, {
+      arc,
+      options: state.currentOptions,
+      runtime,
+      pathData: d,
+      previousArc,
+      transition,
+      drivers,
+      cx,
+      cy,
+      navigationMorph,
+      index,
+      getArcColor: state.getArcColor,
+    });
+
+    if (isNew) {
+      batchTargets.append(managed.element, managed.labelElement);
+    }
+  }
+
+  if (hasNewElements) {
+    batchTargets.flush();
+  }
+
+  return usedKeys;
+}
+
+type BatchTargets = {
+  append: (element: SVGElement, label: SVGElement) => void;
+  flush: () => void;
+};
+
+function createBatchTargets(doc: Document, host: SVGElement): BatchTargets {
+  if (typeof doc.createDocumentFragment !== 'function') {
+    return {
+      append: (element, label) => {
+        host.appendChild(element);
+        host.appendChild(label);
+      },
+      flush: () => {},
+    };
+  }
+
+  const fragment = doc.createDocumentFragment();
+  const labelFragment = doc.createDocumentFragment();
+
+  return {
+    append: (element, label) => {
+      fragment.appendChild(element);
+      labelFragment.appendChild(label);
+    },
+    flush: () => {
+      host.appendChild(fragment);
+      host.appendChild(labelFragment);
+    },
   };
+}
 
-  const runtimes = createRuntimeSet(doc, normalizedOptions, {
-    baseConfig: normalizedOptions.config,
-    requestRender,
-  });
-
-  // Initialize state with runtimes
-  state = new RenderState(normalizedOptions, runtimes);
-
-  requestRender();
-
-  Object.defineProperties(handle, {
-    update: {
-      enumerable: false,
-      value(input: RenderSvgUpdateInput) {
-        const nextOptions = normalizeUpdateOptions(state.currentOptions, input, host, doc);
-        const nextConfigInput = extractConfigFromUpdate(input, state.baseConfig);
-        const nextConfig = cloneSunburstConfig(nextConfigInput);
-        const finalOptions = {
-          ...nextOptions,
-          config: nextConfig,
-        };
-        state.updateConfig(finalOptions, nextConfig);
-        disposeRuntimeSet(state.runtimes);
-        state.runtimes = createRuntimeSet(doc, finalOptions, {
-          baseConfig: nextConfig,
-          requestRender,
-        });
-        requestRender();
-        return handle;
-      },
-    },
-    destroy: {
-      enumerable: false,
-      value() {
-        state.dispose(host);
-        handle.length = 0;
-      },
-    },
-    getOptions: {
-      enumerable: false,
-      value() {
-        return { ...state.currentOptions };
-      },
-    },
-    resetNavigation: {
-      enumerable: false,
-      value() {
-        state.runtimes.navigation?.reset();
-      },
-    },
-  });
-
-  return handle;
+function scheduleRemovals(params: {
+  state: RenderState;
+  host: SVGElement;
+  usedKeys: Set<string>;
+  transition: ReturnType<typeof resolveTransition>;
+  drivers: AnimationDrivers;
+  cx: number;
+  cy: number;
+  navigationMorph: boolean;
+}): void {
+  const { state, host, usedKeys, transition, drivers, cx, cy, navigationMorph } = params;
+  for (const [key, managed] of state.pathRegistry) {
+    if (usedKeys.has(key)) continue;
+    scheduleManagedRemoval({
+      key,
+      managed,
+      host,
+      registry: state.pathRegistry,
+      transition,
+      drivers,
+      cx,
+      cy,
+      navigationMorph,
+      debug: state.currentOptions.debug ?? false,
+      renderOptions: state.currentOptions,
+    });
+  }
 }
 
 function normalizeUpdateOptions(
