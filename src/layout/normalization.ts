@@ -1,4 +1,4 @@
-import type { LayerConfig, TreeNodeInput } from '../types/index.js';
+import type { LayerConfig, TreeNodeInput } from '../types';
 import { ZERO_TOLERANCE } from '../render/geometry.js';
 
 export type NormalizedNode = {
