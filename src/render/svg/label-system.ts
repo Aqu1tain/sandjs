@@ -12,7 +12,7 @@ import {
   LABEL_TANGENT_MAX_DELTA,
 } from './constants.js';
 import type { ManagedPath } from './types.js';
-import type { LayoutArc } from '../../types/index.js';
+import type { LayoutArc } from '../../types';
 import type { ResolvedRenderOptions } from '../types.js';
 
 /**
@@ -71,7 +71,7 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
     return;
   }
 
-  const text = typeof arc.data.name === 'string' ? arc.data.name.trim() : '';
+  const text = arc.data.name.trim();
   if (!text) {
     hideLabel(managed, 'empty-label');
     return;
@@ -281,11 +281,9 @@ function showLabel(
   labelColor: string,
   options: ShowLabelOptions,
 ): void {
-  const { labelElement, textPathElement, labelPathElement } = managed;
-  if (!evaluation.x || !evaluation.y || !evaluation.fontSize) {
-    return;
-  }
+  if (!evaluation.x || !evaluation.y || !evaluation.fontSize) return;
 
+  const { labelElement } = managed;
   labelElement.style.display = '';
   labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
   labelElement.style.opacity = managed.element.style.opacity;
