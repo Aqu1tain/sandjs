@@ -18,7 +18,12 @@ function renderSVG(options: RenderSvgOptions): RenderHandle
 interface RenderSvgOptions {
   // Required
   el: string | SVGElement;
-  config: SunburstConfig;
+
+  // Configuration (choose one approach)
+  config?: SunburstConfig;          // Full configuration (advanced)
+  data?: TreeNodeInput | TreeNodeInput[];  // Simple tree data (creates default layer)
+  radius?: number;                  // Required when using `data`
+  angle?: number;                   // Total angle in radians (default: 2π)
 
   // Features
   tooltip?: boolean | TooltipOptions;
@@ -43,6 +48,13 @@ interface RenderSvgOptions {
   debug?: boolean;
 }
 ```
+
+**Configuration Approaches:**
+
+1. **Simple API** (`data` + `radius`): For basic single-layer sunbursts
+2. **Full Config** (`config`): For multi-layer charts, alignment modes, and advanced layouts
+
+These are mutually exclusive - use one or the other.
 
 See [Configuration Reference](./configuration.md) for detailed option descriptions.
 
@@ -124,7 +136,40 @@ if (chart.resetNavigation) {
 
 ## Examples
 
-### Basic Usage
+### Simple API (Recommended for Basic Charts)
+
+```javascript
+import { renderSVG } from '@akitain/sandjs';
+
+const chart = renderSVG({
+  el: '#my-chart',
+  radius: 200,
+  data: [
+    { name: 'A', value: 50 },
+    { name: 'B', value: 50, children: [
+      { name: 'B1', value: 25 },
+      { name: 'B2', value: 25 }
+    ]}
+  ],
+  tooltip: true
+});
+```
+
+### Simple API with Partial Circle
+
+```javascript
+const chart = renderSVG({
+  el: '#my-chart',
+  radius: 200,
+  angle: Math.PI,  // Half circle
+  data: [
+    { name: 'A', value: 50 },
+    { name: 'B', value: 50 }
+  ]
+});
+```
+
+### Full Config (Advanced)
 
 ```javascript
 import { renderSVG } from '@akitain/sandjs';

@@ -103,7 +103,12 @@ interface LayoutArc {
 ```typescript
 interface RenderSvgOptions {
   el: SVGElement | string;
-  config: SunburstConfig;
+
+  // Configuration (choose one approach)
+  config?: SunburstConfig;                    // Full configuration (advanced)
+  data?: TreeNodeInput | TreeNodeInput[];     // Simple tree data (creates default layer)
+  radius?: number;                            // Required when using `data`
+  angle?: number;                             // Total angle in radians (default: 2π)
 
   document?: Document;
   colorTheme?: ColorThemeOptions;
@@ -114,6 +119,7 @@ interface RenderSvgOptions {
   breadcrumbs?: boolean | BreadcrumbOptions;
   transition?: boolean | TransitionOptions;
   navigation?: boolean | NavigationOptions;
+  labels?: boolean | LabelOptions;
   debug?: boolean;
 
   onArcEnter?: (payload: ArcPointerEventPayload) => void;

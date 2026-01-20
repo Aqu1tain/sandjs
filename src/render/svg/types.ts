@@ -1,5 +1,5 @@
 import type { LayoutArc } from '../../types/index.js';
-import type { RenderSvgOptions } from '../types.js';
+import type { ResolvedRenderOptions } from '../types.js';
 import type { TooltipRuntime } from '../runtime/tooltip.js';
 import type { BreadcrumbRuntime } from '../runtime/breadcrumbs.js';
 import type { HighlightRuntime } from '../runtime/highlight.js';
@@ -42,7 +42,7 @@ export type ManagedPath = {
   textPathElement: SVGTextPathElement;
   labelPathId: string;
   arc: LayoutArc;
-  options: RenderSvgOptions;
+  options: ResolvedRenderOptions;
   runtime: RuntimeSet;
   animation: AnimationHandle | null;
   fade: AnimationHandle | null;
