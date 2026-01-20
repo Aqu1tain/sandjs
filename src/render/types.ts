@@ -73,6 +73,7 @@ export interface LabelOptions {
   autoLabelColor?: boolean;
   fontSize?: number | { min: number; max: number };
   minRadialThickness?: number;
+  rootLabelStyle?: 'curved' | 'straight';
 }
 
 /**

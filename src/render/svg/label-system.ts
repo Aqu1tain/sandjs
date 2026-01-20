@@ -98,7 +98,15 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
   }
 
   const labelColor = resolveLabelColor(arc, layer, renderOptions, arcColor);
-  showLabel(managed, text, evaluation, arc, labelColor);
+  const useStraightStyle = shouldUseStraightLabel(arc, renderOptions);
+  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle });
+}
+
+function shouldUseStraightLabel(arc: LayoutArc, renderOptions: ResolvedRenderOptions): boolean {
+  if (arc.depth !== 0) return false;
+  const labelOptions = renderOptions.labels;
+  if (typeof labelOptions !== 'object') return false;
+  return labelOptions?.rootLabelStyle === 'straight';
 }
 
 function resolveLabelColor(
@@ -258,24 +266,73 @@ function createLabelArcPath(params: {
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`;
 }
 
+type ShowLabelOptions = {
+  useStraightStyle: boolean;
+};
+
 /**
  * Shows the label for a managed arc
  */
-function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation, arc: LayoutArc, labelColor: string): void {
+function showLabel(
+  managed: ManagedPath,
+  text: string,
+  evaluation: LabelEvaluation,
+  arc: LayoutArc,
+  labelColor: string,
+  options: ShowLabelOptions,
+): void {
   const { labelElement, textPathElement, labelPathElement } = managed;
-  if (!evaluation.x || !evaluation.y || !evaluation.fontSize || !evaluation.pathData) {
+  if (!evaluation.x || !evaluation.y || !evaluation.fontSize) {
     return;
   }
 
-  if (textPathElement.textContent !== text) {
-    textPathElement.textContent = text;
-  }
   labelElement.style.display = '';
   labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
   labelElement.style.opacity = managed.element.style.opacity;
   labelElement.setAttribute('fill', labelColor);
   labelElement.dataset.layer = arc.layerId;
   labelElement.dataset.depth = String(arc.depth);
+
+  if (options.useStraightStyle) {
+    showStraightLabel(managed, text, evaluation);
+  } else {
+    showCurvedLabel(managed, text, evaluation);
+  }
+
+  managed.labelVisible = true;
+  managed.labelHiddenReason = null;
+  managed.labelPendingLogReason = null;
+}
+
+function showStraightLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation): void {
+  const { labelElement, textPathElement, labelPathElement } = managed;
+
+  textPathElement.textContent = '';
+  labelPathElement.removeAttribute('d');
+
+  labelElement.setAttribute('x', String(evaluation.x));
+  labelElement.setAttribute('y', String(evaluation.y));
+  labelElement.setAttribute('text-anchor', 'middle');
+  labelElement.setAttribute('dominant-baseline', 'middle');
+  labelElement.textContent = text;
+  labelElement.removeAttribute('transform');
+  delete labelElement.dataset.inverted;
+}
+
+function showCurvedLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation): void {
+  const { labelElement, textPathElement, labelPathElement } = managed;
+
+  if (!evaluation.pathData) return;
+
+  labelElement.textContent = '';
+  labelElement.removeAttribute('x');
+  labelElement.removeAttribute('y');
+  labelElement.removeAttribute('text-anchor');
+  labelElement.removeAttribute('dominant-baseline');
+
+  if (textPathElement.textContent !== text) {
+    textPathElement.textContent = text;
+  }
   labelPathElement.setAttribute('d', evaluation.pathData);
   textPathElement.setAttribute('startOffset', '50%');
   textPathElement.setAttribute('spacing', 'auto');
@@ -286,10 +343,6 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
   } else {
     delete labelElement.dataset.inverted;
   }
-
-  managed.labelVisible = true;
-  managed.labelHiddenReason = null;
-  managed.labelPendingLogReason = null;
 }
 
 /**
