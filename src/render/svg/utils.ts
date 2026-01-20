@@ -35,19 +35,34 @@ export function ensureLabelDefs(host: SVGElement, doc: Document): SVGDefsElement
 }
 
 /**
- * Extracts the config from an update input
+ * Extracts the config from an update input.
+ * Supports both full config and simple data API.
  */
 export function extractConfigFromUpdate(
   input: RenderSvgUpdateInput,
   fallback: SunburstConfig,
+  currentRadius?: number,
+  currentAngle?: number,
 ): SunburstConfig {
   if (isSunburstConfig(input)) {
     return input;
   }
   if (input && typeof input === 'object') {
-    const candidate = (input).config;
-    if (candidate) {
-      return candidate;
+    const record = input as Record<string, unknown>;
+    if (record.config) {
+      return record.config as SunburstConfig;
+    }
+    if (record.data) {
+      const radius = (record.radius as number | undefined) ?? currentRadius;
+      if (!radius) {
+        throw new Error('update() requires `radius` when using `data`');
+      }
+      return resolveConfig({
+        el: '',
+        data: record.data as TreeNodeInput | TreeNodeInput[],
+        radius,
+        angle: (record.angle as number | undefined) ?? currentAngle,
+      });
     }
   }
   return fallback;
@@ -71,7 +86,7 @@ export function resolveConfig(options: RenderSvgOptions): SunburstConfig {
   }
 
   const tree = normalizeTreeInput(options.data);
-  const maxDepth = computeMaxDepth(tree);
+  const maxUnits = computeMaxRadialUnits(tree);
 
   return {
     size: {
@@ -80,7 +95,7 @@ export function resolveConfig(options: RenderSvgOptions): SunburstConfig {
     },
     layers: [{
       id: 'default',
-      radialUnits: [0, maxDepth],
+      radialUnits: [0, maxUnits],
       angleMode: 'free',
       tree,
     }],
@@ -91,11 +106,13 @@ function normalizeTreeInput(data: TreeNodeInput | TreeNodeInput[]): TreeNodeInpu
   return Array.isArray(data) ? data : [data];
 }
 
-function computeMaxDepth(nodes: TreeNodeInput[], current = 1): number {
-  let max = current;
+function computeMaxRadialUnits(nodes: TreeNodeInput[], currentUnits = 0): number {
+  let max = currentUnits;
   for (const node of nodes) {
+    const nodeUnits = currentUnits + (node.expandLevels ?? 1);
+    max = Math.max(max, nodeUnits);
     if (node.children && node.children.length > 0) {
-      max = Math.max(max, computeMaxDepth(node.children, current + 1));
+      max = Math.max(max, computeMaxRadialUnits(node.children, nodeUnits));
     }
   }
   return max;

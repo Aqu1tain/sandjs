@@ -4,12 +4,14 @@ import { resolveConfig, isSunburstConfig } from '../src/render/svg/utils.js';
 import type { RenderSvgOptions } from '../src/render/types.js';
 import type { SunburstConfig, TreeNodeInput } from '../src/types/index.js';
 
-// Re-implement computeMaxDepth for testing (since it's not exported)
-function testComputeMaxDepth(nodes: TreeNodeInput[], current = 1): number {
-  let max = current;
+// Re-implement computeMaxRadialUnits for testing (since it's not exported)
+function testComputeMaxRadialUnits(nodes: TreeNodeInput[], currentUnits = 0): number {
+  let max = currentUnits;
   for (const node of nodes) {
+    const nodeUnits = currentUnits + (node.expandLevels ?? 1);
+    max = Math.max(max, nodeUnits);
     if (node.children && node.children.length > 0) {
-      max = Math.max(max, testComputeMaxDepth(node.children, current + 1));
+      max = Math.max(max, testComputeMaxRadialUnits(node.children, nodeUnits));
     }
   }
   return max;
@@ -142,6 +144,22 @@ describe('Simple API - resolveConfig', () => {
     assert.equal(tree.length, 3);
     assert.deepEqual(result.layers[0].radialUnits, [0, 2]);
   });
+
+  test('accounts for expandLevels in radialUnits', () => {
+    const options = {
+      el: '#chart',
+      radius: 100,
+      data: [
+        { name: 'A', expandLevels: 2, children: [
+          { name: 'A1', expandLevels: 3 }
+        ]},
+      ],
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    // Path: A (2 units) -> A1 (3 units) = 5 total
+    assert.deepEqual(result.layers[0].radialUnits, [0, 5]);
+  });
 });
 
 describe('Simple API - isSunburstConfig', () => {
@@ -180,21 +198,21 @@ describe('Simple API - isSunburstConfig', () => {
   });
 });
 
-describe('Simple API - computeMaxDepth', () => {
+describe('Simple API - computeMaxRadialUnits', () => {
   test('returns 1 for flat array', () => {
-    const result = testComputeMaxDepth([{ name: 'A' }, { name: 'B' }]);
+    const result = testComputeMaxRadialUnits([{ name: 'A' }, { name: 'B' }]);
     assert.equal(result, 1);
   });
 
   test('returns 2 for one level of children', () => {
-    const result = testComputeMaxDepth([
+    const result = testComputeMaxRadialUnits([
       { name: 'A', children: [{ name: 'A1' }] }
     ]);
     assert.equal(result, 2);
   });
 
   test('returns correct depth for unbalanced tree', () => {
-    const result = testComputeMaxDepth([
+    const result = testComputeMaxRadialUnits([
       { name: 'A' },
       { name: 'B', children: [
         { name: 'B1', children: [{ name: 'B1a' }] }
@@ -205,9 +223,33 @@ describe('Simple API - computeMaxDepth', () => {
   });
 
   test('handles empty children array', () => {
-    const result = testComputeMaxDepth([
+    const result = testComputeMaxRadialUnits([
       { name: 'A', children: [] }
     ]);
     assert.equal(result, 1);
+  });
+
+  test('accounts for expandLevels on nodes', () => {
+    const result = testComputeMaxRadialUnits([
+      { name: 'A', expandLevels: 2 }
+    ]);
+    assert.equal(result, 2);
+  });
+
+  test('sums expandLevels along path', () => {
+    const result = testComputeMaxRadialUnits([
+      { name: 'A', expandLevels: 2, children: [
+        { name: 'A1', expandLevels: 3 }
+      ]}
+    ]);
+    assert.equal(result, 5);  // 2 + 3
+  });
+
+  test('finds max path with mixed expandLevels', () => {
+    const result = testComputeMaxRadialUnits([
+      { name: 'A', expandLevels: 1, children: [{ name: 'A1' }] },  // 1 + 1 = 2
+      { name: 'B', expandLevels: 3 },  // 3
+    ]);
+    assert.equal(result, 3);
   });
 });

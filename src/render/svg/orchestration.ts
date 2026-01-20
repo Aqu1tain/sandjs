@@ -102,7 +102,9 @@ export function renderSVG(options: RenderSvgOptions): RenderHandle {
 
   handle.update = (input: RenderSvgUpdateInput) => {
     const nextOptions = normalizeUpdateOptions(state.currentOptions, input, host, doc);
-    const nextConfigInput = extractConfigFromUpdate(input, state.baseConfig);
+    const currentRadius = state.baseConfig.size.radius;
+    const currentAngle = state.baseConfig.size.angle;
+    const nextConfigInput = extractConfigFromUpdate(input, state.baseConfig, currentRadius, currentAngle);
     const nextConfig = cloneSunburstConfig(nextConfigInput);
     const finalOptions: ResolvedRenderOptions = { ...nextOptions, config: nextConfig };
 
