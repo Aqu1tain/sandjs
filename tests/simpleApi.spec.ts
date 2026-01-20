@@ -4,13 +4,8 @@ import { resolveConfig, isSunburstConfig } from '../src/render/svg/utils.js';
 import type { RenderSvgOptions } from '../src/render/types.js';
 import type { SunburstConfig, TreeNodeInput } from '../src/types/index.js';
 
-// Re-implement computeMaxRadialUnits for testing (since it's not exported)
-// Uses same normalization as layout: expandLevels must be positive, defaults to 1
 function normalizeExpandLevels(value: number | undefined): number {
-  if (typeof value === 'number' && value > 0) {
-    return value;
-  }
-  return 1;
+  return (typeof value === 'number' && value > 0) ? value : 1;
 }
 
 function testComputeMaxRadialUnits(nodes: TreeNodeInput[], currentUnits = 0): number {
@@ -18,7 +13,7 @@ function testComputeMaxRadialUnits(nodes: TreeNodeInput[], currentUnits = 0): nu
   for (const node of nodes) {
     const nodeUnits = currentUnits + normalizeExpandLevels(node.expandLevels);
     max = Math.max(max, nodeUnits);
-    if (node.children && node.children.length > 0) {
+    if (node.children?.length) {
       max = Math.max(max, testComputeMaxRadialUnits(node.children, nodeUnits));
     }
   }
@@ -96,8 +91,6 @@ describe('Simple API - resolveConfig', () => {
       ],
     } as RenderSvgOptions;
     const result = resolveConfig(options);
-
-    // Depth is 3 (Root -> Child -> Grandchild)
     assert.deepEqual(result.layers[0].radialUnits, [0, 3]);
   });
 
@@ -164,8 +157,6 @@ describe('Simple API - resolveConfig', () => {
       ],
     } as RenderSvgOptions;
     const result = resolveConfig(options);
-
-    // Path: A (2 units) -> A1 (3 units) = 5 total
     assert.deepEqual(result.layers[0].radialUnits, [0, 5]);
   });
 
@@ -179,8 +170,6 @@ describe('Simple API - resolveConfig', () => {
       ],
     } as RenderSvgOptions;
     const result = resolveConfig(options);
-
-    // Both nodes should be normalized to expandLevels: 1
     assert.deepEqual(result.layers[0].radialUnits, [0, 1]);
   });
 });
@@ -265,13 +254,13 @@ describe('Simple API - computeMaxRadialUnits', () => {
         { name: 'A1', expandLevels: 3 }
       ]}
     ]);
-    assert.equal(result, 5);  // 2 + 3
+    assert.equal(result, 5);
   });
 
   test('finds max path with mixed expandLevels', () => {
     const result = testComputeMaxRadialUnits([
-      { name: 'A', expandLevels: 1, children: [{ name: 'A1' }] },  // 1 + 1 = 2
-      { name: 'B', expandLevels: 3 },  // 3
+      { name: 'A', expandLevels: 1, children: [{ name: 'A1' }] },
+      { name: 'B', expandLevels: 3 },
     ]);
     assert.equal(result, 3);
   });
