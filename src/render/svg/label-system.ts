@@ -77,7 +77,7 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
     return;
   }
 
-  const evaluation = evaluateLabelVisibility(arc, text, cx, cy);
+  const evaluation = evaluateLabelVisibility(arc, text, cx, cy, renderOptions);
   if (!evaluation.visible || evaluation.x === undefined || evaluation.y === undefined || !evaluation.fontSize) {
     const reason = evaluation.reason ?? 'insufficient-geometry';
     const loggable = shouldLogLabelReason(reason);
@@ -119,22 +119,46 @@ function resolveLabelColor(
   return '#000000';
 }
 
+type FontSizeConfig = { min: number; max: number };
+
+function resolveFontSizeConfig(labelOptions: ResolvedRenderOptions['labels']): FontSizeConfig {
+  if (typeof labelOptions !== 'object' || !labelOptions?.fontSize) {
+    return { min: LABEL_MIN_FONT_SIZE, max: LABEL_MAX_FONT_SIZE };
+  }
+  const fs = labelOptions.fontSize;
+  if (typeof fs === 'number') return { min: fs, max: fs };
+  return { min: fs.min, max: fs.max };
+}
+
+function resolveMinRadialThickness(labelOptions: ResolvedRenderOptions['labels']): number {
+  if (typeof labelOptions !== 'object') return LABEL_MIN_RADIAL_THICKNESS;
+  return labelOptions?.minRadialThickness ?? LABEL_MIN_RADIAL_THICKNESS;
+}
+
 /**
  * Evaluates whether a label can be shown for an arc
  */
-function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: number): LabelEvaluation {
+function evaluateLabelVisibility(
+  arc: LayoutArc,
+  text: string,
+  cx: number,
+  cy: number,
+  renderOptions: ResolvedRenderOptions,
+): LabelEvaluation {
   const span = arc.x1 - arc.x0;
   if (span <= 0) {
     return { visible: false, reason: 'no-span' };
   }
 
+  const minThickness = resolveMinRadialThickness(renderOptions.labels);
   const radialThickness = Math.max(0, arc.y1 - arc.y0);
-  if (radialThickness < LABEL_MIN_RADIAL_THICKNESS) {
+  if (radialThickness < minThickness) {
     return { visible: false, reason: 'thin-radius' };
   }
 
+  const fontConfig = resolveFontSizeConfig(renderOptions.labels);
   const midRadius = arc.y0 + radialThickness * 0.5;
-  const fontSize = Math.min(Math.max(radialThickness * 0.5, LABEL_MIN_FONT_SIZE), LABEL_MAX_FONT_SIZE);
+  const fontSize = Math.min(Math.max(radialThickness * 0.5, fontConfig.min), fontConfig.max);
   const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
   const arcLength = span * midRadius;
 
