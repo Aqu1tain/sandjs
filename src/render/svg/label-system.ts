@@ -12,7 +12,7 @@ import {
   LABEL_TANGENT_MAX_DELTA,
 } from './constants.js';
 import type { ManagedPath } from './types.js';
-import type { LayoutArc } from '../../types/index.js';
+import type { LayoutArc } from '../../types';
 import type { ResolvedRenderOptions } from '../types.js';
 
 /**
@@ -71,13 +71,13 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
     return;
   }
 
-  const text = typeof arc.data.name === 'string' ? arc.data.name.trim() : '';
+  const text = arc.data.name.trim();
   if (!text) {
     hideLabel(managed, 'empty-label');
     return;
   }
 
-  const evaluation = evaluateLabelVisibility(arc, text, cx, cy);
+  const evaluation = evaluateLabelVisibility(arc, text, cx, cy, renderOptions);
   if (!evaluation.visible || evaluation.x === undefined || evaluation.y === undefined || !evaluation.fontSize) {
     const reason = evaluation.reason ?? 'insufficient-geometry';
     const loggable = shouldLogLabelReason(reason);
@@ -98,7 +98,15 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
   }
 
   const labelColor = resolveLabelColor(arc, layer, renderOptions, arcColor);
-  showLabel(managed, text, evaluation, arc, labelColor);
+  const useStraightStyle = shouldUseStraightLabel(arc, renderOptions);
+  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle });
+}
+
+function shouldUseStraightLabel(arc: LayoutArc, renderOptions: ResolvedRenderOptions): boolean {
+  if (arc.depth !== 0) return false;
+  const labelOptions = renderOptions.labels;
+  if (typeof labelOptions !== 'object') return false;
+  return labelOptions?.rootLabelStyle === 'straight';
 }
 
 function resolveLabelColor(
@@ -119,22 +127,46 @@ function resolveLabelColor(
   return '#000000';
 }
 
+type FontSizeConfig = { min: number; max: number };
+
+function resolveFontSizeConfig(labelOptions: ResolvedRenderOptions['labels']): FontSizeConfig {
+  if (typeof labelOptions !== 'object' || !labelOptions?.fontSize) {
+    return { min: LABEL_MIN_FONT_SIZE, max: LABEL_MAX_FONT_SIZE };
+  }
+  const fs = labelOptions.fontSize;
+  if (typeof fs === 'number') return { min: fs, max: fs };
+  return { min: fs.min, max: fs.max };
+}
+
+function resolveMinRadialThickness(labelOptions: ResolvedRenderOptions['labels']): number {
+  if (typeof labelOptions !== 'object') return LABEL_MIN_RADIAL_THICKNESS;
+  return labelOptions?.minRadialThickness ?? LABEL_MIN_RADIAL_THICKNESS;
+}
+
 /**
  * Evaluates whether a label can be shown for an arc
  */
-function evaluateLabelVisibility(arc: LayoutArc, text: string, cx: number, cy: number): LabelEvaluation {
+function evaluateLabelVisibility(
+  arc: LayoutArc,
+  text: string,
+  cx: number,
+  cy: number,
+  renderOptions: ResolvedRenderOptions,
+): LabelEvaluation {
   const span = arc.x1 - arc.x0;
   if (span <= 0) {
     return { visible: false, reason: 'no-span' };
   }
 
+  const minThickness = resolveMinRadialThickness(renderOptions.labels);
   const radialThickness = Math.max(0, arc.y1 - arc.y0);
-  if (radialThickness < LABEL_MIN_RADIAL_THICKNESS) {
+  if (radialThickness < minThickness) {
     return { visible: false, reason: 'thin-radius' };
   }
 
+  const fontConfig = resolveFontSizeConfig(renderOptions.labels);
   const midRadius = arc.y0 + radialThickness * 0.5;
-  const fontSize = Math.min(Math.max(radialThickness * 0.5, LABEL_MIN_FONT_SIZE), LABEL_MAX_FONT_SIZE);
+  const fontSize = Math.min(Math.max(radialThickness * 0.5, fontConfig.min), fontConfig.max);
   const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
   const arcLength = span * midRadius;
 
@@ -234,24 +266,75 @@ function createLabelArcPath(params: {
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`;
 }
 
+type ShowLabelOptions = {
+  useStraightStyle: boolean;
+};
+
 /**
  * Shows the label for a managed arc
  */
-function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation, arc: LayoutArc, labelColor: string): void {
-  const { labelElement, textPathElement, labelPathElement } = managed;
-  if (!evaluation.x || !evaluation.y || !evaluation.fontSize || !evaluation.pathData) {
-    return;
-  }
+function showLabel(
+  managed: ManagedPath,
+  text: string,
+  evaluation: LabelEvaluation,
+  arc: LayoutArc,
+  labelColor: string,
+  options: ShowLabelOptions,
+): void {
+  if (!evaluation.x || !evaluation.y || !evaluation.fontSize) return;
 
-  if (textPathElement.textContent !== text) {
-    textPathElement.textContent = text;
-  }
+  const { labelElement } = managed;
   labelElement.style.display = '';
   labelElement.style.fontSize = `${evaluation.fontSize.toFixed(2)}px`;
   labelElement.style.opacity = managed.element.style.opacity;
   labelElement.setAttribute('fill', labelColor);
   labelElement.dataset.layer = arc.layerId;
   labelElement.dataset.depth = String(arc.depth);
+
+  if (options.useStraightStyle) {
+    showStraightLabel(managed, text, evaluation);
+  } else {
+    showCurvedLabel(managed, text, evaluation);
+  }
+
+  managed.labelVisible = true;
+  managed.labelHiddenReason = null;
+  managed.labelPendingLogReason = null;
+}
+
+function showStraightLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation): void {
+  const { labelElement, textPathElement, labelPathElement } = managed;
+
+  textPathElement.textContent = '';
+  labelPathElement.removeAttribute('d');
+
+  labelElement.setAttribute('x', String(evaluation.x));
+  labelElement.setAttribute('y', String(evaluation.y));
+  labelElement.setAttribute('text-anchor', 'middle');
+  labelElement.setAttribute('dominant-baseline', 'middle');
+  labelElement.textContent = text;
+  labelElement.removeAttribute('transform');
+  delete labelElement.dataset.inverted;
+}
+
+function showCurvedLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluation): void {
+  const { labelElement, textPathElement, labelPathElement } = managed;
+
+  if (!evaluation.pathData) return;
+
+  labelElement.removeAttribute('x');
+  labelElement.removeAttribute('y');
+  labelElement.removeAttribute('text-anchor');
+  labelElement.removeAttribute('dominant-baseline');
+
+  if (!textPathElement.parentNode) {
+    labelElement.textContent = '';
+    labelElement.appendChild(textPathElement);
+  }
+
+  if (textPathElement.textContent !== text) {
+    textPathElement.textContent = text;
+  }
   labelPathElement.setAttribute('d', evaluation.pathData);
   textPathElement.setAttribute('startOffset', '50%');
   textPathElement.setAttribute('spacing', 'auto');
@@ -262,10 +345,6 @@ function showLabel(managed: ManagedPath, text: string, evaluation: LabelEvaluati
   } else {
     delete labelElement.dataset.inverted;
   }
-
-  managed.labelVisible = true;
-  managed.labelHiddenReason = null;
-  managed.labelPendingLogReason = null;
 }
 
 /**
