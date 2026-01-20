@@ -12,7 +12,7 @@
     "prepublishOnly": "npm run build",
     "clean:test": "rimraf dist-tests",
     "test:build": "npm run clean:test && tsc --project tsconfig.test.json",
-    "test": "npm run test:build && node --test dist-tests/tests/**/*.js",
+    "test": "npm run test:build && node --test dist-tests/tests/*.js",
     "verify": "npm run test && npm run build",
     "dev": "node scripts/dev-server.mjs",
     "clean:docs": "rimraf temp docs/api",
