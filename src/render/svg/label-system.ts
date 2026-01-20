@@ -322,11 +322,15 @@ function showCurvedLabel(managed: ManagedPath, text: string, evaluation: LabelEv
 
   if (!evaluation.pathData) return;
 
-  labelElement.textContent = '';
   labelElement.removeAttribute('x');
   labelElement.removeAttribute('y');
   labelElement.removeAttribute('text-anchor');
   labelElement.removeAttribute('dominant-baseline');
+
+  if (!textPathElement.parentNode) {
+    labelElement.textContent = '';
+    labelElement.appendChild(textPathElement);
+  }
 
   if (textPathElement.textContent !== text) {
     textPathElement.textContent = text;
