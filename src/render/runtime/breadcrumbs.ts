@@ -1,4 +1,4 @@
-import type { LayoutArc } from '../../types/index.js';
+import type { LayoutArc } from '../../types';
 import type { BreadcrumbOptions, BreadcrumbTrailItem, RenderSvgOptions } from '../types.js';
 import { resolveTooltipContainer } from './tooltip.js';
 import { formatArcBreadcrumb } from '../format.js';
@@ -27,7 +27,7 @@ export function createBreadcrumbRuntime(
   }
 
   const options: BreadcrumbOptions =
-    typeof input === 'object' && input !== null ? (input as BreadcrumbOptions) : {};
+    typeof input === 'object' && input !== null ? input : {};
   const container = resolveTooltipContainer(doc, options.container);
   const element = ensureBreadcrumbElement(doc, container);
   applyDefaultBreadcrumbStyles(element);
@@ -73,14 +73,14 @@ export function createBreadcrumbRuntime(
             if (index > 0) {
               const separatorNode = doc.createElement('span');
               separatorNode.textContent = separator;
-              separatorNode.setAttribute('data-separator', 'true');
+              separatorNode.dataset.separator = 'true';
               element.appendChild(separatorNode);
             }
 
             const hasHandler = typeof item.onSelect === 'function';
             const node = hasHandler ? doc.createElement('button') : doc.createElement('span');
             node.textContent = item.label;
-            node.setAttribute('data-breadcrumb', item.id);
+            node.dataset.breadcrumb = item.id;
             if (hasHandler) {
               node.setAttribute('type', 'button');
               node.addEventListener('click', (event) => {
@@ -89,9 +89,9 @@ export function createBreadcrumbRuntime(
               });
             }
             if (item.active) {
-              node.setAttribute('data-active', 'true');
+              node.dataset.active = 'true';
             } else {
-              node.removeAttribute('data-active');
+              delete node.dataset.active;
             }
             element.appendChild(node);
           });

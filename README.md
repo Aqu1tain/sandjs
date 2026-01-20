@@ -116,6 +116,50 @@ const chart = renderSVG({
 
 That's it! You now have a fully interactive sunburst chart.
 
+### Simple API (Recommended for Basic Charts)
+
+For simple sunbursts, skip the full configuration and use the `data` + `radius` shorthand:
+
+```javascript
+import { renderSVG } from '@akitain/sandjs';
+
+const chart = renderSVG({
+  el: '#chart',
+  radius: 200,
+  data: [
+    { name: 'Engineering', value: 45 },
+    {
+      name: 'Design',
+      value: 30,
+      children: [
+        { name: 'UI', value: 15 },
+        { name: 'UX', value: 15 }
+      ]
+    },
+    { name: 'Marketing', value: 25 }
+  ],
+  tooltip: true
+});
+```
+
+The Simple API automatically:
+- Creates a single layer with `angleMode: 'free'`
+- Computes `radialUnits` from your tree depth
+- Sets the chart radius
+
+For partial sunbursts (less than a full circle), add the `angle` option:
+
+```javascript
+renderSVG({
+  el: '#chart',
+  radius: 200,
+  angle: Math.PI,  // Half circle
+  data: [...]
+});
+```
+
+Use the full `config` object when you need multiple layers, alignment modes, or advanced layout options.
+
 ---
 
 ## Core Concepts
@@ -627,7 +671,7 @@ For quick prototyping or non-bundled environments:
 ```html
 <svg id="chart"></svg>
 
-<script src="https://unpkg.com/@akitain/sandjs@0.3.6/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 

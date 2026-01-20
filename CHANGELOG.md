@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-01-20
+
+### Added
+- **Simple API**: New simplified way to create sunbursts without layer configuration. Use `data` and `radius` props directly instead of wrapping everything in `config.layers`. The library auto-computes layer depth from tree structure. Example: `renderSVG({ el: '#chart', radius: 400, data: [{ name: 'A', children: [...] }] })`. Full `config` API remains available for advanced use cases (multi-layer, aligned layers, etc.).
+- **Label font size control** (#40): Added `fontSize` option to `LabelOptions` - accepts a number for fixed size or `{ min, max }` object for range. Added `minRadialThickness` option to control visibility threshold.
+- **Root label style** (#26): Added `rootLabelStyle` option to `LabelOptions` with values `'curved'` (default) or `'straight'` to display root node labels as centered text instead of following the arc path.
+- **CI workflow**: Added GitHub Actions workflow for automated testing on PRs to main/dev branches.
+
+### Changed
+- **Instant node removal** (#39): Disappearing nodes during navigation now remove instantly without fade/collapse animation. Only nodes that stay and expand are animated.
+
+### Refactoring
+- **path-management.ts**: Extracted `attachEventHandlers`, `applyBorderStyles`, `applyDataAttributes`, `buildClassList` helpers. Simplified opacity conditionals with single guard clause.
+- **orchestration.ts**: Split `renderSVG` (222→59 lines) into `createRenderLoop`, `executeRender`, `processArcs`, `applySvgDimensions`, `appendNewElement`, `scheduleRemovals`. Replaced `Object.defineProperties` with direct assignment.
+- **label-system.ts**: Extracted `resolveLabelColor` helper. Replaced if-else chain in `logHiddenLabel` with `LABEL_HIDDEN_REASONS` map. Added `LABEL_TANGENT_*` constants for magic numbers.
+- **navigation.ts**: Consolidated 8 mutable variables into `NavigationState` type. Renamed WeakMaps to clearer names (`nodeToBase`, `baseToPath`, `derivedToPath`). Extracted `registerSingleArc` and `setFocus` helpers. Flattened nested conditionals with guard clauses.
+- **aligned.ts**: Reduced `layoutAlignedLayer` cognitive complexity from 27 to ~5 by extracting `getSourceLayer`, `buildRootSourceMap`, `getAlignedSlot`, `computeTrimmedBounds`, `layoutAlignedNode`, `fallbackToFreeLayout`.
+- **breadcrumbs.ts**: Use `.dataset` instead of `setAttribute` for data attributes.
+- **orchestration.ts**: Refactor `scheduleRemovals` to use options object (8→1 parameters).
+- **normalization.ts**: Reduced `normalizeTree` cognitive complexity from 17 to ~6 by extracting `isMultiParentNode`, `warnMultiParentFeature`, `addToMultiParentGroup`, `normalizeValue`, `normalizeNode`.
+- **orchestration.ts**: Replace boolean `supportsFragment` parameter with `BatchTargets` strategy pattern.
+- **removal.ts, path-management.ts**: Use `element.remove()` instead of `parentNode.removeChild(element)`.
+- **normalization.ts**: Avoid object literal as default parameter for `warnOnce`.
+- **navigation.ts**: Extract nested ternary into `resolveNavigationOptions` helper.
+- **index.ts**: Use `Set` with `has()` instead of array with `includes()` for `foundKeys`.
+- **document.ts, animation.ts**: Compare with `undefined` directly instead of using `typeof`.
+- **colorAssignment.ts**: Use `codePointAt()` instead of `charCodeAt()`.
+- **multi-parent-test.html**: Improve text contrast ratio.
+
 ## [0.3.6] - 2025-01-27
 
 ### Enhanced

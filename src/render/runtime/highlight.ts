@@ -18,7 +18,7 @@ export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']
   }
 
   const options: HighlightByKeyOptions =
-    typeof input === 'object' && input !== null ? (input as HighlightByKeyOptions) : {};
+    typeof input === 'object' && input !== null ? (input) : {};
   const className = options.className?.trim() ?? 'is-related';
   const includeSource = options.includeSource ?? false;
   const deriveKey =
@@ -78,8 +78,8 @@ export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']
         groups.set(key, group);
       }
       group.add(path);
-      if (!path.hasAttribute('data-key')) {
-        path.setAttribute('data-key', key);
+      if (!Object.hasOwn(path.dataset, 'key')) {
+        path.dataset.key = key;
       }
     },
     pointerEnter(arc, path) {

@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.6",
+  "version": "0.4.0",
   "description": "Sunburst Advanced Node Data",
   "main": "dist/sandjs.mjs",
   "scripts": {
@@ -12,7 +12,7 @@
     "prepublishOnly": "npm run build",
     "clean:test": "rimraf dist-tests",
     "test:build": "npm run clean:test && tsc --project tsconfig.test.json",
-    "test": "npm run test:build && node --test dist-tests/tests/**/*.js",
+    "test": "npm run test:build && node --test dist-tests/tests/*.js",
     "verify": "npm run test && npm run build",
     "dev": "node scripts/dev-server.mjs",
     "clean:docs": "rimraf temp docs/api",

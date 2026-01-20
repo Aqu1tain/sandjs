@@ -31,7 +31,7 @@ const resolveStaticPath = async (urlPathRaw) => {
   if (!urlPathRaw) return null;
 
   const decoded = decodeURIComponent(urlPathRaw);
-  let sanitized = decoded.replace(/\\/g, '/').replace(/^\/+/, '');
+  let sanitized = decoded.replaceAll('\\', '/').replace(/^\/+/, '');
 
   // Default to index.html if the request is for the root or a directory
   if (sanitized === '' || sanitized.endsWith('/')) {

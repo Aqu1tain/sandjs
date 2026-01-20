@@ -73,7 +73,7 @@ Add the script to import Sand.js. You can use either a module bundler or CDN:
 ### Option B: Using CDN
 
 ```html
-<script src="https://unpkg.com/@akitain/sandjs@0.3.6/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 
@@ -83,7 +83,35 @@ Add the script to import Sand.js. You can use either a module bundler or CDN:
 
 ## Step 3: Define Your Data
 
-Create a simple configuration with sample data:
+### Option A: Simple API (Recommended)
+
+For basic charts, use the `data` + `radius` shorthand:
+
+```javascript
+const chart = renderSVG({
+  el: '#chart',
+  radius: 180,
+  data: [
+    { name: 'Engineering', value: 45 },
+    {
+      name: 'Design',
+      value: 30,
+      children: [
+        { name: 'UI Design', value: 15 },
+        { name: 'UX Research', value: 15 }
+      ]
+    },
+    { name: 'Marketing', value: 25 }
+  ],
+  tooltip: true
+});
+```
+
+The Simple API automatically handles layer configuration and tree depth calculation.
+
+### Option B: Full Configuration (Advanced)
+
+For multi-layer charts or advanced layouts, use the full `config` object:
 
 ```javascript
 const config = {
@@ -119,13 +147,7 @@ const config = {
     }
   ]
 };
-```
 
-## Step 4: Render the Chart
-
-Call the `renderSVG` function:
-
-```javascript
 const chart = renderSVG({
   el: '#chart',
   config: config,
@@ -133,9 +155,13 @@ const chart = renderSVG({
 });
 ```
 
+## Step 4: That's It!
+
+Your chart is now rendered. The Simple API is perfect for getting started quickly.
+
 ## Complete Code
 
-Here's everything together:
+### Using Simple API (Recommended)
 
 ```html
 <!DOCTYPE html>
@@ -176,7 +202,80 @@ Here's everything together:
     <svg id="chart" width="400" height="400"></svg>
   </div>
 
-  <script src="https://unpkg.com/@akitain/sandjs@0.3.6/dist/sandjs.iife.min.js"></script>
+  <script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+  <script>
+    const { renderSVG } = window.SandJS;
+
+    const chart = renderSVG({
+      el: '#chart',
+      radius: 180,
+      data: [
+        { name: 'Engineering', value: 45 },
+        {
+          name: 'Design',
+          value: 30,
+          children: [
+            { name: 'UI Design', value: 15 },
+            { name: 'UX Research', value: 15 }
+          ]
+        },
+        { name: 'Marketing', value: 25 }
+      ],
+      tooltip: true,
+      colorTheme: {
+        type: 'qualitative',
+        palette: 'ocean'
+      }
+    });
+  </script>
+</body>
+</html>
+```
+
+### Using Full Config
+
+Here's the same chart with full configuration:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My First Sunburst</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .chart-container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chart-container">
+    <h1>My First Sunburst Chart</h1>
+    <svg id="chart" width="400" height="400"></svg>
+  </div>
+
+  <script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
   <script>
     const { renderSVG } = window.SandJS;
 

@@ -6,8 +6,8 @@ const DOCS_ROOT = path.resolve('docs');
 const API_DIR = path.join(DOCS_ROOT, 'api');
 
 function transformLinks(content) {
-  const linkPattern = /\[([^\]]+)\]\(((?:\.\.?\/)[^\)]+?)\.md\)/g;
-  return content.replace(linkPattern, (_match, label, rawTarget) => {
+  const linkPattern = /\[([^\]]+)\]\(((?:\.\.?\/)[^)]+?)\.md\)/g;
+  return content.replaceAll(linkPattern, (_match, label, rawTarget) => {
     let target = rawTarget;
     if (target === './index') {
       target = '../index';

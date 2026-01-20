@@ -861,7 +861,12 @@ Options passed to the `renderSVG()` function.
 ```typescript
 interface RenderSvgOptions {
   el: string | SVGElement;
-  config: SunburstConfig;
+
+  // Configuration (choose one approach)
+  config?: SunburstConfig;                    // Full configuration (advanced)
+  data?: TreeNodeInput | TreeNodeInput[];     // Simple tree data (creates default layer)
+  radius?: number;                            // Required when using `data`
+  angle?: number;                             // Total angle in radians (default: 2π)
 
   tooltip?: boolean | TooltipOptions;
   breadcrumbs?: boolean | BreadcrumbOptions;
@@ -898,9 +903,42 @@ const svg = document.querySelector('#my-chart');
 renderSVG({ el: svg, config });
 ```
 
-#### config
+### Configuration Approaches
 
-Sunburst configuration object.
+You can configure your chart using either the **Simple API** or **Full Config**:
+
+#### Simple API (`data` + `radius`)
+
+For basic single-layer sunbursts:
+
+```javascript
+renderSVG({
+  el: '#chart',
+  radius: 200,
+  data: [
+    { name: 'A', value: 50 },
+    { name: 'B', value: 50, children: [...] }
+  ]
+});
+```
+
+The Simple API automatically creates a single layer with `angleMode: 'free'` and computes
+`radialUnits` from your tree depth.
+
+Add `angle` for partial circles:
+
+```javascript
+renderSVG({
+  el: '#chart',
+  radius: 200,
+  angle: Math.PI,  // Half circle
+  data: [...]
+});
+```
+
+#### Full Config (`config`)
+
+For multi-layer charts, alignment modes, or advanced layouts:
 
 ```javascript
 renderSVG({
