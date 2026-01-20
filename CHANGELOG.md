@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-01-20
+
 ### Added
 - **Simple API**: New simplified way to create sunbursts without layer configuration. Use `data` and `radius` props directly instead of wrapping everything in `config.layers`. The library auto-computes layer depth from tree structure. Example: `renderSVG({ el: '#chart', radius: 400, data: [{ name: 'A', children: [...] }] })`. Full `config` API remains available for advanced use cases (multi-layer, aligned layers, etc.).
+- **Label font size control** (#40): Added `fontSize` option to `LabelOptions` - accepts a number for fixed size or `{ min, max }` object for range. Added `minRadialThickness` option to control visibility threshold.
+- **Root label style** (#26): Added `rootLabelStyle` option to `LabelOptions` with values `'curved'` (default) or `'straight'` to display root node labels as centered text instead of following the arc path.
+- **CI workflow**: Added GitHub Actions workflow for automated testing on PRs to main/dev branches.
+
+### Changed
+- **Instant node removal** (#39): Disappearing nodes during navigation now remove instantly without fade/collapse animation. Only nodes that stay and expand are animated.
 
 ### Refactoring
 - **path-management.ts**: Extracted `attachEventHandlers`, `applyBorderStyles`, `applyDataAttributes`, `buildClassList` helpers. Simplified opacity conditionals with single guard clause.
