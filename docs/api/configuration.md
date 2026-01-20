@@ -716,9 +716,9 @@ Completely hide this node from layout.
 
 #### parents
 
-**⚠️ EXPERIMENTAL FEATURE - Use at your own risk**
-
 Array of parent keys that creates a unified parent arc spanning multiple nodes. When multiple parent keys are specified, those parent nodes are treated as ONE combined arc, and this node becomes a child of that unified parent.
+
+**Stable since:** 1.0
 
 ```javascript
 {
@@ -734,7 +734,6 @@ Array of parent keys that creates a unified parent arc spanning multiple nodes. 
 - The combined arc spans from the start of the first parent to the end of the last parent
 - Multiple nodes can share the same `parents` array and will all be children of the unified parent
 - Parent nodes referenced in `parents` arrays should not have their own individual children
-- A console warning will appear the first time this feature is used
 
 **How it works:**
 1. Nodes with a `parents` property are extracted during normalization
@@ -742,12 +741,9 @@ Array of parent keys that creates a unified parent arc spanning multiple nodes. 
 3. A combined angular span is calculated (from min start to max end of all parent arcs)
 4. Multi-parent children are laid out within that combined span
 
-**⚠️ Warning:**
-This feature may cause unexpected behavior with:
-- Animations and transitions
-- Value calculations (parents lose their individual values)
-- Key-based highlighting
-- Navigation and drill-down
+**Known limitations:**
+- Key-based highlighting does not automatically highlight multi-parent arcs when hovering parents
+- Navigation/drill-down has path ambiguity with multi-parent nodes
 
 **Constraints:**
 - Must be an array of at least 2 strings
@@ -847,8 +843,8 @@ This feature may cause unexpected behavior with:
 - Cross-functional teams spanning multiple divisions
 - Many-to-many relationships
 
-**Recommended approach:**
-This feature is experimental. For simpler cases, consider using multiple layers with alignment instead.
+**Alternative approach:**
+For simpler cases, consider using multiple layers with alignment instead.
 
 ---
 

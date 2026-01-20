@@ -32,16 +32,6 @@ function isMultiParentNode(node: TreeNodeInput): boolean {
   return Boolean(node.parents && Array.isArray(node.parents) && node.parents.length > 1);
 }
 
-function warnMultiParentFeature(warnOnce: { warned: boolean }): void {
-  if (warnOnce.warned) return;
-  console.warn(
-    '[Sand.js] ⚠️  EXPERIMENTAL FEATURE: Multi-parent nodes detected. ' +
-    'Parent nodes with matching keys will be unified into a single combined arc. ' +
-    'Use at your own risk.'
-  );
-  warnOnce.warned = true;
-}
-
 function addToMultiParentGroup(
   node: TreeNodeInput,
   index: number,
@@ -87,9 +77,7 @@ export function normalizeTree(
   parentPath: TreeNodeInput[] = [],
   parentIndices: number[] = [],
   multiParentGroups: Map<string, MultiParentGroup> = new Map(),
-  warnOnce?: { warned: boolean },
 ): NormalizationResult {
-  const warnState = warnOnce ?? { warned: false };
   const nodes = Array.isArray(tree) ? tree : [tree];
   const isRoot = parentPath.length === 0;
   const normalized: NormalizedNode[] = [];
@@ -98,12 +86,11 @@ export function normalizeTree(
     if (!node || node.hidden) return;
 
     if (isMultiParentNode(node)) {
-      warnMultiParentFeature(warnState);
       addToMultiParentGroup(node, index, parentPath, parentIndices, multiParentGroups);
       return;
     }
 
-    normalized.push(normalizeNode(node, index, parentPath, parentIndices, multiParentGroups, warnState));
+    normalized.push(normalizeNode(node, index, parentPath, parentIndices, multiParentGroups));
   });
 
   if (isRoot) {
@@ -118,12 +105,11 @@ function normalizeNode(
   parentPath: TreeNodeInput[],
   parentIndices: number[],
   multiParentGroups: Map<string, MultiParentGroup>,
-  warnOnce: { warned: boolean },
 ): NormalizedNode {
   const children = Array.isArray(node.children) ? node.children : [];
   const path = parentPath.concat(node);
   const pathIndices = parentIndices.concat(index);
-  const childResult = normalizeTree(children, path, pathIndices, multiParentGroups, warnOnce);
+  const childResult = normalizeTree(children, path, pathIndices, multiParentGroups);
   const normalizedChildren = childResult.nodes;
 
   const collapsed = Boolean(node.collapsed);

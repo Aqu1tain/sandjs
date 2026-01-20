@@ -20,7 +20,7 @@ interface TreeNodeInput {
   labelColor?: string;
   padAngle?: number;
   children?: TreeNodeInput[];
-  parents?: string[];  // EXPERIMENTAL
+  parents?: string[];
   tooltip?: string;
   collapsed?: boolean;
   hidden?: boolean;
@@ -207,11 +207,11 @@ children: [
 
 ### parents
 
-**⚠️ EXPERIMENTAL FEATURE**
-
 Array of parent keys that creates a unified parent arc spanning multiple nodes.
 
 **Type:** `string[] | undefined`
+
+**Stable since:** 1.0
 
 **Example:**
 ```javascript
@@ -233,6 +233,10 @@ Array of parent keys that creates a unified parent arc spanning multiple nodes.
 - Each string must match a `key` property of a node anywhere in the same layer
 - Parent nodes referenced should not have their own `children`
 - Can be used at any depth (root level or nested)
+
+**Known limitations:**
+- Key-based highlighting does not automatically highlight multi-parent arcs when hovering parents
+- Navigation/drill-down has path ambiguity with multi-parent nodes
 
 **Use cases:**
 - Shared resources across departments
