@@ -5,10 +5,18 @@ import type { RenderSvgOptions } from '../src/render/types.js';
 import type { SunburstConfig, TreeNodeInput } from '../src/types/index.js';
 
 // Re-implement computeMaxRadialUnits for testing (since it's not exported)
+// Uses same normalization as layout: expandLevels must be positive, defaults to 1
+function normalizeExpandLevels(value: number | undefined): number {
+  if (typeof value === 'number' && value > 0) {
+    return value;
+  }
+  return 1;
+}
+
 function testComputeMaxRadialUnits(nodes: TreeNodeInput[], currentUnits = 0): number {
   let max = currentUnits;
   for (const node of nodes) {
-    const nodeUnits = currentUnits + (node.expandLevels ?? 1);
+    const nodeUnits = currentUnits + normalizeExpandLevels(node.expandLevels);
     max = Math.max(max, nodeUnits);
     if (node.children && node.children.length > 0) {
       max = Math.max(max, testComputeMaxRadialUnits(node.children, nodeUnits));
@@ -160,6 +168,21 @@ describe('Simple API - resolveConfig', () => {
     // Path: A (2 units) -> A1 (3 units) = 5 total
     assert.deepEqual(result.layers[0].radialUnits, [0, 5]);
   });
+
+  test('normalizes invalid expandLevels to 1', () => {
+    const options = {
+      el: '#chart',
+      radius: 100,
+      data: [
+        { name: 'A', expandLevels: 0 },
+        { name: 'B', expandLevels: -1 },
+      ],
+    } as RenderSvgOptions;
+    const result = resolveConfig(options);
+
+    // Both nodes should be normalized to expandLevels: 1
+    assert.deepEqual(result.layers[0].radialUnits, [0, 1]);
+  });
 });
 
 describe('Simple API - isSunburstConfig', () => {
@@ -251,5 +274,19 @@ describe('Simple API - computeMaxRadialUnits', () => {
       { name: 'B', expandLevels: 3 },  // 3
     ]);
     assert.equal(result, 3);
+  });
+
+  test('normalizes zero expandLevels to 1', () => {
+    const result = testComputeMaxRadialUnits([
+      { name: 'A', expandLevels: 0 }
+    ]);
+    assert.equal(result, 1);
+  });
+
+  test('normalizes negative expandLevels to 1', () => {
+    const result = testComputeMaxRadialUnits([
+      { name: 'A', expandLevels: -5 }
+    ]);
+    assert.equal(result, 1);
   });
 });

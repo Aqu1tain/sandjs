@@ -1,6 +1,7 @@
 import type { SunburstConfig, TreeNodeInput } from '../../types';
 import type { RenderSvgOptions, RenderSvgUpdateInput} from '../types.js';
 import { SVG_NS } from './constants.js';
+import { normalizeExpandLevels } from '../../layout/normalization.js';
 
 /**
  * Checks if a value is a SunburstConfig
@@ -109,7 +110,7 @@ function normalizeTreeInput(data: TreeNodeInput | TreeNodeInput[]): TreeNodeInpu
 function computeMaxRadialUnits(nodes: TreeNodeInput[], currentUnits = 0): number {
   let max = currentUnits;
   for (const node of nodes) {
-    const nodeUnits = currentUnits + (node.expandLevels ?? 1);
+    const nodeUnits = currentUnits + normalizeExpandLevels(node.expandLevels);
     max = Math.max(max, nodeUnits);
     if (node.children && node.children.length > 0) {
       max = Math.max(max, computeMaxRadialUnits(node.children, nodeUnits));
