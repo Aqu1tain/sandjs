@@ -148,16 +148,11 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   };
 
   const handleFocus = () => {
-    const { arc, runtime, options } = managed;
+    const { arc, runtime } = managed;
     element.classList.add('is-focused');
     element.parentNode?.appendChild(element);
     managed.labelElement.parentNode?.appendChild(managed.labelElement);
-    const layer = options.config.layers.find(l => l.id === arc.layerId);
-    const hasBorder = (layer?.borderWidth ?? options.borderWidth) !== undefined;
-    if (!hasBorder) {
-      element.setAttribute('stroke', '#000');
-      element.setAttribute('stroke-width', '2');
-    }
+    element.style.filter = 'drop-shadow(0 0 3px #000) drop-shadow(0 0 6px #fff)';
     runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.show(arc);
@@ -165,21 +160,9 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   };
 
   const handleBlur = () => {
-    const { runtime, options, arc } = managed;
+    const { runtime } = managed;
     element.classList.remove('is-focused');
-    const layer = options.config.layers.find(l => l.id === arc.layerId);
-    const borderColor = layer?.borderColor ?? options.borderColor;
-    const borderWidth = layer?.borderWidth ?? options.borderWidth;
-    if (borderColor) {
-      element.setAttribute('stroke', borderColor);
-    } else {
-      element.removeAttribute('stroke');
-    }
-    if (borderWidth !== undefined) {
-      element.setAttribute('stroke-width', String(borderWidth));
-    } else {
-      element.removeAttribute('stroke-width');
-    }
+    element.style.filter = '';
     runtime.tooltip?.hide();
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.clear();
