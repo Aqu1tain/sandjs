@@ -148,16 +148,25 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     options.onArcClick?.({ arc, path: element, event });
   };
 
-  let savedStroke: string | null = null;
-  let savedStrokeWidth: string | null = null;
+  let focusRing: SVGPathElement | null = null;
 
   const handleFocus = () => {
     const { arc, runtime } = managed;
     element.classList.add('is-focused');
-    savedStroke = element.getAttribute('stroke');
-    savedStrokeWidth = element.getAttribute('stroke-width');
-    element.setAttribute('stroke', '#005fcc');
-    element.setAttribute('stroke-width', '2');
+
+    const pathData = element.getAttribute('d');
+    if (pathData && element.parentNode && element.ownerDocument) {
+      const ring = element.ownerDocument.createElementNS(SVG_NS, 'path');
+      ring.setAttribute('d', pathData);
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', '#005fcc');
+      ring.setAttribute('stroke-width', '3');
+      ring.setAttribute('pointer-events', 'none');
+      ring.setAttribute('class', 'sand-focus-ring');
+      element.parentNode.appendChild(ring);
+      focusRing = ring;
+    }
+
     runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.show(arc);
@@ -165,21 +174,14 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   };
 
   const handleBlur = () => {
-
     const { runtime } = managed;
     element.classList.remove('is-focused');
-    if (savedStroke) {
-      element.setAttribute('stroke', savedStroke);
-    } else {
-      element.removeAttribute('stroke');
+
+    if (focusRing) {
+      focusRing.remove();
+      focusRing = null;
     }
-    if (savedStrokeWidth) {
-      element.setAttribute('stroke-width', savedStrokeWidth);
-    } else {
-      element.removeAttribute('stroke-width');
-    }
-    savedStroke = null;
-    savedStrokeWidth = null;
+
     runtime.tooltip?.hide();
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.clear();
