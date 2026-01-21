@@ -17,7 +17,13 @@
     "dev": "node scripts/dev-server.mjs",
     "clean:docs": "rimraf temp docs/api",
     "docs:extract": "api-extractor run --local",
-    "docs:build": "npm run build && npm run clean:docs && npm run docs:extract && api-documenter markdown --input-folder temp --output-folder docs/api && node scripts/postprocess-docs.mjs"
+    "docs:build": "npm run build && npm run clean:docs && npm run docs:extract && api-documenter markdown --input-folder temp --output-folder docs/api && node scripts/postprocess-docs.mjs",
+    "clean:bench": "rimraf dist-benchmarks",
+    "bench:build": "npm run clean:bench && tsc --project tsconfig.bench.json",
+    "bench": "npm run bench:build && node dist-benchmarks/benchmarks/index.js",
+    "bench:layout": "npm run bench:build && node dist-benchmarks/benchmarks/layout.bench.js",
+    "bench:render": "npm run bench:build && node dist-benchmarks/benchmarks/render.bench.js",
+    "bench:navigation": "npm run bench:build && node dist-benchmarks/benchmarks/navigation.bench.js"
   },
   "repository": {
     "type": "git",
