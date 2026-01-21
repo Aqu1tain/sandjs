@@ -78,7 +78,7 @@ export function createHighlightRuntime(input: RenderSvgOptions['highlightByKey']
         groups.set(key, group);
       }
       group.add(path);
-      if (!Object.hasOwn(path.dataset, 'key')) {
+      if (path.dataset.key === undefined) {
         path.dataset.key = key;
       }
     },
