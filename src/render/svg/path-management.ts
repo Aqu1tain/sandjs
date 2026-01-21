@@ -150,23 +150,14 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
 
   let savedStroke: string | null = null;
   let savedStrokeWidth: string | null = null;
-  let isFocusing = false;
 
   const handleFocus = () => {
-    if (isFocusing) return;
-    isFocusing = true;
-
-    const { arc, runtime, labelElement } = managed;
+    const { arc, runtime } = managed;
     element.classList.add('is-focused');
     savedStroke = element.getAttribute('stroke');
     savedStrokeWidth = element.getAttribute('stroke-width');
     element.setAttribute('stroke', '#005fcc');
     element.setAttribute('stroke-width', '2');
-    element.parentNode?.appendChild(element);
-    labelElement.parentNode?.appendChild(labelElement);
-    element.focus();
-
-    isFocusing = false;
     runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.show(arc);
@@ -174,7 +165,6 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   };
 
   const handleBlur = () => {
-    if (isFocusing) return;
 
     const { runtime } = managed;
     element.classList.remove('is-focused');
