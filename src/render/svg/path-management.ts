@@ -31,6 +31,7 @@ export function createManagedPath(params: {
 }): ManagedPath {
   const { key, arc, options, runtime, doc, labelDefs } = params;
   const element = doc.createElementNS(SVG_NS, 'path');
+  element.style.outline = 'none';
 
   const labelPathElement = doc.createElementNS(SVG_NS, 'path');
   const labelElement = doc.createElementNS(SVG_NS, 'text');
@@ -147,7 +148,16 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   };
 
   const handleFocus = () => {
-    const { arc, runtime } = managed;
+    const { arc, runtime, options } = managed;
+    element.classList.add('is-focused');
+    element.parentNode?.appendChild(element);
+    managed.labelElement.parentNode?.appendChild(managed.labelElement);
+    const layer = options.config.layers.find(l => l.id === arc.layerId);
+    const hasBorder = (layer?.borderWidth ?? options.borderWidth) !== undefined;
+    if (!hasBorder) {
+      element.setAttribute('stroke', '#000');
+      element.setAttribute('stroke-width', '2');
+    }
     runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.show(arc);
@@ -155,7 +165,21 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   };
 
   const handleBlur = () => {
-    const { runtime } = managed;
+    const { runtime, options, arc } = managed;
+    element.classList.remove('is-focused');
+    const layer = options.config.layers.find(l => l.id === arc.layerId);
+    const borderColor = layer?.borderColor ?? options.borderColor;
+    const borderWidth = layer?.borderWidth ?? options.borderWidth;
+    if (borderColor) {
+      element.setAttribute('stroke', borderColor);
+    } else {
+      element.removeAttribute('stroke');
+    }
+    if (borderWidth !== undefined) {
+      element.setAttribute('stroke-width', String(borderWidth));
+    } else {
+      element.removeAttribute('stroke-width');
+    }
     runtime.tooltip?.hide();
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.clear();
