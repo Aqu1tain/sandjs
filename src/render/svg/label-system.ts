@@ -193,17 +193,18 @@ function evaluateLabelVisibility(
 
   const fontConfig = resolveFontSizeConfig(renderOptions.labels);
   const fontSizeScale = resolveFontSizeScale(renderOptions.labels);
-  const midRadius = arc.y0 + radialThickness * 0.5;
-  const fontSize = checkHeight
-    ? Math.min(Math.max(radialThickness * fontSizeScale, fontConfig.min), fontConfig.max)
-    : fontConfig.max;
   const labelPadding = resolveLabelPadding(renderOptions.labels);
-  const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + labelPadding;
+  const midRadius = arc.y0 + radialThickness * 0.5;
   const arcLength = span * midRadius;
 
-  // Apply safety margin for centered text to prevent cut-off at boundaries
-  const requiredLength = estimatedWidth * LABEL_SAFETY_MARGIN;
-  if (checkWidth && arcLength < requiredLength) {
+  const heightBasedSize = radialThickness * fontSizeScale;
+  const widthBasedSize = (arcLength / LABEL_SAFETY_MARGIN - labelPadding) / (text.length * LABEL_CHAR_WIDTH_FACTOR);
+
+  const rawFontSize = checkWidth ? Math.min(widthBasedSize, checkHeight ? heightBasedSize : Infinity) : heightBasedSize;
+  const fontSize = Math.min(Math.max(rawFontSize, fontConfig.min), fontConfig.max);
+
+  const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + labelPadding;
+  if (checkWidth && arcLength < estimatedWidth * LABEL_SAFETY_MARGIN) {
     return { visible: false, reason: 'narrow-arc' };
   }
 
