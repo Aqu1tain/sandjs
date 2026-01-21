@@ -178,7 +178,7 @@ export function createAnimationDrivers(doc: Document): AnimationDrivers {
           const handle = setTimeout(() => callback(Date.now()), 16);
           return Number(handle);
         };
-  
+
   const caf =
     view && typeof view.cancelAnimationFrame === 'function'
       ? view.cancelAnimationFrame.bind(view)

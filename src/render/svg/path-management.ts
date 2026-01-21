@@ -156,13 +156,14 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     if (isFocusing) return;
     isFocusing = true;
 
-    const { arc, runtime } = managed;
+    const { arc, runtime, labelElement } = managed;
     element.classList.add('is-focused');
     savedStroke = element.getAttribute('stroke');
     savedStrokeWidth = element.getAttribute('stroke-width');
     element.setAttribute('stroke', '#005fcc');
     element.setAttribute('stroke-width', '2');
     element.parentNode?.appendChild(element);
+    labelElement.parentNode?.appendChild(labelElement);
     element.focus();
 
     isFocusing = false;
