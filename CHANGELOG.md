@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-01-21
+
 ### Added
 - **Multi-parent nodes stable**: Removed EXPERIMENTAL status from multi-parent nodes feature. Added comprehensive test suite (23 tests) covering detection, normalization, validation, layout, and integration. Documented known limitations (key highlighting, navigation ambiguity). Stable since 1.0.
 - **Layer-specific rootLabelStyle**: Added `rootLabelStyle` option to `LayerConfig` for per-layer control of root label rendering (`'curved'` or `'straight'`). Layer setting takes priority over global `LabelOptions.rootLabelStyle`.
