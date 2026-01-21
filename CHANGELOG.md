@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-parent nodes stable**: Removed EXPERIMENTAL status from multi-parent nodes feature. Added comprehensive test suite (23 tests) covering detection, normalization, validation, layout, and integration. Documented known limitations (key highlighting, navigation ambiguity). Stable since 1.0.
+- **Layer-specific rootLabelStyle**: Added `rootLabelStyle` option to `LayerConfig` for per-layer control of root label rendering (`'curved'` or `'straight'`). Layer setting takes priority over global `LabelOptions.rootLabelStyle`.
+- **Configurable fontSizeScale**: Added `fontSizeScale` option to `LabelOptions` to control font size calculation. Default is `0.5`. Use smaller values (e.g., `0.25`) for large charts where fonts would otherwise always hit max size.
+
+### Fixed
+- **Straight label centering**: Fixed straight labels on full-circle root nodes (360° arcs) to render at the true center instead of on the arc midpoint.
+
 ## [0.4.0] - 2026-01-20
 
 ### Added
