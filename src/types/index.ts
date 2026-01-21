@@ -30,7 +30,7 @@ export interface TreeNodeInput {
   labelColor?: string;
   padAngle?: number;
   children?: TreeNodeInput[];
-  parents?: string[];  // EXPERIMENTAL: Array of parent keys for multi-parent nodes
+  parents?: string[];
   tooltip?: string;
   hidden?: boolean;
   collapsed?: boolean;
