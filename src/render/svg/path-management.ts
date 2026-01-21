@@ -1,6 +1,6 @@
 import { describeArcPath } from '../geometry.js';
 import { interpolateArc } from '../transition.js';
-import { SVG_NS, XLINK_NS } from './constants.js';
+import { SVG_NS, XLINK_NS, FOCUS_RING_COLOR, FOCUS_RING_WIDTH } from './constants.js';
 import type { RuntimeSet, ManagedPath, AnimationDrivers } from './types.js';
 import type { LayoutArc } from '../../types/index.js';
 import type { ResolvedRenderOptions } from '../types.js';
@@ -153,20 +153,7 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   const handleFocus = () => {
     const { arc, runtime } = managed;
     element.classList.add('is-focused');
-
-    const pathData = element.getAttribute('d');
-    if (pathData && element.parentNode && element.ownerDocument) {
-      const ring = element.ownerDocument.createElementNS(SVG_NS, 'path');
-      ring.setAttribute('d', pathData);
-      ring.setAttribute('fill', 'none');
-      ring.setAttribute('stroke', '#005fcc');
-      ring.setAttribute('stroke-width', '3');
-      ring.setAttribute('pointer-events', 'none');
-      ring.setAttribute('class', 'sand-focus-ring');
-      element.parentNode.appendChild(ring);
-      focusRing = ring;
-    }
-
+    focusRing = createFocusRing(element);
     runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.show(arc);
@@ -176,12 +163,8 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   const handleBlur = () => {
     const { runtime } = managed;
     element.classList.remove('is-focused');
-
-    if (focusRing) {
-      focusRing.remove();
-      focusRing = null;
-    }
-
+    focusRing?.remove();
+    focusRing = null;
     runtime.tooltip?.hide();
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.clear();
@@ -228,6 +211,21 @@ function setOrRemoveAttribute(element: Element, name: string, value: string | nu
   } else {
     element.removeAttribute(name);
   }
+}
+
+function createFocusRing(element: SVGPathElement): SVGPathElement | null {
+  const pathData = element.getAttribute('d');
+  if (!pathData || !element.parentNode || !element.ownerDocument) return null;
+
+  const ring = element.ownerDocument.createElementNS(SVG_NS, 'path');
+  ring.setAttribute('d', pathData);
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', FOCUS_RING_COLOR);
+  ring.setAttribute('stroke-width', String(FOCUS_RING_WIDTH));
+  ring.setAttribute('pointer-events', 'none');
+  ring.setAttribute('class', 'sand-focus-ring');
+  element.parentNode.appendChild(ring);
+  return ring;
 }
 
 function buildClassList(arc: LayoutArc, options: ResolvedRenderOptions): string {

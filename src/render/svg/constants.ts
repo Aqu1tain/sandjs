@@ -24,3 +24,9 @@ export const COLLAPSED_ARC_SPAN_SHRINK_FACTOR = 0.1; // Shrink span to 10% of or
 export const COLLAPSED_ARC_MIN_SPAN = 0.01; // Minimum span in radians for collapsed arcs
 export const COLLAPSED_ARC_THICKNESS_SHRINK_FACTOR = 0.1; // Shrink thickness to 10% of original
 export const COLLAPSED_ARC_MIN_THICKNESS = 0.5; // Minimum thickness in pixels for collapsed arcs
+
+/**
+ * Focus ring styling
+ */
+export const FOCUS_RING_COLOR = '#005fcc';
+export const FOCUS_RING_WIDTH = 3;
