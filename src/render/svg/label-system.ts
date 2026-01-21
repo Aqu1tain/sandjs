@@ -307,8 +307,10 @@ function showLabel(
 
   if (options.useStraightStyle) {
     const isFullCircle = (arc.x1 - arc.x0) >= TAU - ZERO_TOLERANCE;
-    const x = isFullCircle ? options.cx : evaluation.x;
-    const y = isFullCircle ? options.cy : evaluation.y;
+    const includesCenter = arc.y0 <= ZERO_TOLERANCE;
+    const useCenter = isFullCircle && includesCenter;
+    const x = useCenter ? options.cx : evaluation.x;
+    const y = useCenter ? options.cy : evaluation.y;
     showStraightLabel(managed, text, { ...evaluation, x, y });
   } else {
     showCurvedLabel(managed, text, evaluation);
