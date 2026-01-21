@@ -127,7 +127,7 @@ export interface HighlightByKeyOptions {
   deriveKey?: (arc: LayoutArc) => string | null;
   pinOnClick?: boolean;
   pinClassName?: string;
-  onPinChange?: (payload: { arc: LayoutArc; path: SVGPathElement; pinned: boolean; event: MouseEvent }) => void;
+  onPinChange?: (payload: { arc: LayoutArc; path: SVGPathElement; pinned: boolean; event: MouseEvent | KeyboardEvent }) => void;
 }
 
 /**
@@ -149,7 +149,7 @@ export interface ArcPointerEventPayload {
 export interface ArcClickEventPayload {
   arc: LayoutArc;
   path: SVGPathElement;
-  event: MouseEvent;
+  event: MouseEvent | KeyboardEvent;
 }
 
 /**

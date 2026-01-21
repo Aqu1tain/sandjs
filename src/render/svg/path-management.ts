@@ -143,8 +143,9 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     const { arc, runtime, options } = managed;
+    runtime.highlight?.handleClick?.(arc, element, event);
     runtime.navigation?.handleArcClick(arc);
-    options.onArcClick?.({ arc, path: element, event: event as unknown as MouseEvent });
+    options.onArcClick?.({ arc, path: element, event });
   };
 
   let savedStroke: string | null = null;
