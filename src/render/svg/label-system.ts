@@ -99,7 +99,7 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
 
   const labelColor = resolveLabelColor(arc, layer, renderOptions, arcColor);
   const useStraightStyle = shouldUseStraightLabel(arc, renderOptions);
-  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle });
+  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle, cx, cy });
 }
 
 function shouldUseStraightLabel(arc: LayoutArc, renderOptions: ResolvedRenderOptions): boolean {
@@ -272,6 +272,8 @@ function createLabelArcPath(params: {
 
 type ShowLabelOptions = {
   useStraightStyle: boolean;
+  cx: number;
+  cy: number;
 };
 
 /**
@@ -296,7 +298,10 @@ function showLabel(
   labelElement.dataset.depth = String(arc.depth);
 
   if (options.useStraightStyle) {
-    showStraightLabel(managed, text, evaluation);
+    const isFullCircle = (arc.x1 - arc.x0) >= TAU - ZERO_TOLERANCE;
+    const x = isFullCircle ? options.cx : evaluation.x;
+    const y = isFullCircle ? options.cy : evaluation.y;
+    showStraightLabel(managed, text, { ...evaluation, x, y });
   } else {
     showCurvedLabel(managed, text, evaluation);
   }
