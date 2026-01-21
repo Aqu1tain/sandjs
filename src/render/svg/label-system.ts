@@ -147,6 +147,13 @@ function resolveMinRadialThickness(labelOptions: ResolvedRenderOptions['labels']
   return labelOptions?.minRadialThickness ?? LABEL_MIN_RADIAL_THICKNESS;
 }
 
+const DEFAULT_FONT_SIZE_SCALE = 0.5;
+
+function resolveFontSizeScale(labelOptions: ResolvedRenderOptions['labels']): number {
+  if (typeof labelOptions !== 'object') return DEFAULT_FONT_SIZE_SCALE;
+  return labelOptions?.fontSizeScale ?? DEFAULT_FONT_SIZE_SCALE;
+}
+
 /**
  * Evaluates whether a label can be shown for an arc
  */
@@ -169,8 +176,9 @@ function evaluateLabelVisibility(
   }
 
   const fontConfig = resolveFontSizeConfig(renderOptions.labels);
+  const fontSizeScale = resolveFontSizeScale(renderOptions.labels);
   const midRadius = arc.y0 + radialThickness * 0.5;
-  const fontSize = Math.min(Math.max(radialThickness * 0.5, fontConfig.min), fontConfig.max);
+  const fontSize = Math.min(Math.max(radialThickness * fontSizeScale, fontConfig.min), fontConfig.max);
   const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
   const arcLength = span * midRadius;
 
