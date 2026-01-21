@@ -147,17 +147,10 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     options.onArcClick?.({ arc, path: element, event: event as unknown as MouseEvent });
   };
 
-  let savedNextSibling: Node | null = null;
-  let savedLabelNextSibling: Node | null = null;
-
   const handleFocus = () => {
     const { arc, runtime } = managed;
     element.classList.add('is-focused');
-    savedNextSibling = element.nextSibling;
-    savedLabelNextSibling = managed.labelElement.nextSibling;
-    element.parentNode?.appendChild(element);
-    managed.labelElement.parentNode?.appendChild(managed.labelElement);
-    element.style.filter = 'drop-shadow(0 0 3px #000) drop-shadow(0 0 6px #fff)';
+    element.style.filter = 'drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #fff) drop-shadow(0 0 2px #000)';
     runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.show(arc);
@@ -168,14 +161,6 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     const { runtime } = managed;
     element.classList.remove('is-focused');
     element.style.filter = '';
-    if (savedNextSibling && element.parentNode) {
-      element.parentNode.insertBefore(element, savedNextSibling);
-    }
-    if (savedLabelNextSibling && managed.labelElement.parentNode) {
-      managed.labelElement.parentNode.insertBefore(managed.labelElement, savedLabelNextSibling);
-    }
-    savedNextSibling = null;
-    savedLabelNextSibling = null;
     runtime.tooltip?.hide();
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.clear();
