@@ -99,11 +99,15 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
 
   const labelColor = resolveLabelColor(arc, layer, renderOptions, arcColor);
   const useStraightStyle = shouldUseStraightLabel(arc, renderOptions);
-  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle });
+  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle, cx, cy });
 }
 
 function shouldUseStraightLabel(arc: LayoutArc, renderOptions: ResolvedRenderOptions): boolean {
   if (arc.depth !== 0) return false;
+
+  const layer = renderOptions.config.layers.find(l => l.id === arc.layerId);
+  if (layer?.rootLabelStyle) return layer.rootLabelStyle === 'straight';
+
   const labelOptions = renderOptions.labels;
   if (typeof labelOptions !== 'object') return false;
   return labelOptions?.rootLabelStyle === 'straight';
@@ -143,6 +147,13 @@ function resolveMinRadialThickness(labelOptions: ResolvedRenderOptions['labels']
   return labelOptions?.minRadialThickness ?? LABEL_MIN_RADIAL_THICKNESS;
 }
 
+const DEFAULT_FONT_SIZE_SCALE = 0.5;
+
+function resolveFontSizeScale(labelOptions: ResolvedRenderOptions['labels']): number {
+  if (typeof labelOptions !== 'object') return DEFAULT_FONT_SIZE_SCALE;
+  return labelOptions?.fontSizeScale ?? DEFAULT_FONT_SIZE_SCALE;
+}
+
 /**
  * Evaluates whether a label can be shown for an arc
  */
@@ -165,8 +176,9 @@ function evaluateLabelVisibility(
   }
 
   const fontConfig = resolveFontSizeConfig(renderOptions.labels);
+  const fontSizeScale = resolveFontSizeScale(renderOptions.labels);
   const midRadius = arc.y0 + radialThickness * 0.5;
-  const fontSize = Math.min(Math.max(radialThickness * 0.5, fontConfig.min), fontConfig.max);
+  const fontSize = Math.min(Math.max(radialThickness * fontSizeScale, fontConfig.min), fontConfig.max);
   const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
   const arcLength = span * midRadius;
 
@@ -268,6 +280,8 @@ function createLabelArcPath(params: {
 
 type ShowLabelOptions = {
   useStraightStyle: boolean;
+  cx: number;
+  cy: number;
 };
 
 /**
@@ -292,7 +306,10 @@ function showLabel(
   labelElement.dataset.depth = String(arc.depth);
 
   if (options.useStraightStyle) {
-    showStraightLabel(managed, text, evaluation);
+    const isFullCircle = (arc.x1 - arc.x0) >= TAU - ZERO_TOLERANCE;
+    const x = isFullCircle ? options.cx : evaluation.x;
+    const y = isFullCircle ? options.cy : evaluation.y;
+    showStraightLabel(managed, text, { ...evaluation, x, y });
   } else {
     showCurvedLabel(managed, text, evaluation);
   }
