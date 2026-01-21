@@ -154,6 +154,18 @@ function resolveFontSizeScale(labelOptions: ResolvedRenderOptions['labels']): nu
   return labelOptions?.fontSizeScale ?? DEFAULT_FONT_SIZE_SCALE;
 }
 
+function resolveLabelPadding(labelOptions: ResolvedRenderOptions['labels']): number {
+  if (typeof labelOptions !== 'object') return LABEL_PADDING;
+  return labelOptions?.labelPadding ?? LABEL_PADDING;
+}
+
+type LabelFit = 'both' | 'height' | 'width';
+
+function resolveLabelFit(labelOptions: ResolvedRenderOptions['labels']): LabelFit {
+  if (typeof labelOptions !== 'object') return 'both';
+  return labelOptions?.labelFit ?? 'both';
+}
+
 /**
  * Evaluates whether a label can be shown for an arc
  */
@@ -169,22 +181,27 @@ function evaluateLabelVisibility(
     return { visible: false, reason: 'no-span' };
   }
 
+  const labelFit = resolveLabelFit(renderOptions.labels);
+  const checkHeight = labelFit === 'both' || labelFit === 'height';
+  const checkWidth = labelFit === 'both' || labelFit === 'width';
+
   const minThickness = resolveMinRadialThickness(renderOptions.labels);
   const radialThickness = Math.max(0, arc.y1 - arc.y0);
-  if (radialThickness < minThickness) {
+  if (checkHeight && radialThickness < minThickness) {
     return { visible: false, reason: 'thin-radius' };
   }
 
   const fontConfig = resolveFontSizeConfig(renderOptions.labels);
   const fontSizeScale = resolveFontSizeScale(renderOptions.labels);
   const midRadius = arc.y0 + radialThickness * 0.5;
-  const fontSize = Math.min(Math.max(radialThickness * fontSizeScale, fontConfig.min), fontConfig.max);
-  const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
+const fontSize = Math.min(Math.max(radialThickness * fontSizeScale, fontConfig.min), fontConfig.max);
+  const labelPadding = resolveLabelPadding(renderOptions.labels);
+  const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + labelPadding;
   const arcLength = span * midRadius;
 
   // Apply safety margin for centered text to prevent cut-off at boundaries
   const requiredLength = estimatedWidth * LABEL_SAFETY_MARGIN;
-  if (arcLength < requiredLength) {
+  if (checkWidth && arcLength < requiredLength) {
     return { visible: false, reason: 'narrow-arc' };
   }
 

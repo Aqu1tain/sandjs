@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance benchmarks** (#49): Added benchmark suite and performance documentation:
   - Benchmark scripts for layout, render, and navigation (`npm run bench`)
   - Performance guide with node limits and optimization tips (`docs/guides/performance.md`)
+- **Configurable label padding** (#55): Added `labelPadding` option to `LabelOptions` to control spacing between label text and arc boundaries (default: 8px).
+- **Label fit mode**: Added `labelFit` option to `LabelOptions` with values `'both'` (default), `'height'`, or `'width'` to control which dimension is checked for label visibility.
 
 ### Fixed
 - **Straight label centering**: Fixed straight labels on full-circle root nodes (360° arcs) to render at the true center instead of on the arc midpoint. Only applies to innermost rings (`y0 ≈ 0`); outer full-circle layers keep labels on the ring's mid-radius to avoid overlapping other layers.

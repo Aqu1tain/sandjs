@@ -75,6 +75,8 @@ export interface LabelOptions {
   fontSizeScale?: number;
   minRadialThickness?: number;
   rootLabelStyle?: 'curved' | 'straight';
+  labelPadding?: number;
+  labelFit?: 'both' | 'height' | 'width';
 }
 
 /**
