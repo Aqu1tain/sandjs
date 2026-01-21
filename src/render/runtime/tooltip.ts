@@ -19,6 +19,7 @@ const TOOLTIP_ATTRIBUTE = 'data-sandjs-tooltip';
 
 export type TooltipRuntime = {
   show: (event: PointerEvent, arc: LayoutArc) => void;
+  showAt: (rect: DOMRect, arc: LayoutArc) => void;
   move: (event: PointerEvent) => void;
   hide: () => void;
   dispose: () => void;
@@ -63,6 +64,13 @@ export function createTooltipRuntime(
     show(event, arc) {
       element.innerHTML = formatter(arc);
       position(event);
+      element.style.visibility = 'visible';
+      element.style.opacity = '1';
+    },
+    showAt(rect, arc) {
+      element.innerHTML = formatter(arc);
+      element.style.left = `${rect.right + TOOLTIP_OFFSET_X}px`;
+      element.style.top = `${rect.top}px`;
       element.style.visibility = 'visible';
       element.style.opacity = '1';
     },

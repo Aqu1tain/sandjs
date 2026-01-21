@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-parent nodes stable**: Removed EXPERIMENTAL status from multi-parent nodes feature. Added comprehensive test suite (23 tests) covering detection, normalization, validation, layout, and integration. Documented known limitations (key highlighting, navigation ambiguity). Stable since 1.0.
 - **Layer-specific rootLabelStyle**: Added `rootLabelStyle` option to `LayerConfig` for per-layer control of root label rendering (`'curved'` or `'straight'`). Layer setting takes priority over global `LabelOptions.rootLabelStyle`.
 - **Configurable fontSizeScale**: Added `fontSizeScale` option to `LabelOptions` to control font size calculation. Default is `0.5`. Use smaller values (e.g., `0.25`) for large charts where fonts would otherwise always hit max size.
+- **Accessibility improvements** (#47): Added keyboard navigation and ARIA support for screen readers:
+  - Arc elements are now focusable (`tabindex="0"`) and have `role="button"` with descriptive `aria-label`
+  - Keyboard navigation: Tab to focus arcs, Enter/Space to drill down
+  - Focus shows tooltip and breadcrumb, blur hides them
+  - SVG container has `role="graphics-document"` and `aria-label`
+  - Tooltip element has `role="tooltip"`, breadcrumb has `role="status"`
 
 ### Fixed
 - **Straight label centering**: Fixed straight labels on full-circle root nodes (360° arcs) to render at the true center instead of on the arc midpoint. Only applies to innermost rings (`y0 ≈ 0`); outer full-circle layers keep labels on the ring's mid-radius to avoid overlapping other layers.

@@ -138,11 +138,38 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     options.onArcClick?.({ arc, path: element, event });
   };
 
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    const { arc, runtime, options } = managed;
+    runtime.navigation?.handleArcClick(arc);
+    options.onArcClick?.({ arc, path: element, event: event as unknown as MouseEvent });
+  };
+
+  const handleFocus = () => {
+    const { arc, runtime } = managed;
+    runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
+    if (!runtime.navigation?.handlesBreadcrumbs()) {
+      runtime.breadcrumbs?.show(arc);
+    }
+  };
+
+  const handleBlur = () => {
+    const { runtime } = managed;
+    runtime.tooltip?.hide();
+    if (!runtime.navigation?.handlesBreadcrumbs()) {
+      runtime.breadcrumbs?.clear();
+    }
+  };
+
   element.addEventListener('pointerenter', handleEnter, { signal });
   element.addEventListener('pointermove', handleMove, { signal });
   element.addEventListener('pointerleave', handleLeave, { signal });
   element.addEventListener('pointercancel', handleLeave, { signal });
   element.addEventListener('click', handleClick, { signal });
+  element.addEventListener('keydown', handleKeyDown, { signal });
+  element.addEventListener('focus', handleFocus, { signal });
+  element.addEventListener('blur', handleBlur, { signal });
 }
 
 function applyBorderStyles(element: SVGPathElement, arc: LayoutArc, options: ResolvedRenderOptions): void {
@@ -162,6 +189,11 @@ function applyDataAttributes(element: SVGPathElement, arc: LayoutArc): void {
   setOrRemoveAttribute(element, 'data-collapsed', arc.data.collapsed ? 'true' : null);
   setOrRemoveAttribute(element, 'data-key', arc.key ?? null);
   setOrRemoveAttribute(element, 'data-tooltip', typeof arc.data.tooltip === 'string' ? arc.data.tooltip : null);
+
+  element.setAttribute('tabindex', '0');
+  element.setAttribute('role', 'button');
+  const percentage = arc.percentage > 0 ? ` (${(arc.percentage * 100).toFixed(1)}%)` : '';
+  element.setAttribute('aria-label', `${arc.data.name}${percentage}`);
 }
 
 function setOrRemoveAttribute(element: Element, name: string, value: string | null): void {
