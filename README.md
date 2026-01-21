@@ -33,6 +33,7 @@ For detailed guides, API reference, and examples, visit the [full documentation]
 - [API Reference](#api-reference)
 - [Build & Development](#build--development)
 - [CDN Usage](#cdn-usage)
+- [Browser Support](#browser-support)
 - [License](#license)
 
 ---
@@ -695,6 +696,25 @@ For quick prototyping or non-bundled environments:
   });
 </script>
 ```
+
+---
+
+## Browser Support
+
+Sand.js targets ESNext and supports modern browsers:
+
+| Browser | Minimum Version |
+|---------|-----------------|
+| Chrome | 80+ |
+| Firefox | 74+ |
+| Safari | 13.1+ |
+| Edge | 80+ |
+| iOS Safari | 13.4+ |
+| Chrome Android | 80+ |
+
+**Not supported:** Internet Explorer
+
+> For older browsers, transpile the bundle with Babel. See the [Browser Support Guide](./docs/guides/browser-support.md) for details.
 
 ---
 
