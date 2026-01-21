@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "outDir": "dist-benchmarks",
+    "declaration": false,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["benchmarks/**/*.ts", "src/**/*.ts"]
+}
