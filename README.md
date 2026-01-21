@@ -33,6 +33,7 @@ For detailed guides, API reference, and examples, visit the [full documentation]
 - [API Reference](#api-reference)
 - [Build & Development](#build--development)
 - [CDN Usage](#cdn-usage)
+- [Browser Support](#browser-support)
 - [License](#license)
 
 ---
@@ -695,6 +696,25 @@ For quick prototyping or non-bundled environments:
   });
 </script>
 ```
+
+---
+
+## Browser Support
+
+Sand.js supports all modern browsers:
+
+| Browser | Minimum Version |
+|---------|-----------------|
+| Chrome | 66+ |
+| Firefox | 57+ |
+| Safari | 13+ |
+| Edge | 79+ (Chromium) |
+| iOS Safari | 13+ |
+| Chrome Android | 66+ |
+
+**Not supported:** Internet Explorer
+
+For detailed compatibility information, see the [Browser Support Guide](./docs/guides/browser-support.md).
 
 ---
 
