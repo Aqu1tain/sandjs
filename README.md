@@ -701,20 +701,20 @@ For quick prototyping or non-bundled environments:
 
 ## Browser Support
 
-Sand.js supports all modern browsers:
+Sand.js targets ESNext and supports modern browsers:
 
 | Browser | Minimum Version |
 |---------|-----------------|
-| Chrome | 66+ |
-| Firefox | 57+ |
-| Safari | 13+ |
-| Edge | 79+ (Chromium) |
-| iOS Safari | 13+ |
-| Chrome Android | 66+ |
+| Chrome | 80+ |
+| Firefox | 74+ |
+| Safari | 13.1+ |
+| Edge | 80+ |
+| iOS Safari | 13.4+ |
+| Chrome Android | 80+ |
 
 **Not supported:** Internet Explorer
 
-For detailed compatibility information, see the [Browser Support Guide](./docs/guides/browser-support.md).
+> For older browsers, transpile the bundle with Babel. See the [Browser Support Guide](./docs/guides/browser-support.md) for details.
 
 ---
 

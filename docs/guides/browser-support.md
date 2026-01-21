@@ -6,15 +6,17 @@ Sand.js is designed for modern browsers. This guide documents officially support
 
 | Browser | Minimum Version | Status |
 |---------|-----------------|--------|
-| Chrome | 66+ | Supported |
-| Firefox | 57+ | Supported |
-| Safari | 13+ | Supported |
-| Edge | 79+ (Chromium) | Supported |
-| Opera | 53+ | Supported |
-| iOS Safari | 13+ | Supported |
-| Chrome Android | 66+ | Supported |
-| Samsung Internet | 9.0+ | Supported |
+| Chrome | 80+ | Supported |
+| Firefox | 74+ | Supported |
+| Safari | 13.1+ | Supported |
+| Edge | 80+ | Supported |
+| Opera | 67+ | Supported |
+| iOS Safari | 13.4+ | Supported |
+| Chrome Android | 80+ | Supported |
+| Samsung Internet | 13.0+ | Supported |
 | Internet Explorer | - | Not Supported |
+
+> **Note:** The distributed bundle targets ESNext and includes ES2020 syntax (optional chaining, nullish coalescing). If you need to support older browsers, you must transpile the bundle with Babel or similar tools.
 
 ## Required Browser Features
 
@@ -31,8 +33,10 @@ Sand.js relies on the following browser APIs:
 | Pointer Events | Mouse/touch interactions |
 | requestAnimationFrame | Smooth animations |
 
-### ES6+ Features Used
+### ES2020+ Features Used
 
+- Optional chaining (`?.`)
+- Nullish coalescing (`??`)
 - Arrow functions
 - `const` / `let`
 - Template literals
@@ -98,9 +102,20 @@ console.log('Sand.js supported:', isSupported);
 
 ## Transpilation
 
-The distributed bundle (`dist/sandjs.mjs`) targets ES2017. If you need broader compatibility, you can:
+The distributed bundle (`dist/sandjs.mjs`) targets **ESNext** and includes ES2020 syntax. If you need to support older browsers:
 
-1. Use the source files directly with your own build pipeline
-2. Transpile the distributed bundle with Babel
+1. **Transpile with Babel**: Add `@babel/preset-env` with appropriate targets
+2. **Use source files**: Import from source and include in your build pipeline
+3. **Add polyfills**: `WeakMap`, `AbortController`, and `PointerEvent` polyfills may be needed
 
-Note: Even with transpilation, polyfills for `WeakMap`, `AbortController`, and `PointerEvent` would be required for older browsers.
+Example Babel configuration for broader support:
+
+```json
+{
+  "presets": [
+    ["@babel/preset-env", {
+      "targets": "> 0.5%, last 2 versions, not dead"
+    }]
+  ]
+}
+```
