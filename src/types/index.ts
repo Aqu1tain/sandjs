@@ -55,6 +55,7 @@ export interface LayerConfig {
   borderWidth?: number;
   labelColor?: string;
   showLabels?: boolean;
+  rootLabelStyle?: 'curved' | 'straight';
 }
 
 /**

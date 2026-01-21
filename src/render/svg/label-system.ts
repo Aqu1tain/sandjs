@@ -104,6 +104,10 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
 
 function shouldUseStraightLabel(arc: LayoutArc, renderOptions: ResolvedRenderOptions): boolean {
   if (arc.depth !== 0) return false;
+
+  const layer = renderOptions.config.layers.find(l => l.id === arc.layerId);
+  if (layer?.rootLabelStyle) return layer.rootLabelStyle === 'straight';
+
   const labelOptions = renderOptions.labels;
   if (typeof labelOptions !== 'object') return false;
   return labelOptions?.rootLabelStyle === 'straight';
