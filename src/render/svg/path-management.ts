@@ -147,10 +147,19 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     options.onArcClick?.({ arc, path: element, event: event as unknown as MouseEvent });
   };
 
+  let savedStroke: string | null = null;
+  let savedStrokeWidth: string | null = null;
+  let savedNextSibling: Node | null = null;
+
   const handleFocus = () => {
     const { arc, runtime } = managed;
     element.classList.add('is-focused');
-    element.style.filter = 'drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #fff) drop-shadow(0 0 2px #000)';
+    savedStroke = element.getAttribute('stroke');
+    savedStrokeWidth = element.getAttribute('stroke-width');
+    savedNextSibling = element.nextSibling;
+    element.parentNode?.appendChild(element);
+    element.setAttribute('stroke', '#005fcc');
+    element.setAttribute('stroke-width', '2');
     runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.show(arc);
@@ -160,7 +169,22 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
   const handleBlur = () => {
     const { runtime } = managed;
     element.classList.remove('is-focused');
-    element.style.filter = '';
+    if (savedStroke) {
+      element.setAttribute('stroke', savedStroke);
+    } else {
+      element.removeAttribute('stroke');
+    }
+    if (savedStrokeWidth) {
+      element.setAttribute('stroke-width', savedStrokeWidth);
+    } else {
+      element.removeAttribute('stroke-width');
+    }
+    if (savedNextSibling && savedNextSibling.parentNode) {
+      savedNextSibling.parentNode.insertBefore(element, savedNextSibling);
+    }
+    savedStroke = null;
+    savedStrokeWidth = null;
+    savedNextSibling = null;
     runtime.tooltip?.hide();
     if (!runtime.navigation?.handlesBreadcrumbs()) {
       runtime.breadcrumbs?.clear();
