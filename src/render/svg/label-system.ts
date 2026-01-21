@@ -194,7 +194,9 @@ function evaluateLabelVisibility(
   const fontConfig = resolveFontSizeConfig(renderOptions.labels);
   const fontSizeScale = resolveFontSizeScale(renderOptions.labels);
   const midRadius = arc.y0 + radialThickness * 0.5;
-const fontSize = Math.min(Math.max(radialThickness * fontSizeScale, fontConfig.min), fontConfig.max);
+  const fontSize = checkHeight
+    ? Math.min(Math.max(radialThickness * fontSizeScale, fontConfig.min), fontConfig.max)
+    : fontConfig.max;
   const labelPadding = resolveLabelPadding(renderOptions.labels);
   const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + labelPadding;
   const arcLength = span * midRadius;
