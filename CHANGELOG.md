@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Configurable fontSizeScale**: Added `fontSizeScale` option to `LabelOptions` to control font size calculation. Default is `0.5`. Use smaller values (e.g., `0.25`) for large charts where fonts would otherwise always hit max size.
 
 ### Fixed
-- **Straight label centering**: Fixed straight labels on full-circle root nodes (360° arcs) to render at the true center instead of on the arc midpoint.
+- **Straight label centering**: Fixed straight labels on full-circle root nodes (360° arcs) to render at the true center instead of on the arc midpoint. Only applies to innermost rings (`y0 ≈ 0`); outer full-circle layers keep labels on the ring's mid-radius to avoid overlapping other layers.
 
 ## [0.4.0] - 2026-01-20
 
