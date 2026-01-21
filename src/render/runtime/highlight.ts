@@ -7,7 +7,7 @@ export type HighlightRuntime = {
   pointerEnter: (arc: LayoutArc, path: SVGPathElement) => void;
   pointerMove: (arc: LayoutArc, path: SVGPathElement) => void;
   pointerLeave: (arc: LayoutArc, path: SVGPathElement) => void;
-  handleClick?: (arc: LayoutArc, path: SVGPathElement, event: MouseEvent) => void;
+  handleClick?: (arc: LayoutArc, path: SVGPathElement, event: MouseEvent | KeyboardEvent) => void;
   handlesClick: boolean;
   dispose: () => void;
 };

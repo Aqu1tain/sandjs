@@ -1,6 +1,6 @@
 import { describeArcPath } from '../geometry.js';
 import { interpolateArc } from '../transition.js';
-import { SVG_NS, XLINK_NS } from './constants.js';
+import { SVG_NS, XLINK_NS, FOCUS_RING_COLOR, FOCUS_RING_WIDTH } from './constants.js';
 import type { RuntimeSet, ManagedPath, AnimationDrivers } from './types.js';
 import type { LayoutArc } from '../../types/index.js';
 import type { ResolvedRenderOptions } from '../types.js';
@@ -31,6 +31,7 @@ export function createManagedPath(params: {
 }): ManagedPath {
   const { key, arc, options, runtime, doc, labelDefs } = params;
   const element = doc.createElementNS(SVG_NS, 'path');
+  element.style.outline = 'none';
 
   const labelPathElement = doc.createElementNS(SVG_NS, 'path');
   const labelElement = doc.createElementNS(SVG_NS, 'text');
@@ -138,11 +139,46 @@ function attachEventHandlers(managed: ManagedPath, signal: AbortSignal): void {
     options.onArcClick?.({ arc, path: element, event });
   };
 
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    const { arc, runtime, options } = managed;
+    runtime.highlight?.handleClick?.(arc, element, event);
+    runtime.navigation?.handleArcClick(arc);
+    options.onArcClick?.({ arc, path: element, event });
+  };
+
+  let focusRing: SVGPathElement | null = null;
+
+  const handleFocus = () => {
+    const { arc, runtime } = managed;
+    element.classList.add('is-focused');
+    focusRing = createFocusRing(element);
+    runtime.tooltip?.showAt(element.getBoundingClientRect(), arc);
+    if (!runtime.navigation?.handlesBreadcrumbs()) {
+      runtime.breadcrumbs?.show(arc);
+    }
+  };
+
+  const handleBlur = () => {
+    const { runtime } = managed;
+    element.classList.remove('is-focused');
+    focusRing?.remove();
+    focusRing = null;
+    runtime.tooltip?.hide();
+    if (!runtime.navigation?.handlesBreadcrumbs()) {
+      runtime.breadcrumbs?.clear();
+    }
+  };
+
   element.addEventListener('pointerenter', handleEnter, { signal });
   element.addEventListener('pointermove', handleMove, { signal });
   element.addEventListener('pointerleave', handleLeave, { signal });
   element.addEventListener('pointercancel', handleLeave, { signal });
   element.addEventListener('click', handleClick, { signal });
+  element.addEventListener('keydown', handleKeyDown, { signal });
+  element.addEventListener('focus', handleFocus, { signal });
+  element.addEventListener('blur', handleBlur, { signal });
 }
 
 function applyBorderStyles(element: SVGPathElement, arc: LayoutArc, options: ResolvedRenderOptions): void {
@@ -162,6 +198,11 @@ function applyDataAttributes(element: SVGPathElement, arc: LayoutArc): void {
   setOrRemoveAttribute(element, 'data-collapsed', arc.data.collapsed ? 'true' : null);
   setOrRemoveAttribute(element, 'data-key', arc.key ?? null);
   setOrRemoveAttribute(element, 'data-tooltip', typeof arc.data.tooltip === 'string' ? arc.data.tooltip : null);
+
+  element.setAttribute('tabindex', '0');
+  element.setAttribute('role', 'button');
+  const percentage = arc.percentage > 0 ? ` (${(arc.percentage * 100).toFixed(1)}%)` : '';
+  element.setAttribute('aria-label', `${arc.data.name}${percentage}`);
 }
 
 function setOrRemoveAttribute(element: Element, name: string, value: string | null): void {
@@ -170,6 +211,21 @@ function setOrRemoveAttribute(element: Element, name: string, value: string | nu
   } else {
     element.removeAttribute(name);
   }
+}
+
+function createFocusRing(element: SVGPathElement): SVGPathElement | null {
+  const pathData = element.getAttribute('d');
+  if (!pathData || !element.parentNode || !element.ownerDocument) return null;
+
+  const ring = element.ownerDocument.createElementNS(SVG_NS, 'path');
+  ring.setAttribute('d', pathData);
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', FOCUS_RING_COLOR);
+  ring.setAttribute('stroke-width', String(FOCUS_RING_WIDTH));
+  ring.setAttribute('pointer-events', 'none');
+  ring.setAttribute('class', 'sand-focus-ring');
+  element.parentNode.appendChild(ring);
+  return ring;
 }
 
 function buildClassList(arc: LayoutArc, options: ResolvedRenderOptions): string {
