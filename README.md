@@ -688,7 +688,7 @@ For quick prototyping or non-bundled environments:
 ```html
 <svg id="chart"></svg>
 
-<script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 

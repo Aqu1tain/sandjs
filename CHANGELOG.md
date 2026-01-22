@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-01-22
+
+### Changed
+- Promoted 1.0.0-rc.1 to stable release
+- Updated CDN references to 1.0.0
+
+### Documentation
+- Added `labelFit` and `labelPadding` options to README Labels section
+- Added `LabelOptions` type definition to API docs
+
 ## [1.0.0-rc.1] - 2026-01-21
 
 ### Added
