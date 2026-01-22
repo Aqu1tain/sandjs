@@ -322,8 +322,19 @@ const chart2 = renderSVG({
   }
 });
 
-// Hide labels
+// Control label fitting behavior
 const chart3 = renderSVG({
+  el: '#chart',
+  config,
+  labels: {
+    labelPadding: 8,      // Spacing around text in pixels (default: 8)
+    labelFit: 'height',   // Only check radial thickness, ignore arc width
+    fontSize: { min: 10, max: 18 }
+  }
+});
+
+// Hide labels
+const chart4 = renderSVG({
   el: '#chart',
   config,
   labels: false  // or { showLabels: false }
