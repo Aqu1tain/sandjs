@@ -235,6 +235,27 @@ interface TransitionOptions {
 }
 ```
 
+### LabelOptions
+
+```typescript
+interface LabelOptions {
+  showLabels?: boolean;
+  labelColor?: string;
+  autoLabelColor?: boolean;
+  fontSize?: number | { min: number; max: number };
+  fontSizeScale?: number;
+  minRadialThickness?: number;
+  rootLabelStyle?: 'curved' | 'straight';
+  labelPadding?: number;    // Spacing around text in pixels (default: 8)
+  labelFit?: 'both' | 'height' | 'width';
+}
+```
+
+**`labelFit`** controls which dimensions are checked when fitting labels:
+- `'both'` (default): Label must fit the arc's radial thickness and arc length
+- `'height'`: Only check radial thickness, use max font size based on ring height
+- `'width'`: Only check arc length, labels always fit along the arc path
+
 ## Color Theme Types
 
 ### ColorThemeOptions
