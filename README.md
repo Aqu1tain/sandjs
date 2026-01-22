@@ -537,6 +537,22 @@ renderSVG({
 });
 ```
 
+#### Label Options
+
+```javascript
+labels: {
+  labelPadding: 8,       // Spacing around text in pixels (default: 8)
+  labelFit: 'both',      // 'both' | 'height' | 'width'
+  fontSize: { min: 8, max: 16 },
+  autoLabelColor: true   // Contrast-aware text color
+}
+```
+
+**`labelFit`** controls which dimensions are checked when fitting labels:
+- `'both'` (default): Label must fit the arc's radial thickness and arc length
+- `'height'`: Only check radial thickness, use max font size based on ring height
+- `'width'`: Only check arc length, labels always fit along the arc path
+
 #### Custom Label Formatting
 
 ```javascript
