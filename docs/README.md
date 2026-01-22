@@ -46,4 +46,4 @@ Complete documentation for Sand.js - a lightweight, framework-agnostic library f
 
 ## Version
 
-This documentation is for Sand.js v0.4.0
+This documentation is for Sand.js v1.0.0

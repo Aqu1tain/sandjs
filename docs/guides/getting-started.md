@@ -51,7 +51,7 @@ pnpm add @akitain/sandjs
 For quick prototyping or non-bundled projects:
 
 ```html
-<script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.iife.min.js"></script>
 ```
 
 The library will be available as `window.SandJS`.
@@ -75,7 +75,7 @@ const { renderSVG } = require('@akitain/sandjs');
 ### CDN / IIFE
 
 ```html
-<script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 </script>
@@ -190,7 +190,7 @@ Here's the full working example:
   <svg id="my-chart" width="400" height="400"></svg>
 
   <script type="module">
-    import { renderSVG } from 'https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.mjs';
+    import { renderSVG } from 'https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.mjs';
 
     const config = {
       size: { radius: 180 },
