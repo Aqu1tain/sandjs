@@ -85,6 +85,7 @@ out
 .nuxt
 dist
 dist-tests
+dist-benchmarks
 temp
 
 # Gatsby files

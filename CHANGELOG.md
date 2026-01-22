@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-01-22
+
+### Changed
+- Promoted 1.0.0-rc.1 to stable release
+- Updated CDN references to 1.0.0
+
+### Documentation
+- Added `labelFit` and `labelPadding` options to README Labels section
+- Added `LabelOptions` type definition to API docs
+
+## [1.0.0-rc.1] - 2026-01-21
+
+### Added
+- **Multi-parent nodes stable**: Removed EXPERIMENTAL status from multi-parent nodes feature. Added comprehensive test suite (23 tests) covering detection, normalization, validation, layout, and integration. Documented known limitations (key highlighting, navigation ambiguity). Stable since 1.0.
+- **Layer-specific rootLabelStyle**: Added `rootLabelStyle` option to `LayerConfig` for per-layer control of root label rendering (`'curved'` or `'straight'`). Layer setting takes priority over global `LabelOptions.rootLabelStyle`.
+- **Configurable fontSizeScale**: Added `fontSizeScale` option to `LabelOptions` to control font size calculation. Default is `0.5`. Use smaller values (e.g., `0.25`) for large charts where fonts would otherwise always hit max size.
+- **Accessibility improvements** (#47): Added keyboard navigation and ARIA support for screen readers:
+  - Arc elements are now focusable (`tabindex="0"`) and have `role="button"` with descriptive `aria-label`
+  - Keyboard navigation: Tab to focus arcs, Enter/Space to drill down
+  - Focus shows tooltip and breadcrumb, blur hides them
+  - SVG container has `role="graphics-document"` and `aria-label`
+  - Tooltip element has `role="tooltip"`, breadcrumb has `role="status"`
+- **Performance benchmarks** (#49): Added benchmark suite and performance documentation:
+  - Benchmark scripts for layout, render, and navigation (`npm run bench`)
+  - Performance guide with node limits and optimization tips (`docs/guides/performance.md`)
+- **Configurable label padding** (#55): Added `labelPadding` option to `LabelOptions` to control spacing between label text and arc boundaries (default: 8px).
+- **Label fit mode**: Added `labelFit` option to `LabelOptions` with values `'both'` (default), `'height'`, or `'width'` to control which dimension is checked for label visibility. When set to `'width'`, font size uses the configured max instead of scaling with arc thickness.
+- **Browser compatibility documentation** (#48): Added browser support guide with compatibility matrix, minimum versions, and required browser features (`docs/guides/browser-support.md`).
+- **Migration guide** (#50): Added migration guide for 1.0 documenting breaking changes, new features, and version compatibility (`docs/guides/migration-guide.md`).
+
+### Fixed
+- **Straight label centering**: Fixed straight labels on full-circle root nodes (360° arcs) to render at the true center instead of on the arc midpoint. Only applies to innermost rings (`y0 ≈ 0`); outer full-circle layers keep labels on the ring's mid-radius to avoid overlapping other layers.
+
 ## [0.4.0] - 2026-01-20
 
 ### Added
@@ -36,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **colorAssignment.ts**: Use `codePointAt()` instead of `charCodeAt()`.
 - **multi-parent-test.html**: Improve text contrast ratio.
 
-## [0.3.6] - 2025-01-27
+## [0.3.6] - 2025-11-27
 
 ### Enhanced
 - **Multi-parent nodes nested support**: Multi-parent nodes can now be placed at any depth in the tree hierarchy, not just at root level. Removed restriction that limited `parents` property to root-level nodes only.
@@ -47,12 +80,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Multi-parent radial positioning**: Fixed radial depth calculation for multi-parent children by properly converting y1 pixel values back to units. This prevents multi-parent children from overlapping with their unified parent arcs.
 
-## [0.3.5] - 2025-01-27
+## [0.3.5] - 2025-11-27
 
 ### Added
 - **Multi-parent nodes (EXPERIMENTAL)**: Added `parents` property to `TreeNodeInput` to create unified parent arcs spanning multiple nodes. When a node specifies `parents: ['key1', 'key2']`, the parent nodes with those keys are treated as ONE combined arc, and the node becomes a child of that unified parent. Multiple nodes can share the same parent set, creating many-to-many relationships. Multi-parent nodes can be placed at any depth in the tree hierarchy (root level or nested). This feature is marked as experimental and includes a console warning on first use due to potential issues with animations, value calculations, and navigation. Parent nodes in a multi-parent group should not have their own individual children.
 
-## [0.3.4] - 2025-01-26
+## [0.3.4] - 2025-11-26
 
 ### Added
 - **Border customization**: Added `borderColor` and `borderWidth` options to customize arc borders (strokes). Supports both global settings via `RenderSvgOptions` and per-layer overrides via `LayerConfig`. Layer-specific settings take priority over global options. Accepts any valid CSS color string for `borderColor` (hex, rgb, rgba, named colors) and numeric pixel values for `borderWidth`.
@@ -165,7 +198,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recycled keyed SVG paths so update cycles no longer churn event listeners or DOM nodes.
 - Expanded render handle tests and documentation to cover the update workflow and responsive sizing defaults.
 
-## [0.2.0] - 2025-09-20
+## [0.2.0] - 2025-09-22
 
 ### Added
 - Highlight-by-key runtime with optional pinning, plus demo integration showing related arc highlighting.

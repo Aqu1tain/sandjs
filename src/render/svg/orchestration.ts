@@ -208,6 +208,10 @@ function applySvgDimensions(host: SVGElement, radius: number): void {
   host.setAttribute('viewBox', `0 0 ${diameter} ${diameter}`);
   host.setAttribute('width', `${diameter}`);
   host.setAttribute('height', `${diameter}`);
+  host.setAttribute('role', 'graphics-document');
+  if (!host.getAttribute('aria-label')) {
+    host.setAttribute('aria-label', 'Interactive sunburst chart');
+  }
 }
 
 function processArcs(params: {

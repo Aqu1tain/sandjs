@@ -33,6 +33,7 @@ For detailed guides, API reference, and examples, visit the [full documentation]
 - [API Reference](#api-reference)
 - [Build & Development](#build--development)
 - [CDN Usage](#cdn-usage)
+- [Browser Support](#browser-support)
 - [License](#license)
 
 ---
@@ -536,6 +537,22 @@ renderSVG({
 });
 ```
 
+#### Label Options
+
+```javascript
+labels: {
+  labelPadding: 8,       // Spacing around text in pixels (default: 8)
+  labelFit: 'both',      // 'both' | 'height' | 'width'
+  fontSize: { min: 8, max: 16 },
+  autoLabelColor: true   // Contrast-aware text color
+}
+```
+
+**`labelFit`** controls which dimensions are checked when fitting labels:
+- `'both'` (default): Label must fit the arc's radial thickness and arc length
+- `'height'`: Only check radial thickness, use max font size based on ring height
+- `'width'`: Only check arc length, labels always fit along the arc path
+
 #### Custom Label Formatting
 
 ```javascript
@@ -671,7 +688,7 @@ For quick prototyping or non-bundled environments:
 ```html
 <svg id="chart"></svg>
 
-<script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 
@@ -695,6 +712,25 @@ For quick prototyping or non-bundled environments:
   });
 </script>
 ```
+
+---
+
+## Browser Support
+
+Sand.js targets ESNext and supports modern browsers:
+
+| Browser | Minimum Version |
+|---------|-----------------|
+| Chrome | 80+ |
+| Firefox | 74+ |
+| Safari | 13.1+ |
+| Edge | 80+ |
+| iOS Safari | 13.4+ |
+| Chrome Android | 80+ |
+
+**Not supported:** Internet Explorer
+
+> For older browsers, transpile the bundle with Babel. See the [Browser Support Guide](./docs/guides/browser-support.md) for details.
 
 ---
 

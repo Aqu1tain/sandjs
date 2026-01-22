@@ -99,11 +99,15 @@ export function updateArcLabel(managed: ManagedPath, arc: LayoutArc, options: Up
 
   const labelColor = resolveLabelColor(arc, layer, renderOptions, arcColor);
   const useStraightStyle = shouldUseStraightLabel(arc, renderOptions);
-  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle });
+  showLabel(managed, text, evaluation, arc, labelColor, { useStraightStyle, cx, cy });
 }
 
 function shouldUseStraightLabel(arc: LayoutArc, renderOptions: ResolvedRenderOptions): boolean {
   if (arc.depth !== 0) return false;
+
+  const layer = renderOptions.config.layers.find(l => l.id === arc.layerId);
+  if (layer?.rootLabelStyle) return layer.rootLabelStyle === 'straight';
+
   const labelOptions = renderOptions.labels;
   if (typeof labelOptions !== 'object') return false;
   return labelOptions?.rootLabelStyle === 'straight';
@@ -143,6 +147,25 @@ function resolveMinRadialThickness(labelOptions: ResolvedRenderOptions['labels']
   return labelOptions?.minRadialThickness ?? LABEL_MIN_RADIAL_THICKNESS;
 }
 
+const DEFAULT_FONT_SIZE_SCALE = 0.5;
+
+function resolveFontSizeScale(labelOptions: ResolvedRenderOptions['labels']): number {
+  if (typeof labelOptions !== 'object') return DEFAULT_FONT_SIZE_SCALE;
+  return labelOptions?.fontSizeScale ?? DEFAULT_FONT_SIZE_SCALE;
+}
+
+function resolveLabelPadding(labelOptions: ResolvedRenderOptions['labels']): number {
+  if (typeof labelOptions !== 'object') return LABEL_PADDING;
+  return labelOptions?.labelPadding ?? LABEL_PADDING;
+}
+
+type LabelFit = 'both' | 'height' | 'width';
+
+function resolveLabelFit(labelOptions: ResolvedRenderOptions['labels']): LabelFit {
+  if (typeof labelOptions !== 'object') return 'both';
+  return labelOptions?.labelFit ?? 'both';
+}
+
 /**
  * Evaluates whether a label can be shown for an arc
  */
@@ -158,21 +181,30 @@ function evaluateLabelVisibility(
     return { visible: false, reason: 'no-span' };
   }
 
+  const labelFit = resolveLabelFit(renderOptions.labels);
+  const checkHeight = labelFit === 'both' || labelFit === 'height';
+  const checkWidth = labelFit === 'both' || labelFit === 'width';
+
   const minThickness = resolveMinRadialThickness(renderOptions.labels);
   const radialThickness = Math.max(0, arc.y1 - arc.y0);
-  if (radialThickness < minThickness) {
+  if (checkHeight && radialThickness < minThickness) {
     return { visible: false, reason: 'thin-radius' };
   }
 
   const fontConfig = resolveFontSizeConfig(renderOptions.labels);
+  const fontSizeScale = resolveFontSizeScale(renderOptions.labels);
+  const labelPadding = resolveLabelPadding(renderOptions.labels);
   const midRadius = arc.y0 + radialThickness * 0.5;
-  const fontSize = Math.min(Math.max(radialThickness * 0.5, fontConfig.min), fontConfig.max);
-  const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + LABEL_PADDING;
   const arcLength = span * midRadius;
 
-  // Apply safety margin for centered text to prevent cut-off at boundaries
-  const requiredLength = estimatedWidth * LABEL_SAFETY_MARGIN;
-  if (arcLength < requiredLength) {
+  const heightBasedSize = radialThickness * fontSizeScale;
+  const widthBasedSize = (arcLength / LABEL_SAFETY_MARGIN - labelPadding) / (text.length * LABEL_CHAR_WIDTH_FACTOR);
+
+  const rawFontSize = checkWidth ? Math.min(widthBasedSize, checkHeight ? heightBasedSize : Infinity) : heightBasedSize;
+  const fontSize = Math.min(Math.max(rawFontSize, fontConfig.min), fontConfig.max);
+
+  const estimatedWidth = text.length * fontSize * LABEL_CHAR_WIDTH_FACTOR + labelPadding;
+  if (checkWidth && arcLength < estimatedWidth * LABEL_SAFETY_MARGIN) {
     return { visible: false, reason: 'narrow-arc' };
   }
 
@@ -268,6 +300,8 @@ function createLabelArcPath(params: {
 
 type ShowLabelOptions = {
   useStraightStyle: boolean;
+  cx: number;
+  cy: number;
 };
 
 /**
@@ -292,7 +326,12 @@ function showLabel(
   labelElement.dataset.depth = String(arc.depth);
 
   if (options.useStraightStyle) {
-    showStraightLabel(managed, text, evaluation);
+    const isFullCircle = (arc.x1 - arc.x0) >= TAU - ZERO_TOLERANCE;
+    const includesCenter = arc.y0 <= ZERO_TOLERANCE;
+    const useCenter = isFullCircle && includesCenter;
+    const x = useCenter ? options.cx : evaluation.x;
+    const y = useCenter ? options.cy : evaluation.y;
+    showStraightLabel(managed, text, { ...evaluation, x, y });
   } else {
     showCurvedLabel(managed, text, evaluation);
   }

@@ -73,7 +73,7 @@ Add the script to import Sand.js. You can use either a module bundler or CDN:
 ### Option B: Using CDN
 
 ```html
-<script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+<script src="https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.iife.min.js"></script>
 <script>
   const { renderSVG } = window.SandJS;
 
@@ -202,7 +202,7 @@ Your chart is now rendered. The Simple API is perfect for getting started quickl
     <svg id="chart" width="400" height="400"></svg>
   </div>
 
-  <script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+  <script src="https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.iife.min.js"></script>
   <script>
     const { renderSVG } = window.SandJS;
 
@@ -275,7 +275,7 @@ Here's the same chart with full configuration:
     <svg id="chart" width="400" height="400"></svg>
   </div>
 
-  <script src="https://unpkg.com/@akitain/sandjs@0.4.0/dist/sandjs.iife.min.js"></script>
+  <script src="https://unpkg.com/@akitain/sandjs@1.0.0/dist/sandjs.iife.min.js"></script>
   <script>
     const { renderSVG } = window.SandJS;
 
